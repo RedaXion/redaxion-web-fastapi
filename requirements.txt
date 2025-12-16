@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+mercadopago
+google-cloud-storage
+python-dotenv
+requests
+openai
+python-docx

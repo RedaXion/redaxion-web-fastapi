@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba RedaXion</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input, select, button { width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; }
+        button { background-color: #4A66AC; color: white; border: none; cursor: pointer; font-size: 1.1rem; }
+        button:hover { background-color: #3b528b; }
+        #status { margin-top: 1rem; padding: 1rem; border-radius: 4px; display: none; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Prueba de Carga RedaXion</h1>
+    <form id="redaxionForm">
+        <div class="form-group">
+            <label>Nombre:</label>
+            <input type="text" name="nombre" value="Tester" required>
+        </div>
+        <div class="form-group">
+            <label>Correo:</label>
+            <input type="email" name="correo" value="test@example.com" required>
+        </div>
+        <div class="form-group">
+            <label>Color:</label>
+            <select name="color">
+                <option value="amatista">Amatista</option>
+                <option value="azul elegante">Azul Elegante</option>
+                <option value="rojo elegante">Rojo Elegante</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Columnas:</label>
+            <select name="columnas">
+                <option value="una">Una Columna</option>
+                <option value="doble">Dos Columnas</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Tipo de Entrega:</label>
+            <select name="tipo_entrega">
+                <option value="Estandar">Estándar</option>
+                <option value="Flash">Flash</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Archivo de Audio:</label>
+            <input type="file" name="audio_file" accept="audio/*" required>
+        </div>
+        <button type="submit">Subir y Generar Orden</button>
+    </form>
+
+    <div id="status"></div>
+
+    <script>
+        document.getElementById('redaxionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Subiendo audio... esto puede tardar unos segundos.';
+            statusDiv.className = '';
+
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/orden', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusDiv.className = 'success';
+                    statusDiv.innerHTML = `
+                        <strong>¡Éxito!</strong> Orden creada: ${result.orden_id}<br>
+                        <a href="${result.checkout_url}" target="_blank" style="display:block; margin-top:10px; font-size:1.2rem;">👉 IR A PAGAR (Prueba)</a>
+                    `;
+                } else {
+                    throw new Error(result.detail || 'Error desconocido');
+                }
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

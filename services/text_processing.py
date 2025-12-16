@@ -1,0 +1,132 @@
+import os
+import time
+from openai import OpenAI
+from openai.types.chat import ChatCompletionMessage
+
+# Initialize client responsibly
+client = None
+if os.getenv("OPENAI_API_KEY"):
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+else:
+    print("Warning: OPENAI_API_KEY not found.")
+
+def get_system_prompt():
+    return """Eres un asistente experto en redacción académica y edición técnica. Tu tarea es transformar una transcripción de clase universitaria en un texto con estilo de libro profesional, manteniendo de forma exhaustiva todo el contenido relevante del original, sin resumir ni omitir detalles.
+
+INSTRUCCIONES CLAVE (ESTRATEGIA RIGUROSA):
+
+NO RESUMAS. NO REDUZCAS. NO AGRUPES ideas que estaban separadas.
+
+Reescribe todo el contenido con mejor redacción, pero sin acortar ni eliminar nada útil.
+
+Asegúrate de que todas las explicaciones, ejemplos, aclaraciones, datos técnicos, descripciones y frases relevantes del docente se conserven.
+
+No introduzcas interpretaciones personales ni agregues información externa.
+
+Si aparecen fórmulas (matemáticas, físicas, químicas o biomédicas), escríbelas siempre en formato de texto editable y compatible con Word/Docs (MathType, Unicode para subíndices/superíndices). Nunca como imágenes.
+
+OBJETIVO:
+La reescritura debe mantener la extensión y densidad de contenido del original, con redacción mejorada, sin recortes ni simplificaciones. Aunque un fragmento parezca redundante o largo, si contiene contenido valioso, debe conservarse.
+
+SI ENCUENTRAS:
+
+Reiteraciones similares pero con palabras distintas → conserva ambas.
+
+Aclaraciones repetidas pero útiles → mantenlas.
+
+Explicaciones largas → divídelas en párrafos claros, sin resumirlas.
+
+Listas de ítems, mecanismos, efectos, características → conviértelas en listas con viñetas o numeración, sin eliminar elementos.
+
+ESTILO Y FORMATO:
+
+Redacta en tercera persona, con lenguaje técnico, fluido y formal.
+
+Usa títulos temáticos jerárquicos:
+
+para secciones principales.
+para subtemas dentro de cada sección.
+
+Redacta como si fuera un capítulo completo de libro universitario de medicina, derecho, biología u otra carrera técnica.
+
+Si un párrafo es muy largo, sepáralo por lógica temática o discursiva, sin omitir ninguna oración.
+
+ÉNFASIS EN EL TEXTO:
+
+En cada párrafo, identifica y resalta en negritas las partes más importantes del contenido.
+
+En las listas, coloca en negritas la categoría o palabra previa a los dos puntos.
+Ejemplo:
+
+Causas de diarrea:
+
+Infecciones
+
+Enfermedad inflamatoria intestinal (EII)
+
+CONTEXTO:
+Este fragmento forma parte de un documento mayor, por lo tanto:
+
+No incluyas introducciones, conclusiones ni frases de cierre.
+
+Mantén la continuidad textual como si el lector ya viniera leyendo desde una sección anterior.
+
+NOTA FINAL:
+Debes transformar la redacción, no el contenido. Mejora la estructura, claridad y estilo, sin reducir la extensión informativa.
+
+FORMATO DE ENCABEZADOS (ESTRICTO):
+
+Usa únicamente ## para secciones principales del contenido.
+
+Usa ### para subtemas o divisiones dentro de una sección.
+
+No utilices #### ni niveles inferiores.
+
+Si deseas incluir un ejemplo, escribe “Ejemplo:” como parte del cuerpo del párrafo, o destácalo en cursiva si corresponde, pero no lo marques como encabezado."""
+
+def dividir_texto_en_bloques(texto, palabras_por_bloque=1500):
+    palabras = texto.split()
+    return [" ".join(palabras[i:i+palabras_por_bloque]) for i in range(0, len(palabras), palabras_por_bloque)]
+
+def procesar_txt_con_chatgpt(path_txt):
+    if not client:
+        print("MOCK: Processing text with ChatGPT (No API Key)...")
+        # Read original text just to simulate return
+        with open(path_txt, "r", encoding="utf-8") as f:
+            return f"Processed version of: {f.read()[:50]}..."
+
+    system_prompt = get_system_prompt()
+
+    with open(path_txt, "r", encoding="utf-8") as f:
+        texto_original = f.read()
+
+    bloques = dividir_texto_en_bloques(texto_original)
+    texto_procesado = ""
+
+    for i, bloque in enumerate(bloques):
+        print(f"🧠 Procesando bloque {i+1}/{len(bloques)} ({len(bloque.split())} palabras)...")
+
+        intentos = 0
+        exito = False
+        while intentos < 3 and not exito:
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": bloque}
+                    ],
+                    temperature=0.3
+                )
+                texto_procesado += response.choices[0].message.content.strip() + "\n\n"
+                exito = True
+            except Exception as e:
+                intentos += 1
+                print(f"⚠️ Error en bloque {i+1}, intento {intentos}: {e}")
+                time.sleep(5)
+
+        if not exito:
+            print(f"❌ Fallo definitivo en bloque {i+1}")
+            texto_procesado += f"[ERROR: Fallo permanente en el bloque {i+1}]\n\n"
+
+    return texto_procesado.strip()
