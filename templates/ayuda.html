@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayuda - RedaXion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header will be updated globally later, using placeholder for structure -->
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <h1 style="text-align: center; margin-bottom: 2rem;">Centro de <span class="text-gradient">Ayuda</span></h1>
+
+            <div style="max-width: 800px; margin: 0 auto; display: grid; gap: 2rem;">
+                <!-- FAQ Item 1 -->
+                <div class="glass-card" style="padding: 2rem; border-radius: 12px; background: rgba(255,255,255,0.03);">
+                    <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">¿Qué formatos de audio aceptan?</h3>
+                    <p style="color: var(--text-gray);">Aceptamos la mayoría de formatos comunes como MP3, M4A, WAV y
+                        OGG. Si tienes problemas, intenta convertir tu archivo a MP3.</p>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="glass-card" style="padding: 2rem; border-radius: 12px; background: rgba(255,255,255,0.03);">
+                    <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">¿Cuánto tarda el proceso?</h3>
+                    <p style="color: var(--text-gray);">Generalmente el proceso toma entre 5 a 10 minutos dependiendo de
+                        la duración de tu audio y la carga del servidor.</p>
+                </div>
+
+                <!-- FAQ Item 3 Removed by user request -->
+
+                <div style="text-align: center; margin-top: 3rem;">
+                    <p style="color: var(--text-gray);">¿Aún tienes dudas?</p>
+                    <a href="mailto:soporte@redaxion.cl" class="btn btn-primary"
+                        style="margin-top: 1rem;">Contáctanos</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

@@ -18,7 +18,23 @@ venv/
 .vscode/
 .idea/
 
-# RedaXion specific
-*.docx
-*.pdf
+# Database (local only)
+*.db
+*.sqlite3
+
+# Test files
+test_*.py
+debug_*.txt
+repair_order.py
+
+# User uploads (these go to GCS in production)
 redaxion_audios/
+
+# Generated files (local only, production uses GCS)
+static/generated/*.docx
+static/generated/*.pdf
+!static/generated/.gitkeep
+
+# Videos (too large for GitHub, host externally)
+static/video/*.MP4
+static/video/*.mp4

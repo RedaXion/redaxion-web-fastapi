@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testimonios - RedaXion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <h1 style="text-align: center; margin-bottom: 2rem;">Lo que dicen nuestros <span
+                    class="text-gradient">Usuarios</span></h1>
+
+            <!-- Video Section -->
+            <!-- Side-by-Side Layout -->
+            <div
+                style="display: flex; flex-wrap: wrap; gap: 3rem; align-items: flex-start; justify-content: center; margin-bottom: 4rem;">
+
+                <!-- Left: Video -->
+                <div class="video-container"
+                    style="flex: 1; min-width: 250px; max-width: 450px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+                    <video controls width="100%" style="display: block; background: #000;">
+                        <source src="/static/video/testimonios.mp4" type="video/mp4">
+                        Tu navegador no soporta el elemento de video.
+                    </video>
+                </div>
+
+                <!-- Right: Text & Testimonials -->
+                <div style="flex: 1; min-width: 300px;">
+                    <h2 style="margin-bottom: 1.5rem;">Historias Reales de <span class="text-gradient">Éxito</span></h2>
+                    <p style="font-size: 1.1rem; color: var(--text-gray); line-height: 1.6; margin-bottom: 3rem;">
+                        Desde estudiantes de medicina hasta periodistas, nuestra comunidad confía en RedaXion para
+                        optimizar su tiempo y mejorar sus resultados.
+                        <br><br>
+                        Escucha cómo la conversión de audio a texto estructurado ha transformado sus rutinas de estudio
+                        y trabajo.
+                    </p>
+
+                    <!-- Testimonials Vertical Stack -->
+                    <div style="display: grid; gap: 1.5rem;">
+                        <!-- Testimonial 1 -->
+                        <div class="glass-card"
+                            style="padding: 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.03);">
+                            <p
+                                style="font-style: italic; color: var(--text-gray); margin-bottom: 1rem; font-size: 0.95rem;">
+                                "Increíble. Grabé mi
+                                clase mientras caminaba y RedaXion me entregó un resumen perfecto para estudiar."</p>
+                            <div style="display: flex; align-items: center;">
+                                <div
+                                    style="width: 30px; height: 30px; background: #ddd; border-radius: 50%; margin-right: 0.8rem;">
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem;">Camila S.</h4>
+                                    <small style="color: var(--accent-cyan); font-size: 0.8rem;">Estudiante de
+                                        Derecho</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Testimonial 2 -->
+                        <div class="glass-card"
+                            style="padding: 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.03);">
+                            <p
+                                style="font-style: italic; color: var(--text-gray); margin-bottom: 1rem; font-size: 0.95rem;">
+                                "Me ahorra horas de
+                                transcripción. La función de Quiz es lo mejor para repasar antes de los exámenes."</p>
+                            <div style="display: flex; align-items: center;">
+                                <div
+                                    style="width: 30px; height: 30px; background: #ddd; border-radius: 50%; margin-right: 0.8rem;">
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem;">Felipe M.</h4>
+                                    <small style="color: var(--accent-cyan); font-size: 0.8rem;">Estudiante de
+                                        Medicina</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Testimonial 3 -->
+                        <div class="glass-card"
+                            style="padding: 1.5rem; border-radius: 12px; background: rgba(255,255,255,0.03);">
+                            <p
+                                style="font-style: italic; color: var(--text-gray); margin-bottom: 1rem; font-size: 0.95rem;">
+                                "La edición es
+                                sorprendente. Elimina todos los titubeos y deja un texto limpio y profesional."</p>
+                            <div style="display: flex; align-items: center;">
+                                <div
+                                    style="width: 30px; height: 30px; background: #ddd; border-radius: 50%; margin-right: 0.8rem;">
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem;">Sofía R.</h4>
+                                    <small style="color: var(--accent-cyan); font-size: 0.8rem;">Periodista</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 3rem;">
+                        <a href="/orden" class="btn btn-primary"
+                            style="font-size: 1.1rem; padding: 0.8rem 2rem;">Comenzar Ahora</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+</body>
+
+</html>

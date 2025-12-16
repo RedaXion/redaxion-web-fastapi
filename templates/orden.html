@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haz Tu Pedido | RedaXion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            border-radius: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        /* File Upload Styling */
+        .file-drop-area {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 200px;
+            padding: 2rem;
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            transition: 0.2s;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.2);
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .file-drop-area:hover,
+        .file-drop-area.is-active {
+            border-color: var(--accent-orange);
+            background-color: rgba(250, 140, 22, 0.05);
+        }
+
+        .fake-btn {
+            background-color: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        .file-msg {
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            pointer-events: none;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+            opacity: 0;
+        }
+
+        /* Status Messages */
+        #status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+            text-align: center;
+        }
+
+        .success {
+            background: rgba(28, 198, 194, 0.2);
+            color: #fff;
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .error {
+            background: rgba(255, 99, 71, 0.2);
+            color: #fff;
+            border: 1px solid tomato;
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 3rem;">
+                <h1>Transcribe Mi <span class="text-gradient">Clase</span></h1>
+                <p style="color: var(--text-gray);">Completa el formulario y sube tu audio para empezar.</p>
+            </div>
+
+            <div class="form-container">
+                <form id="redaxionForm">
+                    <div class="form-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" name="nombre" placeholder="Ej. Juan Pérez" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" name="correo" placeholder="tu@email.com" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div class="form-group">
+                            <label>Estilo Visual</label>
+                            <select name="color">
+                                <option value="azul elegante">Azul Elegante</option>
+                                <option value="azul pastel">Azul Pastel</option>
+                                <option value="rojo elegante">Rojo Elegante</option>
+                                <option value="rojo pastel">Rojo Pastel</option>
+                                <option value="gris elegante">Gris Elegante</option>
+                                <option value="morado pastel">Morado Pastel</option>
+                                <option value="verde pastel">Verde Pastel</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Formato de Columnas</label>
+                            <select name="columnas">
+                                <option value="una">Una Columna</option>
+                                <option value="doble">Dos Columnas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tipo de Entrega eliminado por solicitud del usuario -->
+
+                    <div class="form-group">
+                        <label>Sube tu Audio</label>
+                        <div class="file-drop-area">
+                            <span class="fake-btn">Elegir archivo</span>
+                            <span class="file-msg">o arrastra y suelta aquí</span>
+                            <input class="file-input" type="file" name="audio_file" accept="audio/*" required>
+                        </div>
+                        <p id="file-name" style="margin-top: 0.5rem; text-align: center; color: var(--accent-cyan);">
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
+                        Generar Orden y Pagar
+                    </button>
+                </form>
+
+                <div id="status"></div>
+            </div>
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // File Input visuals
+        const fileInput = document.querySelector('.file-input');
+        const dropArea = document.querySelector('.file-drop-area');
+        const fileNameDisplay = document.getElementById('file-name');
+
+        fileInput.addEventListener('dragenter', () => dropArea.classList.add('is-active'));
+        fileInput.addEventListener('dragleave', () => dropArea.classList.remove('is-active'));
+        fileInput.addEventListener('drop', () => dropArea.classList.remove('is-active'));
+
+        fileInput.addEventListener('change', () => {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                fileNameDisplay.textContent = `Archivo seleccionado: ${files[0].name}`;
+            }
+        });
+
+        // Form Submission
+        document.getElementById('redaxionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('status');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Subiendo audio... esto puede tardar unos segundos.';
+            statusDiv.className = '';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
+
+            const formData = new FormData(e.target);
+
+            try {
+                // Adjust URL if needed for production
+                const response = await fetch('/api/orden', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusDiv.className = 'success';
+                    statusDiv.innerHTML = `
+                        <strong>¡Éxito!</strong> Orden creada.<br>
+                        Te estamos llevando a tu panel para finalizar...
+                    `;
+                    // Redirect to Dashboard FIRST
+                    // We pass the checkout_url so the dashboard can show the 'Pay' button
+                    const dashboardUrl = `/dashboard?external_reference=${result.orden_id}&checkout_url=${encodeURIComponent(result.checkout_url)}`;
+
+                    setTimeout(() => {
+                        window.location.href = dashboardUrl;
+                    }, 1000);
+                } else {
+                    throw new Error(result.detail || 'Error desconocido');
+                }
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.textContent = 'Error: ' + error.message;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generar Orden y Pagar';
+            }
+        });
+    </script>
+</body>
+
+</html>

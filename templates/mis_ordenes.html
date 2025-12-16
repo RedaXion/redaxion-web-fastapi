@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Órdenes - RedaXion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .tracking-container {
+            max-width: 600px;
+            margin: 4rem auto;
+            text-align: center;
+        }
+
+        .search-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <div class="tracking-container">
+                <h1>Rastrea tu <span class="text-gradient">Pedido</span></h1>
+                <p style="color: var(--text-gray); margin-bottom: 2rem;">Ingresa el ID de orden que recibiste en tu
+                    correo.</p>
+
+                <div class="search-box">
+                    <form onsubmit="trackOrder(event)">
+                        <div class="form-group">
+                            <input type="text" id="orderInput" placeholder="Ej. 123e4567-e89b..." required
+                                style="width: 100%; padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; font-size: 1.1rem; text-align: center; letter-spacing: 1px; margin-bottom: 1rem;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Buscar Orden 🔍</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function trackOrder(e) {
+            e.preventDefault();
+            const orderId = document.getElementById('orderInput').value.trim();
+            if (orderId) {
+                // Redirect to dashboard with the ID
+                window.location.href = `/dashboard?external_reference=${orderId}`;
+            }
+        }
+    </script>
+</body>
+
+</html>

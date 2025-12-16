@@ -1,0 +1,11 @@
+
+[TRANSCRIPCIÓN SIMULADA]
+Este es un texto generado automáticamente porque el servicio de transcripción no pudo acceder al archivo de audio (probablemente porque estamos en un entorno local sin almacenamiento en la nube real).
+
+En un entorno de producción, aquí aparecería el contenido completode tu grabación.
+Por ahora, utilizaremos este texto base para demostrar la capacidad de RedaXion de:
+1. Analizar el contenido.
+2. Mejorar la redacción.
+3. Generar quizzes de repaso.
+
+El sistema continúa funcionando correctamente.

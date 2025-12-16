@@ -16,7 +16,7 @@ def enviar_correo_con_adjuntos(destinatario: str, asunto: str, cuerpo: str, list
     clave_app = os.environ.get("REDA_CLAVE_APP_GMAIL")
 
     if not remitente or not clave_app:
-        # raise ValueError("Faltan las variables de entorno REDA_CORREO_REMITENTE o REDA_CLAVE_APP_GMAIL")
+        print(f"DEBUG EMAIL: Remitente present? {bool(remitente)}, Clave present? {bool(clave_app)}")
         print("Warning: Email credentials not found. Skipping email.")
         return
 

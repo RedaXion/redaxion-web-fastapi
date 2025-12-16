@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cómo Funciona - RedaXion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <h1 style="text-align: center; margin-bottom: 3rem;">Descubre la Magia de <span
+                    class="text-gradient">RedaXion</span></h1>
+
+            <!-- Side-by-Side Layout -->
+            <div style="display: flex; flex-wrap: wrap; gap: 3rem; align-items: flex-start; justify-content: center;">
+
+                <!-- Left: Video -->
+                <div class="video-container"
+                    style="flex: 1; min-width: 300px; max-width: 600px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+                    <!-- Removed poster attribute so browser renders first frame, unless user provides a valid poster image -->
+                    <video controls width="100%" style="display: block; background: #000;">
+                        <source src="/static/video/explainer.mp4" type="video/mp4">
+                        Tu navegador no soporta el elemento de video.
+                    </video>
+                </div>
+
+                <!-- Right: Text & Steps -->
+                <div style="flex: 1; min-width: 300px;">
+                    <p style="font-size: 1.2rem; margin-bottom: 2rem; color: var(--text-gray);">
+                        Nuestra avanzada Inteligencia Artificial analiza tu audio en tiempo real, identificando los
+                        conceptos clave y estructurando la información mucho más rápido que cualquier transcripción
+                        manual.
+                        <br><br>
+                        <strong style="color: white;">¡Obtén tus apuntes listos en minutos, no en horas!</strong>
+                    </p>
+
+                    <div class="steps-container">
+                        <!-- Step 1 -->
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <div style="font-size: 2rem; margin-right: 1rem; min-width: 40px;">🎤</div>
+                            <div>
+                                <h3 style="margin-bottom: 0.2rem;">1. Graba</h3>
+                                <p style="font-size: 0.9rem; color: var(--text-gray);">Sube el audio de tu clase,
+                                    reunión o nota de voz.</p>
+                            </div>
+                        </div>
+                        <!-- Step 2 -->
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 1.5rem;">
+                            <div style="font-size: 2rem; margin-right: 1rem; min-width: 40px;">🤖</div>
+                            <div>
+                                <h3 style="margin-bottom: 0.2rem;">2. Procesa</h3>
+                                <p style="font-size: 0.9rem; color: var(--text-gray);">La IA transcribe, resume y da
+                                    formato profesional.</p>
+                            </div>
+                        </div>
+                        <!-- Step 3 -->
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="font-size: 2rem; margin-right: 1rem; min-width: 40px;">📄</div>
+                            <div>
+                                <h3 style="margin-bottom: 0.2rem;">3. Descarga</h3>
+                                <p style="font-size: 0.9rem; color: var(--text-gray);">Recibe PDF, DOCX editable y
+                                    preguntas de repaso.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2.5rem;">
+                        <a href="/orden" class="btn btn-primary">¡Quiero Probarlo!</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

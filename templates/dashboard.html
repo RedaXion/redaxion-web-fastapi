@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Panel | RedaXion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        .progress-container {
+            max-width: 600px;
+            margin: 0 auto 3rem auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 5px;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: var(--accent-cyan);
+            border-radius: 50px;
+            width: 0%;
+            transition: width 1s ease-in-out;
+            box-shadow: 0 0 10px rgba(28, 198, 194, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.15) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.15) 50%,
+                    rgba(255, 255, 255, 0.15) 75%,
+                    transparent 75%,
+                    transparent);
+            background-size: 1rem 1rem;
+            animation: progress-stripe 1s linear infinite;
+        }
+
+        @keyframes progress-stripe {
+            0% {
+                background-position: 1rem 0;
+            }
+
+            100% {
+                background-position: 0 0;
+            }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 1rem;
+            font-weight: 600;
+            color: var(--text-gray);
+            min-height: 1.5em;
+        }
+
+        .file-viewer {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            height: 600px;
+        }
+
+        .file-list {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .file-item {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .file-item:hover,
+        .file-item.active {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-item.active {
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .preview-area {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--glass-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1>Tu <span class="text-gradient">Pedido</span></h1>
+                <p>Orden ID: <span id="orden-id-display"
+                        style="font-family: monospace; color: var(--accent-cyan);">Cargando...</span></p>
+            </div>
+
+            <!-- Status Tracker (Progress Bar) -->
+            <div class="progress-wrap">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="progress-text" id="progress-text">Cargando estado...</div>
+            </div>
+
+
+            <!-- Main Content Area -->
+            <!-- Dynamic Content Area -->
+            <div id="status-content" style="text-align: center; margin: 4rem 0;">
+
+                <!-- 1. PENDING STATE -->
+                <div id="pending-state" class="hidden">
+                    <h2 style="margin-bottom: 1rem;">¡Orden Creada! 🚀</h2>
+                    <p class="text-gray-400">Para comenzar a trabajar, necesitamos confirmar tu pago.</p>
+
+                    <div
+                        style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                        <a id="btn-pay-mp" href="#" target="_blank" class="btn btn-primary"
+                            style="background: #009EE3; border: none; padding: 1rem 2rem; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                            <span>💳</span> Pagar con Mercado Pago
+                        </a>
+
+                        <p style="margin: 1rem 0; font-size: 0.9rem; opacity: 0.7;">— O —</p>
+
+                        <div
+                            style="border: 1px dashed var(--accent-orange); padding: 1.5rem; border-radius: 12px; background: rgba(250, 140, 22, 0.05);">
+                            <h4 style="color: var(--accent-orange); margin-bottom: 0.5rem;">Modo Demo / Solución de
+                                Problemas</h4>
+                            <p style="font-size: 0.9rem; margin-bottom: 1rem;">¿El pago falló o estás probando?</p>
+                            <button onclick="simulatePayment()" class="btn"
+                                style="background: var(--accent-orange); color: white; border: none;">
+                                👉 Simular / Confirmar Pago Manualmente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PROCESSING STATE -->
+                <div id="processing-state" class="hidden">
+                    <h2 style="margin-bottom: 1rem;">Estamos trabajando en tu documento 🤖</h2>
+                    <p>Esto puede tomar unos minutos. Te avisaremos cuando esté listo.</p>
+                    <div style="margin-top: 2rem; font-size: 2rem;" class="animate-spin">⏳</div>
+                </div>
+
+            </div>
+
+            <div id="results-area" class="file-viewer hidden">
+                <div class="file-list">
+                    <h3 style="margin-bottom: 1.5rem;">Tus Archivos</h3>
+                    <div id="files-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                <div class="preview-area">
+                    <div id="preview-placeholder" class="loading-overlay" style="background: #f0f0f0; color: #333;">
+                        <p>Selecciona un archivo para previsualizar</p>
+                    </div>
+                    <iframe id="file-frame" class="hidden"></iframe>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // Get Orden ID from URL params (e.g. ?external_reference=...)
+        const params = new URLSearchParams(window.location.search);
+        // MercadoPago sends 'external_reference' or we might rely on 'preference_id'
+        const ordenId = params.get('external_reference') || params.get('orden_id') || localStorage.getItem('last_orden_id');
+
+        document.getElementById('orden-id-display').textContent = ordenId || 'Desconocido';
+
+        function updateProgress(status) {
+            const bar = document.getElementById('progress-bar');
+            const text = document.getElementById('progress-text');
+
+            // Allow default transitions
+            bar.style.transition = 'width 1s ease-in-out';
+
+            // Hide all states first
+            document.getElementById('pending-state').classList.add('hidden');
+            document.getElementById('processing-state').classList.add('hidden');
+            document.getElementById('results-area').classList.add('hidden');
+
+            if (status === 'pending') {
+                bar.style.width = '25%';
+                text.textContent = 'Orden Recibida - Esperando Pago';
+
+                document.getElementById('pending-state').classList.remove('hidden');
+                // Set Checkout URL if available in params
+                const params = new URLSearchParams(window.location.search);
+                const checkoutUrl = params.get('checkout_url');
+                if (checkoutUrl) {
+                    document.getElementById('btn-pay-mp').href = decodeURIComponent(checkoutUrl);
+                } else {
+                    document.getElementById('btn-pay-mp').style.display = 'none';
+                }
+            }
+
+            if (status === 'paid' || status === 'processing') {
+                // If processing, maybe give it a bit more
+                bar.style.width = status === 'paid' ? '50%' : '75%';
+                text.textContent = status === 'paid' ? 'Pago Confirmado - Iniciando...' : 'IA Trabajando en tu documento...';
+
+                document.getElementById('processing-state').classList.remove('hidden');
+            }
+
+            if (status === 'completed') {
+                bar.style.width = '100%';
+                text.textContent = '¡Listo! Descarga tus archivos.';
+                document.getElementById('results-area').classList.remove('hidden');
+            }
+        }
+
+        async function pollStatus() {
+            if (!ordenId) return;
+
+            try {
+                const response = await fetch(`/api/status/${ordenId}`);
+                if (!response.ok) return; // Wait for server
+
+                const data = await response.json();
+                console.log("Status update:", data);
+
+                updateProgress(data.status);
+
+                if (data.status === 'completed' && data.files) {
+                    renderFiles(data.files);
+                    // Stop polling if done
+                    // return; // Optional: keep polling if we expect more updates
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                } else {
+                    setTimeout(pollStatus, 3000); // Poll every 3s
+                }
+            } catch (e) {
+                console.error("Polling error", e);
+                setTimeout(pollStatus, 5000);
+            }
+        }
+
+        function renderFiles(files) {
+            const container = document.getElementById('files-container');
+            container.innerHTML = '';
+
+            // Filter: Only show PDF files
+            const filesToShow = files.filter(f => f.type === 'pdf');
+
+            if (filesToShow.length === 0) {
+                container.innerHTML = '<div style="color: white; opacity: 0.7;">No hay previsualizaciones disponibles. Revisa tu correo.</div>';
+                return;
+            }
+
+            filesToShow.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                if (index === 0) item.classList.add('active'); // Select first default
+
+                let icon = '📕'; // PDF Icon
+
+                item.innerHTML = `
+                    <div style="font-size: 1.5rem;">${icon}</div>
+                    <div>
+                        <div style="font-weight: 600;">${file.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-gray);">${file.type.toUpperCase()}</div>
+                    </div>
+                `;
+
+                item.onclick = () => {
+                    document.querySelectorAll('.file-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    loadPreview(file.url, file.type);
+                };
+
+                container.appendChild(item);
+
+                // Auto load first
+                if (index === 0) loadPreview(file.url, file.type);
+            });
+        }
+
+        function loadPreview(url, type) {
+            const frame = document.getElementById('file-frame');
+            const placeholder = document.getElementById('preview-placeholder');
+
+            placeholder.classList.add('hidden');
+            frame.classList.remove('hidden');
+
+
+            if (type === 'pdf') {
+                frame.src = url + "?t=" + new Date().getTime();
+            } else {
+                // For DOCX, we might not be able to preview simply in iframe unless we rely on GViewer
+                // For now, use GViewer fallback or just download
+                frame.src = `https://docs.google.com/gview?url=${window.location.origin}${url}&embedded=true`;
+
+                // Show message if GView might fail (localhost)
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (isLocal) {
+                    placeholder.innerHTML = `<p>⚠️ En modo Local (localhost), Google Docs no puede previsualizar tus archivos DOCX.<br>Descárgalos para verlos.</p>`;
+                    placeholder.classList.remove('hidden');
+                    frame.classList.add('hidden');
+                }
+            }
+        }
+
+        function simulatePayment() {
+            if (!ordenId) return;
+            // Reload with special params to trigger backend processing
+            window.location.href = `/dashboard?external_reference=${ordenId}&collection_status=approved`;
+        }
+
+        // Start
+        if (ordenId) {
+            pollStatus();
+        } else {
+            document.getElementById('loading-state').innerHTML = "<h3>No se encontró el pedido</h3><p>Verifica el enlace o contacta soporte.</p>";
+        }
+    </script>
+</body>
+
+</html>
