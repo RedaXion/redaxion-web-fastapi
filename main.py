@@ -113,6 +113,11 @@ from services.exam_formatting import guardar_examen_como_docx, guardar_examen_co
 from services.meeting_processing import procesar_reunion
 from services.meeting_formatting import guardar_acta_reunion_como_docx, guardar_acta_reunion_como_pdf
 
+# Payment Gateway - "flow" or "mercadopago"
+from services.flow_payment import crear_pago_flow, obtener_estado_pago, status_code_to_string
+PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "flow")
+print(f"💳 Payment Gateway: {PAYMENT_GATEWAY.upper()}")
+
 # ORDERS_DB Removed - Using SQLite now
 
 async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = None, user_metadata: dict = None):
@@ -390,43 +395,70 @@ async def crear_prueba(
     }
     
     try:
-        preference_data = {
-            "items": [{
-                "title": f"Generador de Pruebas - {asignatura}",
-                "quantity": 1,
-                "unit_price": float(SPECIAL_SERVICES_PRICE),
-                "currency_id": PRICE_CURRENCY
-            }],
-            "payer": {"email": correo},
-            "back_urls": {
-                "success": f"{BASE_URL}/dashboard",
-                "failure": f"{BASE_URL}/dashboard",
-                "pending": f"{BASE_URL}/dashboard"
-            },
-            "external_reference": orden_id,
-            "metadata": {
-                "orden_id": orden_id,
-                "service_type": "exam",
-                **exam_metadata
-            }
-        }
-        
-        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
-            preference_data["auto_return"] = "approved"
-        
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response["response"]
-        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
-        
-        if not checkout_url:
-            # Mock payment for testing
-            background_tasks.add_task(
-                procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
-                preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+        # Use Flow or MercadoPago based on configuration
+        if PAYMENT_GATEWAY == "flow":
+            resultado_pago = crear_pago_flow(
+                orden_id=orden_id,
+                monto=SPECIAL_SERVICES_PRICE,
+                email=correo,
+                descripcion=f"Generador de Pruebas - {asignatura}",
+                url_retorno=f"{BASE_URL}/dashboard?external_reference={orden_id}",
+                url_confirmacion=f"{BASE_URL}/api/flow-webhook",
+                optional_data=exam_metadata
             )
-            return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
+            
+            if resultado_pago.get("mock"):
+                # Mock payment - start processing immediately
+                background_tasks.add_task(
+                    procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
+                    preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+                )
+            
+            checkout_url = resultado_pago.get("checkout_url")
+            if not checkout_url:
+                raise Exception(resultado_pago.get("error", "Error creando pago"))
+            
+            return {"orden_id": orden_id, "checkout_url": checkout_url}
         
-        return {"orden_id": orden_id, "checkout_url": checkout_url}
+        else:
+            # MercadoPago (legacy)
+            preference_data = {
+                "items": [{
+                    "title": f"Generador de Pruebas - {asignatura}",
+                    "quantity": 1,
+                    "unit_price": float(SPECIAL_SERVICES_PRICE),
+                    "currency_id": PRICE_CURRENCY
+                }],
+                "payer": {"email": correo},
+                "back_urls": {
+                    "success": f"{BASE_URL}/dashboard",
+                    "failure": f"{BASE_URL}/dashboard",
+                    "pending": f"{BASE_URL}/dashboard"
+                },
+                "external_reference": orden_id,
+                "metadata": {
+                    "orden_id": orden_id,
+                    "service_type": "exam",
+                    **exam_metadata
+                }
+            }
+            
+            if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+                preference_data["auto_return"] = "approved"
+            
+            preference_response = sdk.preference().create(preference_data)
+            preference = preference_response["response"]
+            checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
+            
+            if not checkout_url:
+                # Mock payment for testing
+                background_tasks.add_task(
+                    procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
+                    preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+                )
+                return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
+            
+            return {"orden_id": orden_id, "checkout_url": checkout_url}
         
     except Exception as e:
         print(f"Error creating exam order: {e}")
@@ -534,46 +566,77 @@ async def crear_orden_reunion(
     
     print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'}")
     
+    meeting_metadata = {
+        "titulo_reunion": titulo_reunion,
+        "asistentes": asistentes,
+        "agenda": agenda
+    }
+    
     try:
-        preference_data = {
-            "items": [{
-                "title": "Transcripción de Reunión - RedaXion",
-                "quantity": 1,
-                "unit_price": float(SPECIAL_SERVICES_PRICE),
-                "currency_id": PRICE_CURRENCY
-            }],
-            "payer": {"email": correo},
-            "back_urls": {
-                "success": f"{BASE_URL}/dashboard",
-                "failure": f"{BASE_URL}/dashboard",
-                "pending": f"{BASE_URL}/dashboard"
-            },
-            "external_reference": orden_id,
-            "metadata": {
-                "orden_id": orden_id,
-                "service_type": "meeting",
-                "titulo_reunion": titulo_reunion,
-                "asistentes": asistentes,
-                "agenda": agenda
-            }
-        }
-        
-        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
-            preference_data["auto_return"] = "approved"
-        
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response["response"]
-        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
-        
-        if not checkout_url:
-            # Mock payment for testing
-            background_tasks.add_task(
-                procesar_y_enviar_reunion, orden_id, audio_url, titulo_reunion,
-                asistentes, agenda, correo, nombre
+        # Use Flow or MercadoPago based on configuration
+        if PAYMENT_GATEWAY == "flow":
+            resultado_pago = crear_pago_flow(
+                orden_id=orden_id,
+                monto=SPECIAL_SERVICES_PRICE,
+                email=correo,
+                descripcion="Transcripción de Reunión - RedaXion",
+                url_retorno=f"{BASE_URL}/dashboard?external_reference={orden_id}",
+                url_confirmacion=f"{BASE_URL}/api/flow-webhook",
+                optional_data=meeting_metadata
             )
-            return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
+            
+            if resultado_pago.get("mock"):
+                # Mock payment - start processing immediately
+                background_tasks.add_task(
+                    procesar_y_enviar_reunion, orden_id, audio_url, titulo_reunion,
+                    asistentes, agenda, correo, nombre
+                )
+            
+            checkout_url = resultado_pago.get("checkout_url")
+            if not checkout_url:
+                raise Exception(resultado_pago.get("error", "Error creando pago"))
+            
+            return {"orden_id": orden_id, "checkout_url": checkout_url}
         
-        return {"orden_id": orden_id, "checkout_url": checkout_url}
+        else:
+            # MercadoPago (legacy)
+            preference_data = {
+                "items": [{
+                    "title": "Transcripción de Reunión - RedaXion",
+                    "quantity": 1,
+                    "unit_price": float(SPECIAL_SERVICES_PRICE),
+                    "currency_id": PRICE_CURRENCY
+                }],
+                "payer": {"email": correo},
+                "back_urls": {
+                    "success": f"{BASE_URL}/dashboard",
+                    "failure": f"{BASE_URL}/dashboard",
+                    "pending": f"{BASE_URL}/dashboard"
+                },
+                "external_reference": orden_id,
+                "metadata": {
+                    "orden_id": orden_id,
+                    "service_type": "meeting",
+                    **meeting_metadata
+                }
+            }
+            
+            if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+                preference_data["auto_return"] = "approved"
+            
+            preference_response = sdk.preference().create(preference_data)
+            preference = preference_response["response"]
+            checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
+            
+            if not checkout_url:
+                # Mock payment for testing
+                background_tasks.add_task(
+                    procesar_y_enviar_reunion, orden_id, audio_url, titulo_reunion,
+                    asistentes, agenda, correo, nombre
+                )
+                return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
+            
+            return {"orden_id": orden_id, "checkout_url": checkout_url}
         
     except Exception as e:
         print(f"Error creating meeting order: {e}")
@@ -656,6 +719,76 @@ async def crear_orden_reunion_test(
     )
     
     return {"orden_id": orden_id, "message": "Procesando en modo test"}
+
+
+# --- Flow Payment Webhook ---
+
+@app.post("/api/flow-webhook")
+async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
+    """
+    Handle Flow payment confirmation webhook.
+    Flow sends a POST with token to confirm payment status.
+    """
+    try:
+        form_data = await request.form()
+        token = form_data.get("token")
+        
+        if not token:
+            print("⚠️ Flow webhook: No token received")
+            return JSONResponse({"error": "No token"}, status_code=400)
+        
+        print(f"💳 Flow webhook recibido: token={token[:20]}...")
+        
+        # Get payment status from Flow
+        status_data = obtener_estado_pago(token)
+        
+        if "error" in status_data:
+            print(f"❌ Error obteniendo estado de pago: {status_data['error']}")
+            return JSONResponse({"error": status_data["error"]}, status_code=500)
+        
+        flow_status = status_data.get("status", 0)
+        commerce_order = status_data.get("commerceOrder")  # This is our orden_id
+        
+        print(f"📋 Flow status: {flow_status} ({status_code_to_string(flow_status)}) - Order: {commerce_order}")
+        
+        if flow_status == 2:  # PAGADA (Paid)
+            # Get order from database
+            order = database.get_order(commerce_order)
+            
+            if order and order.get("status") == "pending":
+                service_type = order.get("service_type", "")
+                
+                # Trigger processing based on service type
+                if service_type == "exam":
+                    # For exam, we need the metadata that was stored
+                    # Since we don't store it directly, we'll need to handle this differently
+                    # For now, mark as paid and let dashboard show status
+                    database.update_order_status(commerce_order, "paid")
+                    print(f"✅ Pago confirmado para orden de examen: {commerce_order}")
+                    
+                elif service_type == "meeting":
+                    database.update_order_status(commerce_order, "paid")
+                    print(f"✅ Pago confirmado para orden de reunión: {commerce_order}")
+                    
+                else:
+                    # Standard transcription order
+                    database.update_order_status(commerce_order, "paid")
+                    print(f"✅ Pago confirmado para orden: {commerce_order}")
+        
+        elif flow_status == 3:  # RECHAZADA (Rejected)
+            database.update_order_status(commerce_order, "failed")
+            print(f"❌ Pago rechazado para orden: {commerce_order}")
+            
+        elif flow_status == 4:  # ANULADA (Cancelled)
+            database.update_order_status(commerce_order, "cancelled")
+            print(f"⚠️ Pago anulado para orden: {commerce_order}")
+        
+        return JSONResponse({"status": "ok"})
+        
+    except Exception as e:
+        print(f"❌ Error en Flow webhook: {e}")
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.post("/api/get-upload-url")
