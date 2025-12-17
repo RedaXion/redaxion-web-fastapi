@@ -245,7 +245,7 @@ DALLE_COLOR_MAP = {
 }
 
 def extract_titles_from_text(texto: str) -> str:
-    """Extract all # and ## titles from the processed text."""
+    """Extract ALL # and ## titles from the processed text."""
     titles = []
     for line in texto.split('\n'):
         line = line.strip()
@@ -254,8 +254,30 @@ def extract_titles_from_text(texto: str) -> str:
             if title and len(title) > 2:
                 titles.append(title)
     
-    # Limit to first 5 titles to keep prompt concise
-    return ", ".join(titles[:5]) if titles else "academic educational content"
+    # Return all titles joined
+    return ", ".join(titles) if titles else "academic educational content"
+
+def summarize_titles_with_gpt(titles: str) -> str:
+    """Use GPT to create an expanded thematic description from titles."""
+    if not _dalle_client:
+        return titles[:200]  # Fallback: just truncate
+    
+    try:
+        response = _dalle_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant. Given a list of academic topics/titles, create a rich, descriptive summary (2-3 sentences) that captures the full scope and key concepts. This will be used to generate an educational diagram. Output ONLY the description in English."},
+                {"role": "user", "content": f"Topics: {titles}"}
+            ],
+            temperature=0.3,
+            max_tokens=150
+        )
+        summary = response.choices[0].message.content.strip()
+        print(f"📝 Tema expandido por GPT: {summary[:100]}...")
+        return summary
+    except Exception as e:
+        print(f"⚠️ Error summarizing with GPT: {e}")
+        return titles[:200]  # Fallback
 
 def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> BytesIO:
     """
@@ -267,16 +289,19 @@ def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> Byte
         return None
     
     try:
-        # Extract titles for context
-        titles = extract_titles_from_text(texto)
+        # Extract ALL titles for context
+        all_titles = extract_titles_from_text(texto)
+        
+        # Use GPT to create an expanded thematic description
+        theme_description = summarize_titles_with_gpt(all_titles)
         
         # Get color description
         color_normalized = color.strip().lower()
         color_desc = DALLE_COLOR_MAP.get(color_normalized, "blue and white")
         
-        # Build prompt
+        # Build prompt with expanded theme
         prompt = f"""Create a clean, professional academic infographic or conceptual diagram.
-Topic: {titles}
+Topic and scope: {theme_description}
 Style: Modern, minimalist, medical/academic aesthetic. Abstract conceptual representation.
 Color palette: Predominantly {color_desc} tones.
 Important: No text, no letters, no words in the image. Pure visual/abstract representation."""
