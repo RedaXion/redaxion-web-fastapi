@@ -37,6 +37,7 @@ def startup_event():
 # --- Configuration ---
 MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+print(f"📦 GCS_BUCKET_NAME configurado: {GCS_BUCKET_NAME or '(no configurado)'}")
 # Fixed price for now as per requirements
 PRICE_AMOUNT = 3000
 PRICE_CURRENCY = "CLP"
