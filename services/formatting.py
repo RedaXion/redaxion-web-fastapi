@@ -299,14 +299,14 @@ def summarize_titles_with_gpt(titles: str) -> str:
         print(f"⚠️ Error summarizing with GPT: {e}")
         return titles[:200]  # Fallback
 
-def generate_cover_image_gemini(texto: str, color: str = "azul elegante") -> BytesIO:
+def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> BytesIO:
     """
-    Generate a cover image using Gemini Imagen based on document titles and color scheme.
-    Creates minimalist Napkin-style educational diagrams.
+    Generate a cover image using DALL-E 3 based on document titles and color scheme.
+    Creates flat, minimalist vector-style educational diagrams.
     Returns image as BytesIO or None if generation fails.
     """
-    if not _gemini_client:
-        print("⚠️ No GOOGLE_AI_API_KEY configured. Skipping Gemini image generation.")
+    if not _openai_client:
+        print("⚠️ No OPENAI_API_KEY configured. Skipping DALL-E image generation.")
         return None
     
     try:
@@ -320,50 +320,47 @@ def generate_cover_image_gemini(texto: str, color: str = "azul elegante") -> Byt
         color_normalized = color.strip().lower()
         color_desc = COLOR_MAP.get(color_normalized, "blue and white")
         
-        # Build prompt for Napkin-style minimalist diagram
-        prompt = f"""Create a clean, minimalist educational infographic or flowchart diagram.
+        # IMPROVED PROMPT: Very specific for flat minimalist style
+        prompt = f"""Create a FLAT, 2D vector-style educational diagram. 
 
-Topic: {theme_description}
+TOPIC: {theme_description}
 
-Style requirements:
-- Minimalist design like Napkin AI diagrams
-- Simple geometric shapes and icons
-- Clean connecting lines and arrows
-- {color_desc} color palette on white background
-- Abstract conceptual representation
-- NO realistic images or photographs
-- NO text, letters, or words in the image
-- Professional academic/medical aesthetic"""
+MANDATORY STYLE:
+- Flat design, NO 3D effects, NO shadows, NO gradients
+- Simple geometric shapes (circles, squares, hexagons)
+- Thin clean lines connecting concepts
+- Icons in a simple line-art style
+- Pure white background
+- {color_desc} color scheme only
+- Looks like a hand-drawn whiteboard sketch
+- Similar to Notion, Figma, or Napkin AI diagrams
+- NO photographs, NO realistic elements
+- NO text, NO letters, NO words, NO labels
+- Central concept with 3-4 connected sub-concepts
+- Minimalist, clean, professional"""
 
-        print(f"🎨 Generando imagen Gemini con estilo Napkin: {color_desc}")
+        print(f"🎨 Generando imagen DALL-E con estilo flat/vector: {color_desc}")
         
-        # Try new google-genai API first
-        try:
-            result = _gemini_client.models.generate_images(
-                model="imagen-3.0-generate-001",
-                prompt=prompt,
-                config={
-                    "number_of_images": 1,
-                    "aspect_ratio": "1:1",
-                }
-            )
-            
-            if result.generated_images:
-                image_data = result.generated_images[0].image.image_bytes
-                print("✅ Imagen Gemini generada exitosamente")
-                return BytesIO(image_data)
-        except AttributeError:
-            # Fallback for older API
-            model = _gemini_client.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            print("⚠️ Gemini text model used - image generation not available with this API version")
-            return None
+        response = _openai_client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            style="natural",  # More literal interpretation
+            n=1,
+        )
         
-        print("⚠️ Gemini no generó ninguna imagen")
-        return None
+        image_url = response.data[0].url
+        
+        # Download the image
+        img_response = requests.get(image_url)
+        img_response.raise_for_status()
+        
+        print("✅ Imagen DALL-E generada exitosamente")
+        return BytesIO(img_response.content)
         
     except Exception as e:
-        print(f"❌ Error generando imagen Gemini: {e}")
+        print(f"❌ Error generando imagen DALL-E: {e}")
         return None
 
 def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscuro", columnas="simple"):
@@ -382,8 +379,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # Generate cover image with Gemini (using titles and color scheme)
-    cover_img = generate_cover_image_gemini(texto, color)
+    # Generate cover image with DALL-E (using titles and color scheme)
+    cover_img = generate_cover_image_dalle(texto, color)
     if cover_img:
         try:
             doc.add_picture(cover_img, width=Inches(3) if columnas=="doble" else Inches(5))
@@ -391,7 +388,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             doc.add_paragraph("") # Spacing
         except Exception as e:
-            print(f"Error inserting Gemini cover image: {e}")
+            print(f"Error inserting DALL-E cover image: {e}")
 
     texto_lineas = texto.split('\n')
     titulo_agregado = False
