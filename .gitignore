@@ -38,3 +38,4 @@ static/generated/*.pdf
 # Videos (too large for GitHub, host externally)
 static/video/*.MP4
 static/video/*.mp4
+!static/video/videobanner.mp4
