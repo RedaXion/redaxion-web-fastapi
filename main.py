@@ -21,6 +21,20 @@ load_dotenv()
 
 app = FastAPI(title="RedaXion API")
 
+# Configure max request body size (1GB for large audio files)
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class LargeRequestMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Allow large file uploads
+        return await call_next(request)
+
+app.add_middleware(LargeRequestMiddleware)
+
+# Override default body size limit (1GB = 1073741824 bytes)
+from starlette.requests import Request as StarletteRequest
+StarletteRequest.max_body_size = 1073741824  # 1GB
+
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
