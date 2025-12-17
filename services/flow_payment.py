@@ -95,9 +95,10 @@ def crear_pago_flow(
             "urlReturn": url_retorno,
         }
         
-        # Add optional data if provided
+        # Add optional data if provided (must be JSON string for Flow)
         if optional_data:
-            pago_data["optional"] = optional_data
+            import json
+            pago_data["optional"] = json.dumps(optional_data)
         
         print(f"💳 Creando pago Flow: {orden_id} - ${monto} CLP")
         resultado = Payment.create(client, pago_data)
