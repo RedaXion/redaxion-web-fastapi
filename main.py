@@ -221,6 +221,7 @@ async def testimonios(request: Request):
 import traceback
 import re
 from urllib.parse import quote
+from datetime import timedelta
 
 def sanitize_filename(filename: str) -> str:
     """Remove spaces and special characters from filename."""
@@ -247,11 +248,16 @@ async def upload_to_gcs(file: UploadFile, destination_blob_name: str) -> str:
             content = await file.read()
             blob.upload_from_string(content, content_type=file.content_type or "audio/mpeg")
             
-            # Make the blob publicly accessible
-            blob.make_public()
+            # Generate a signed URL (valid for 7 days) instead of make_public()
+            # This works with uniform bucket-level access
+            public_url = blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(days=7),
+                method="GET"
+            )
             
-            public_url = blob.public_url
-            print(f"✅ Audio subido a GCS: {public_url}")
+            print(f"✅ Audio subido a GCS: {safe_filename}")
+            print(f"📎 URL firmada (válida 7 días): {public_url[:80]}...")
             return public_url
         except Exception as e:
             print(f"⚠️ Error subiendo a GCS: {e}")
