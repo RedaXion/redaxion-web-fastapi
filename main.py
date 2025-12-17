@@ -217,6 +217,54 @@ async def como_funciona(request: Request):
 async def testimonios(request: Request):
     return templates.TemplateResponse("testimonios.html", {"request": request})
 
+# --- Direct GCS Upload Endpoint ---
+@app.post("/api/get-upload-url")
+async def get_upload_url(filename: str = Form(...)):
+    """
+    Generate a signed URL for direct browser-to-GCS upload.
+    This bypasses Railway's file size limits.
+    """
+    if not storage_client or not GCS_BUCKET_NAME:
+        raise HTTPException(status_code=500, detail="GCS not configured")
+    
+    try:
+        # Generate unique filename
+        orden_id = str(uuid.uuid4())
+        safe_filename = sanitize_filename(filename)
+        blob_name = f"{orden_id}_{safe_filename}"
+        
+        bucket = storage_client.bucket(GCS_BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+        
+        # Generate signed URL for PUT (upload)
+        upload_url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(minutes=60),  # URL valid for 60 minutes
+            method="PUT",
+            content_type="application/octet-stream",
+        )
+        
+        # Also generate the public URL for later use
+        public_url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(days=7),
+            method="GET",
+        )
+        
+        print(f"📤 URL de subida generada para: {blob_name}")
+        
+        return JSONResponse({
+            "success": True,
+            "upload_url": upload_url,
+            "public_url": public_url,
+            "blob_name": blob_name,
+            "orden_id": orden_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Error generando URL de subida: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 import traceback
 import re
 from urllib.parse import quote
@@ -369,6 +417,87 @@ async def crear_orden(
         print("DEBUG: ERROR IN CREAR_ORDEN")
         traceback.print_exc()
         print(f"Error details: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating payment: {str(e)}")
+
+# --- New endpoint for direct GCS upload orders ---
+@app.post("/api/orden-gcs")
+async def crear_orden_gcs(
+    nombre: str = Form(...),
+    correo: str = Form(...),
+    color: str = Form(...),
+    columnas: str = Form(...),
+    audio_url: str = Form(...),  # Pre-uploaded GCS URL
+    orden_id: str = Form(...)    # Order ID from get-upload-url
+):
+    """
+    Create order with pre-uploaded audio from GCS.
+    Used for large files that bypass Railway's upload limits.
+    """
+    # 1. Save metadata to DB
+    order_data = {
+        "id": orden_id,
+        "status": "pending",
+        "client": nombre,
+        "email": correo,
+        "color": color,
+        "columnas": columnas,
+        "files": [],
+        "audio_url": audio_url
+    }
+    database.create_order(order_data)
+    
+    print(f"Nueva orden GCS recibida (DB): {orden_id} - Cliente: {nombre}")
+
+    # 2. Create Preference in Mercado Pago
+    try:
+        preference_data = {
+            "items": [
+                {
+                    "title": "Transcripción RedaXion",
+                    "quantity": 1,
+                    "unit_price": float(PRICE_AMOUNT),
+                    "currency_id": PRICE_CURRENCY
+                }
+            ],
+            "payer": {
+                "email": correo
+            },
+            "back_urls": {
+                "success": f"{BASE_URL}/dashboard",
+                "failure": f"{BASE_URL}/dashboard",
+                "pending": f"{BASE_URL}/dashboard"
+            },
+            "external_reference": orden_id,
+            "metadata": {
+                "orden_id": orden_id,
+                "email": correo,
+                "color": color,
+                "columnas": columnas
+            }
+        }
+        
+        # Only use auto_return in production
+        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+            preference_data["auto_return"] = "approved"
+
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
+        
+        # Use production or sandbox URL
+        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
+        
+        if not checkout_url:
+            print(f"Error: No checkout URL. Response: {preference}")
+            return {
+                "orden_id": orden_id,
+                "checkout_url": f"/dashboard?external_reference={orden_id}&mock_payment=true" 
+            }
+
+        return {"orden_id": orden_id, "checkout_url": checkout_url}
+        
+    except Exception as e:
+        print(f"ERROR IN CREAR_ORDEN_GCS: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error generating payment: {str(e)}")
 
 @app.get("/dashboard", response_class=HTMLResponse)
