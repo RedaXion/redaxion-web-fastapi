@@ -48,11 +48,25 @@ BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8002")
 # Initialize Mercado Pago SDK
 sdk = mercadopago.SDK(MERCADOPAGO_ACCESS_TOKEN)
 
-# Initialize GCS Client (Mocked if fails)
+# Initialize GCS Client
+storage_client = None
 try:
-    storage_client = storage.Client()
+    # Option 1: Try loading from JSON env var (Railway)
+    gcs_credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    if gcs_credentials_json:
+        import json
+        from google.oauth2 import service_account
+        credentials_dict = json.loads(gcs_credentials_json)
+        credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+        storage_client = storage.Client(credentials=credentials, project=credentials_dict.get("project_id"))
+        print("✅ GCS Client inicializado desde GOOGLE_CREDENTIALS_JSON")
+    else:
+        # Option 2: Try default credentials (local dev with gcloud auth)
+        storage_client = storage.Client()
+        print("✅ GCS Client inicializado con credenciales por defecto")
 except Exception as e:
-    print(f"Warning: Could not initialize GCS client: {e}")
+    print(f"⚠️ Warning: Could not initialize GCS client: {e}")
+    print("   El sistema usará almacenamiento local como fallback.")
     storage_client = None
 
 # --- Services ---
@@ -156,7 +170,7 @@ Adjuntamos los documentos generados:
 2. Quiz de Repaso
 
 Puedes ver el estado y descargar tus archivos también en tu dashboard:
-http://127.0.0.1:8002/dashboard?external_reference={orden_id}
+{BASE_URL}/dashboard?external_reference={orden_id}
 
 Gracias por confiar en nosotros.
 Equipo RedaXion.
@@ -207,24 +221,42 @@ import traceback
 
 async def upload_to_gcs(file: UploadFile, destination_blob_name: str) -> str:
     """
-    Saves audio file locally and returns a public URL.
-    AssemblyAI will download from this URL for transcription.
+    Uploads audio file to GCS and returns a public URL.
+    Falls back to local storage if GCS is not configured.
     """
+    if storage_client and GCS_BUCKET_NAME:
+        try:
+            bucket = storage_client.bucket(GCS_BUCKET_NAME)
+            blob = bucket.blob(destination_blob_name)
+            
+            content = await file.read()
+            blob.upload_from_string(content, content_type=file.content_type)
+            
+            # Make the blob publicly accessible
+            blob.make_public()
+            
+            public_url = blob.public_url
+            print(f"✅ Audio subido a GCS: {public_url}")
+            return public_url
+        except Exception as e:
+            print(f"⚠️ Error subiendo a GCS: {e}")
+            print("   Usando almacenamiento local como fallback...")
+    
+    # Fallback: Local storage
     upload_dir = "static/uploads"
     os.makedirs(upload_dir, exist_ok=True)
     
-    # Sanitize filename
     safe_filename = destination_blob_name.replace("/", "_")
     file_path = f"{upload_dir}/{safe_filename}"
     
-    # Save the file
+    # Reset file position if already read
+    await file.seek(0)
     content = await file.read()
     with open(file_path, "wb") as f:
         f.write(content)
     
-    print(f"✅ Audio guardado: {file_path} ({len(content)} bytes)")
+    print(f"📁 Audio guardado localmente: {file_path} ({len(content)} bytes)")
     
-    # Return public URL (BASE_URL must be set in production)
     public_url = f"{BASE_URL}/{file_path}"
     print(f"📎 URL pública: {public_url}")
     return public_url
