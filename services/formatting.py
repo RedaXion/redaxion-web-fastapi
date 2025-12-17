@@ -307,7 +307,6 @@ Color palette: Predominantly {color_desc} tones.
 Important: No text, no letters, no words in the image. Pure visual/abstract representation."""
 
         print(f"🎨 Generando imagen DALL-E con colores: {color_desc}")
-        print(f"📝 Títulos: {titles[:100]}...")
         
         response = _dalle_client.images.generate(
             model="dall-e-3",
