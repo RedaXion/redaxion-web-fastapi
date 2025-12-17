@@ -41,6 +41,9 @@ GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 PRICE_AMOUNT = 3000
 PRICE_CURRENCY = "CLP"
 
+# Base URL for callbacks (use production URL in Railway)
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8002")
+
 # --- Clients ---
 # Initialize Mercado Pago SDK
 sdk = mercadopago.SDK(MERCADOPAGO_ACCESS_TOKEN)
@@ -254,19 +257,22 @@ async def crear_orden(
                 "email": correo
             },
             "back_urls": {
-                "success": "http://127.0.0.1:8002/dashboard",
-                "failure": "http://127.0.0.1:8002/dashboard",
-                "pending": "http://127.0.0.1:8002/dashboard"
+                "success": f"{BASE_URL}/dashboard",
+                "failure": f"{BASE_URL}/dashboard",
+                "pending": f"{BASE_URL}/dashboard"
             },
-            "auto_return": "approved",
             "external_reference": orden_id,
-             "metadata": {
+            "metadata": {
                 "orden_id": orden_id,
                 "email": correo,
                 "color": color,
                 "columnas": columnas
             }
         }
+        
+        # Only use auto_return in production (MercadoPago rejects localhost URLs)
+        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+            preference_data["auto_return"] = "approved"
 
         preference_response = sdk.preference().create(preference_data)
         preference = preference_response["response"]

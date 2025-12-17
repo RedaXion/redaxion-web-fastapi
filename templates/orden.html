@@ -118,6 +118,69 @@
             color: #fff;
             border: 1px solid tomato;
         }
+
+        /* Upload Progress Bar */
+        .upload-progress-container {
+            max-width: 100%;
+            margin: 1.5rem 0;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 4px;
+            display: none;
+        }
+
+        .upload-progress-container.active {
+            display: block;
+        }
+
+        .upload-progress-bar {
+            height: 16px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));
+            border-radius: 50px;
+            width: 0%;
+            transition: width 0.3s ease-out;
+            box-shadow: 0 0 10px rgba(28, 198, 194, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.15) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.15) 50%,
+                    rgba(255, 255, 255, 0.15) 75%,
+                    transparent 75%,
+                    transparent);
+            background-size: 1rem 1rem;
+            animation: progress-stripe 1s linear infinite;
+        }
+
+        @keyframes progress-stripe {
+            0% {
+                background-position: 1rem 0;
+            }
+
+            100% {
+                background-position: 0 0;
+            }
+        }
+
+        .upload-progress-text {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -184,6 +247,12 @@
                     </button>
                 </form>
 
+                <!-- Upload Progress Bar -->
+                <div class="upload-progress-container" id="upload-progress-container">
+                    <div class="upload-progress-bar" id="upload-progress-bar"></div>
+                </div>
+                <div class="upload-progress-text" id="upload-progress-text" style="display: none;"></div>
+
                 <div id="status"></div>
             </div>
         </div>
@@ -209,51 +278,85 @@
             }
         });
 
-        // Form Submission
-        document.getElementById('redaxionForm').addEventListener('submit', async (e) => {
+        // Form Submission with XMLHttpRequest for upload progress
+        document.getElementById('redaxionForm').addEventListener('submit', function (e) {
             e.preventDefault();
             const statusDiv = document.getElementById('status');
             const submitBtn = e.target.querySelector('button[type="submit"]');
+            const progressContainer = document.getElementById('upload-progress-container');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
 
-            statusDiv.style.display = 'block';
-            statusDiv.textContent = 'Subiendo audio... esto puede tardar unos segundos.';
-            statusDiv.className = '';
+            // Show progress bar
+            progressContainer.classList.add('active');
+            progressText.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Preparando subida...';
+
+            statusDiv.style.display = 'none';
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Procesando...';
+            submitBtn.textContent = 'Subiendo...';
 
             const formData = new FormData(e.target);
 
-            try {
-                // Adjust URL if needed for production
-                const response = await fetch('/api/orden', {
-                    method: 'POST',
-                    body: formData
-                });
+            const xhr = new XMLHttpRequest();
 
-                const result = await response.json();
+            // Track upload progress
+            xhr.upload.addEventListener('progress', function (event) {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.textContent = `Subiendo audio... ${percentComplete}%`;
+                }
+            });
 
-                if (response.ok) {
+            xhr.upload.addEventListener('load', function () {
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Subida completa. Creando orden...';
+            });
+
+            xhr.addEventListener('load', function () {
+                progressContainer.classList.remove('active');
+                progressText.style.display = 'none';
+
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const result = JSON.parse(xhr.responseText);
+                    statusDiv.style.display = 'block';
                     statusDiv.className = 'success';
                     statusDiv.innerHTML = `
                         <strong>¡Éxito!</strong> Orden creada.<br>
                         Te estamos llevando a tu panel para finalizar...
                     `;
-                    // Redirect to Dashboard FIRST
-                    // We pass the checkout_url so the dashboard can show the 'Pay' button
                     const dashboardUrl = `/dashboard?external_reference=${result.orden_id}&checkout_url=${encodeURIComponent(result.checkout_url)}`;
-
                     setTimeout(() => {
                         window.location.href = dashboardUrl;
                     }, 1000);
                 } else {
-                    throw new Error(result.detail || 'Error desconocido');
+                    let errorMessage = 'Error desconocido';
+                    try {
+                        const result = JSON.parse(xhr.responseText);
+                        errorMessage = result.detail || errorMessage;
+                    } catch (e) { }
+                    statusDiv.style.display = 'block';
+                    statusDiv.className = 'error';
+                    statusDiv.textContent = 'Error: ' + errorMessage;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Generar Orden y Pagar';
                 }
-            } catch (error) {
+            });
+
+            xhr.addEventListener('error', function () {
+                progressContainer.classList.remove('active');
+                progressText.style.display = 'none';
+                statusDiv.style.display = 'block';
                 statusDiv.className = 'error';
-                statusDiv.textContent = 'Error: ' + error.message;
+                statusDiv.textContent = 'Error de red. Por favor, intenta de nuevo.';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Generar Orden y Pagar';
-            }
+            });
+
+            xhr.open('POST', '/api/orden');
+            xhr.send(formData);
         });
     </script>
 </body>

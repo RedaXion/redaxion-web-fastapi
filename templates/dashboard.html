@@ -220,12 +220,12 @@
 
         document.getElementById('orden-id-display').textContent = ordenId || 'Desconocido';
 
+        let progressInterval = null;
+        let currentProgress = 0;
+
         function updateProgress(status) {
             const bar = document.getElementById('progress-bar');
             const text = document.getElementById('progress-text');
-
-            // Allow default transitions
-            bar.style.transition = 'width 1s ease-in-out';
 
             // Hide all states first
             document.getElementById('pending-state').classList.add('hidden');
@@ -233,6 +233,13 @@
             document.getElementById('results-area').classList.add('hidden');
 
             if (status === 'pending') {
+                // Clear any running animation
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                currentProgress = 25;
+                bar.style.transition = 'width 0.5s ease-out';
                 bar.style.width = '25%';
                 text.textContent = 'Orden Recibida - Esperando Pago';
 
@@ -248,14 +255,64 @@
             }
 
             if (status === 'paid' || status === 'processing') {
-                // If processing, maybe give it a bit more
-                bar.style.width = status === 'paid' ? '50%' : '75%';
-                text.textContent = status === 'paid' ? 'Pago Confirmado - Iniciando...' : 'IA Trabajando en tu documento...';
-
                 document.getElementById('processing-state').classList.remove('hidden');
+
+                // Start gradual progress animation
+                if (!progressInterval) {
+                    // Start from current position or 30%
+                    if (currentProgress < 30) currentProgress = 30;
+
+                    const statusTexts = [
+                        'Pago Confirmado - Iniciando...',
+                        'Transcribiendo audio con IA...',
+                        'Procesando texto con ChatGPT...',
+                        'Aplicando formato al documento...',
+                        'Generando cuestionario...',
+                        'Finalizando archivos...'
+                    ];
+                    let textIndex = status === 'paid' ? 0 : 1;
+                    text.textContent = statusTexts[textIndex];
+
+                    bar.style.transition = 'width 0.3s ease-out';
+                    bar.style.width = currentProgress + '%';
+
+                    progressInterval = setInterval(() => {
+                        // Slowly increase up to 90% max while processing
+                        if (currentProgress < 90) {
+                            currentProgress += Math.random() * 2 + 0.5; // Random increment 0.5-2.5%
+                            if (currentProgress > 90) currentProgress = 90;
+                            bar.style.width = currentProgress + '%';
+
+                            // Update text at certain thresholds
+                            if (currentProgress > 40 && textIndex < 1) {
+                                textIndex = 1;
+                                text.textContent = statusTexts[textIndex];
+                            } else if (currentProgress > 55 && textIndex < 2) {
+                                textIndex = 2;
+                                text.textContent = statusTexts[textIndex];
+                            } else if (currentProgress > 70 && textIndex < 3) {
+                                textIndex = 3;
+                                text.textContent = statusTexts[textIndex];
+                            } else if (currentProgress > 80 && textIndex < 4) {
+                                textIndex = 4;
+                                text.textContent = statusTexts[textIndex];
+                            } else if (currentProgress > 88 && textIndex < 5) {
+                                textIndex = 5;
+                                text.textContent = statusTexts[textIndex];
+                            }
+                        }
+                    }, 800); // Update every 800ms
+                }
             }
 
             if (status === 'completed') {
+                // Clear animation
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                currentProgress = 100;
+                bar.style.transition = 'width 0.5s ease-out';
                 bar.style.width = '100%';
                 text.textContent = '¡Listo! Descarga tus archivos.';
                 document.getElementById('results-area').classList.remove('hidden');
