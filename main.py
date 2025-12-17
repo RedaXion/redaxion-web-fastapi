@@ -218,19 +218,33 @@ async def testimonios(request: Request):
     return templates.TemplateResponse("testimonios.html", {"request": request})
 
 import traceback
+import re
+from urllib.parse import quote
+
+def sanitize_filename(filename: str) -> str:
+    """Remove spaces and special characters from filename."""
+    # Replace spaces with underscores
+    filename = filename.replace(" ", "_")
+    # Remove any characters that aren't alphanumeric, underscore, dash, or dot
+    filename = re.sub(r'[^\w\-.]', '', filename)
+    return filename
 
 async def upload_to_gcs(file: UploadFile, destination_blob_name: str) -> str:
     """
     Uploads audio file to GCS and returns a public URL.
     Falls back to local storage if GCS is not configured.
     """
+    # Sanitize the filename to avoid URL issues
+    safe_filename = sanitize_filename(destination_blob_name.replace("/", "_"))
+    
     if storage_client and GCS_BUCKET_NAME:
         try:
+            print(f"📤 Intentando subir a GCS bucket: {GCS_BUCKET_NAME}")
             bucket = storage_client.bucket(GCS_BUCKET_NAME)
-            blob = bucket.blob(destination_blob_name)
+            blob = bucket.blob(safe_filename)
             
             content = await file.read()
-            blob.upload_from_string(content, content_type=file.content_type)
+            blob.upload_from_string(content, content_type=file.content_type or "audio/mpeg")
             
             # Make the blob publicly accessible
             blob.make_public()
@@ -240,24 +254,30 @@ async def upload_to_gcs(file: UploadFile, destination_blob_name: str) -> str:
             return public_url
         except Exception as e:
             print(f"⚠️ Error subiendo a GCS: {e}")
+            traceback.print_exc()
             print("   Usando almacenamiento local como fallback...")
+            # Reset file position for fallback
+            await file.seek(0)
     
     # Fallback: Local storage
     upload_dir = "static/uploads"
     os.makedirs(upload_dir, exist_ok=True)
     
-    safe_filename = destination_blob_name.replace("/", "_")
     file_path = f"{upload_dir}/{safe_filename}"
     
-    # Reset file position if already read
-    await file.seek(0)
+    # Reset file position if needed
+    try:
+        await file.seek(0)
+    except:
+        pass
     content = await file.read()
     with open(file_path, "wb") as f:
         f.write(content)
     
     print(f"📁 Audio guardado localmente: {file_path} ({len(content)} bytes)")
     
-    public_url = f"{BASE_URL}/{file_path}"
+    # URL encode the path for safety
+    public_url = f"{BASE_URL}/static/uploads/{quote(safe_filename)}"
     print(f"📎 URL pública: {public_url}")
     return public_url
 
