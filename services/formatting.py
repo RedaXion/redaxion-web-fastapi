@@ -233,15 +233,23 @@ _openai_client = None
 if os.getenv("OPENAI_API_KEY"):
     _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Initialize Google Generative AI for Gemini Imagen
+# Initialize Google GenAI for Gemini Imagen
 _gemini_client = None
 GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
 if GOOGLE_AI_API_KEY:
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=GOOGLE_AI_API_KEY)
-        _gemini_client = genai
+        from google import genai
+        _gemini_client = genai.Client(api_key=GOOGLE_AI_API_KEY)
         print("✅ Gemini Imagen client inicializado")
+    except ImportError:
+        # Try alternative import
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=GOOGLE_AI_API_KEY)
+            _gemini_client = genai
+            print("✅ Gemini generativeai client inicializado")
+        except Exception as e:
+            print(f"⚠️ Error initializing Gemini: {e}")
     except Exception as e:
         print(f"⚠️ Error initializing Gemini: {e}")
 
@@ -329,28 +337,30 @@ Style requirements:
 
         print(f"🎨 Generando imagen Gemini con estilo Napkin: {color_desc}")
         
-        # Use Gemini Imagen model
-        imagen_model = _gemini_client.ImageGenerationModel("imagen-3.0-generate-001")
-        
-        result = imagen_model.generate_images(
-            prompt=prompt,
-            number_of_images=1,
-            aspect_ratio="1:1",
-            safety_filter_level="block_only_high",
-        )
-        
-        if result.images:
-            image_bytes = result.images[0]._pil_image
-            # Convert PIL image to BytesIO
-            img_buffer = BytesIO()
-            image_bytes.save(img_buffer, format='PNG')
-            img_buffer.seek(0)
+        # Try new google-genai API first
+        try:
+            result = _gemini_client.models.generate_images(
+                model="imagen-3.0-generate-001",
+                prompt=prompt,
+                config={
+                    "number_of_images": 1,
+                    "aspect_ratio": "1:1",
+                }
+            )
             
-            print("✅ Imagen Gemini generada exitosamente")
-            return img_buffer
-        else:
-            print("⚠️ Gemini no generó ninguna imagen")
+            if result.generated_images:
+                image_data = result.generated_images[0].image.image_bytes
+                print("✅ Imagen Gemini generada exitosamente")
+                return BytesIO(image_data)
+        except AttributeError:
+            # Fallback for older API
+            model = _gemini_client.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            print("⚠️ Gemini text model used - image generation not available with this API version")
             return None
+        
+        print("⚠️ Gemini no generó ninguna imagen")
+        return None
         
     except Exception as e:
         print(f"❌ Error generando imagen Gemini: {e}")
