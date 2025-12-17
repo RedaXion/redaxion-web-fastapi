@@ -76,3 +76,16 @@ Por ahora, utilizaremos este texto base para demostrar la capacidad de RedaXion 
 
 El sistema continúa funcionando correctamente.
 """
+
+# ============================================
+# ASYNC VERSION - Non-blocking transcription
+# ============================================
+import asyncio
+
+async def transcribir_audio_async(audio_url: str) -> str:
+    """
+    Non-blocking version of transcribir_audio.
+    Runs the blocking transcription in a thread pool so the event loop
+    can continue responding to other requests (like polling).
+    """
+    return await asyncio.to_thread(transcribir_audio, audio_url)

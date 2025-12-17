@@ -71,7 +71,7 @@ except Exception as e:
     storage_client = None
 
 # --- Services ---
-from services.transcription import transcribir_audio
+from services.transcription import transcribir_audio_async
 from services.text_processing import procesar_txt_con_chatgpt
 from services.formatting import guardar_como_docx, guardar_quiz_como_docx, convert_to_pdf
 from services.quiz_generation import generar_quiz_desde_docx
@@ -101,9 +101,8 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
              if order:
                  audio_public_url = order.get("audio_url")
 
-        # NOTE: Ensure valid URL in production
-        # Transcribir_audio is sync, so we don't await it (unless refactored to async)
-        transcription_text = transcribir_audio(audio_public_url)
+        # Use async transcription - runs in thread pool so server stays responsive
+        transcription_text = await transcribir_audio_async(audio_public_url)
         print(f"[{orden_id}] Transcripción completada.")
         
         # Save raw text
