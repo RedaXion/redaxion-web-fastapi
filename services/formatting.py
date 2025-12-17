@@ -181,10 +181,22 @@ def aplicar_estilo(parrafo, tipo_bloque, color, espaciado_extra=False):
     if espaciado_extra:
         parrafo.paragraph_format.space_after = Pt(10)
 
+
+# Import formula conversion utility
+try:
+    from services.formula_utils import latex_to_text
+except ImportError:
+    def latex_to_text(text):
+        return text  # Fallback if module not available
+
+
 def agregar_texto_con_negrita(parrafo, texto):
     if not texto.strip():
         _set_run_calibri(parrafo.add_run(" "))
         return
+
+    # Convert LaTeX formulas to readable text
+    texto = latex_to_text(texto)
 
     patron = r"\*\*(.*?)\*\*"
     cursor = 0

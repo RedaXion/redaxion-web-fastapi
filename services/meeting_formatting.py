@@ -23,6 +23,7 @@ from services.formatting import (
     fallback_pdf_conversion,
     convert_to_pdf
 )
+from services.formula_utils import latex_to_text
 
 
 def _set_run_calibri(run, font_name="Calibri"):
@@ -42,6 +43,9 @@ def agregar_texto_con_negrita(parrafo, texto):
         _set_run_calibri(parrafo.add_run(" "))
         return
 
+    # Convert LaTeX formulas first
+    texto = latex_to_text(texto)
+    
     patron = r"\*\*(.*?)\*\*"
     cursor = 0
     for match in re.finditer(patron, texto):
@@ -118,6 +122,9 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
             continue
         
         linea_normalizada = linea.lstrip()
+        
+        # Convert LaTeX formulas to readable text
+        linea_normalizada = latex_to_text(linea_normalizada)
         
         # Handle --- separator lines
         if linea_normalizada.startswith('---'):

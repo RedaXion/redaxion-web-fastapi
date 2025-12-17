@@ -22,6 +22,7 @@ from services.formatting import (
     fallback_pdf_conversion,
     convert_to_pdf
 )
+from services.formula_utils import latex_to_text
 
 
 def _set_run_calibri(run, font_name="Calibri"):
@@ -100,6 +101,15 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
             continue
         
         linea_normalizada = linea.lstrip()
+        
+        # Convert LaTeX formulas to readable text
+        linea_normalizada = latex_to_text(linea_normalizada)
+        
+        # Handle [dejar espacio] or similar - add blank lines for answer space
+        if '[dejar espacio' in linea_normalizada.lower() or '[espacio para respuesta' in linea_normalizada.lower():
+            for _ in range(8):  # Add 8 blank lines for answer space
+                doc.add_paragraph("")
+            continue
         
         # Handle --- separator lines
         if linea_normalizada.startswith('---'):

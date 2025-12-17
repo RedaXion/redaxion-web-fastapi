@@ -87,9 +87,13 @@ Instrucciones: Responde de forma completa y fundamentada.
 
 1. [Pregunta que requiere análisis o explicación] (X puntos)
 
-[Dejar espacio para respuesta]
 
-[Continuar numerando...]
+
+
+
+
+
+[Continuar numerando con espacio vacío entre preguntas para respuestas...]
 
 ===SOLUCIONARIO===
 
@@ -130,7 +134,13 @@ SEGUNDA PARTE (SOLUCIONARIO PARA EL PROFESOR):
    - Los distractores (opciones incorrectas) deben ser plausibles
    - CADA respuesta de alternativa DEBE tener una justificación detallada
    - La dificultad {dificultad}/10 debe reflejarse en las preguntas
-   - El marcador ===SOLUCIONARIO=== es OBLIGATORIO para separar las dos partes"""
+   - El marcador ===SOLUCIONARIO=== es OBLIGATORIO para separar las dos partes
+   - IMPORTANTE: NO uses notación LaTeX como \\frac, \\times, \\( \\), etc.
+   - Para fórmulas matemáticas, usa texto plano legible, por ejemplo:
+     - En vez de \\frac{{a}}{{b}}, escribe (a/b)
+     - En vez de x^2, escribe x²
+     - En vez de H_2O, escribe H₂O
+     - Usa símbolos Unicode: × ÷ ± ≤ ≥ ≠ ² ³ ₂ etc."""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,
