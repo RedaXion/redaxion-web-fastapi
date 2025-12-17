@@ -271,23 +271,36 @@ async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, ni
         if not resultado["success"]:
             raise Exception(resultado.get("error", "Error generando prueba"))
         
-        contenido = resultado["contenido"]
+        # Get separate exam and solucionario content
+        contenido_examen = resultado.get("examen", resultado.get("contenido", ""))
+        contenido_solucionario = resultado.get("solucionario", "")
         
-        # Generate DOCX and PDF
-        path_docx = f"static/generated/Prueba-{orden_id}.docx"
-        path_pdf = f"static/generated/Prueba-{orden_id}.pdf"
+        # Generate Exam DOCX and PDF
+        path_docx_examen = f"static/generated/Prueba-{orden_id}.docx"
+        path_pdf_examen = f"static/generated/Prueba-{orden_id}.pdf"
         
-        guardar_examen_como_docx(contenido, path_docx)
-        guardar_examen_como_pdf(contenido, path_pdf)
+        guardar_examen_como_docx(contenido_examen, path_docx_examen)
+        guardar_examen_como_pdf(contenido_examen, path_pdf_examen)
         
-        print(f"[{orden_id}] Prueba generada: {path_pdf}")
+        print(f"[{orden_id}] Prueba generada: {path_pdf_examen}")
+        
+        # Generate Solucionario DOCX and PDF (separate file)
+        path_docx_solucionario = f"static/generated/Solucionario-{orden_id}.docx"
+        path_pdf_solucionario = f"static/generated/Solucionario-{orden_id}.pdf"
+        
+        if contenido_solucionario:
+            guardar_examen_como_docx(contenido_solucionario, path_docx_solucionario)
+            guardar_examen_como_pdf(contenido_solucionario, path_pdf_solucionario)
+            print(f"[{orden_id}] Solucionario generado: {path_pdf_solucionario}")
         
         # Update DB with files
         import os
         base_url_path = "/static/generated"
         files_list = [
             {"name": "Prueba PDF", "url": f"{base_url_path}/Prueba-{orden_id}.pdf", "type": "pdf"},
-            {"name": "Prueba Editable", "url": f"{base_url_path}/Prueba-{orden_id}.docx", "type": "docx"}
+            {"name": "Prueba Editable", "url": f"{base_url_path}/Prueba-{orden_id}.docx", "type": "docx"},
+            {"name": "Solucionario PDF", "url": f"{base_url_path}/Solucionario-{orden_id}.pdf", "type": "pdf"},
+            {"name": "Solucionario Editable", "url": f"{base_url_path}/Solucionario-{orden_id}.docx", "type": "docx"}
         ]
         database.update_order_files(orden_id, files_list)
         database.update_order_status(orden_id, "completed")
@@ -304,7 +317,9 @@ Dificultad: {dificultad}/10
 Preguntas de alternativa: {preguntas_alternativa}
 Preguntas de desarrollo: {preguntas_desarrollo}
 
-Adjuntamos tu prueba en formato PDF y DOCX (editable).
+Adjuntamos:
+📝 Prueba (PDF y DOCX editable)
+✅ Solucionario con justificaciones (PDF y DOCX editable)
 
 Puedes ver y descargar tus archivos en:
 {BASE_URL}/dashboard?external_reference={orden_id}
@@ -315,7 +330,7 @@ Gracias por usar RedaXion.
                 destinatario=correo,
                 asunto=f"Tu Prueba de {asignatura} está lista - RedaXion",
                 cuerpo=cuerpo,
-                lista_archivos=[path_pdf, path_docx]
+                lista_archivos=[path_pdf_examen, path_docx_examen, path_pdf_solucionario, path_docx_solucionario]
             )
             print(f"[{orden_id}] Correo enviado a {correo}")
             
@@ -638,15 +653,24 @@ async def crear_orden_reunion_test(
 async def get_upload_url(filename: str = Form(...)):
     """
     Generate a signed URL for direct browser-to-GCS upload.
-    This bypasses Railway's file size limits.
+    Falls back to local upload endpoint if GCS is not configured.
     """
+    orden_id = str(uuid.uuid4())
+    safe_filename = sanitize_filename(filename)
+    
+    # If GCS is not configured, return local upload URL instead
     if not storage_client or not GCS_BUCKET_NAME:
-        raise HTTPException(status_code=500, detail="GCS not configured")
+        print(f"⚠️ GCS no disponible, usando subida local para: {safe_filename}")
+        return JSONResponse({
+            "success": True,
+            "upload_url": f"{BASE_URL}/api/upload-local/{orden_id}",
+            "public_url": f"{BASE_URL}/static/uploads/{orden_id}_{safe_filename}",
+            "blob_name": f"{orden_id}_{safe_filename}",
+            "orden_id": orden_id,
+            "local_mode": True
+        })
     
     try:
-        # Generate unique filename
-        orden_id = str(uuid.uuid4())
-        safe_filename = sanitize_filename(filename)
         blob_name = f"{orden_id}_{safe_filename}"
         
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
@@ -655,7 +679,7 @@ async def get_upload_url(filename: str = Form(...)):
         # Generate signed URL for PUT (upload)
         upload_url = blob.generate_signed_url(
             version="v4",
-            expiration=timedelta(minutes=60),  # URL valid for 60 minutes
+            expiration=timedelta(minutes=60),
             method="PUT",
             content_type="application/octet-stream",
         )
@@ -680,6 +704,42 @@ async def get_upload_url(filename: str = Form(...)):
     except Exception as e:
         print(f"❌ Error generando URL de subida: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/upload-local/{orden_id}")
+async def upload_local(orden_id: str, request: Request):
+    """
+    Local file upload fallback when GCS is not configured.
+    Saves file directly to static/uploads directory.
+    """
+    try:
+        # Get the raw body (file content)
+        content = await request.body()
+        
+        # Create uploads directory if needed
+        upload_dir = "static/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Get filename from content-disposition header or use default
+        filename = f"{orden_id}_audio.mp3"
+        file_path = f"{upload_dir}/{filename}"
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        print(f"📁 Audio guardado localmente: {file_path} ({len(content)} bytes)")
+        
+        return JSONResponse({
+            "success": True,
+            "message": "File uploaded locally",
+            "path": file_path
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en subida local: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 import traceback
 import re

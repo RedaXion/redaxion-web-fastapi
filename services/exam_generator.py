@@ -4,7 +4,7 @@ Exam Generator Service - Creates exams/tests using ChatGPT
 Generates formal academic tests with:
 - Multiple choice questions (a, b, c, d)
 - Development/essay questions
-- Answer key
+- Separate answer key with justifications
 """
 
 import os
@@ -54,7 +54,9 @@ INSTRUCCIONES ESTRICTAS:
    - Nivel: {nivel}
    - Dificultad: {dificultad}/10 ({nivel_dificultad})
 
-3. ESTRUCTURA OBLIGATORIA:
+3. ESTRUCTURA - DEBES GENERAR DOS SECCIONES SEPARADAS CON EL MARCADOR ===SOLUCIONARIO===:
+
+PRIMERA PARTE (PRUEBA PARA EL ESTUDIANTE):
 
 ## PRUEBA DE {asignatura.upper()}
 
@@ -85,33 +87,50 @@ Instrucciones: Responde de forma completa y fundamentada.
 
 1. [Pregunta que requiere análisis o explicación] (X puntos)
 
+[Dejar espacio para respuesta]
+
 [Continuar numerando...]
+
+===SOLUCIONARIO===
+
+SEGUNDA PARTE (SOLUCIONARIO PARA EL PROFESOR):
+
+## SOLUCIONARIO - {asignatura.upper()}
+
+**Tema:** {tema}
 
 ---
 
-## PAUTA DE RESPUESTAS
+## SECCIÓN I: RESPUESTAS DE ALTERNATIVA
 
-**Sección I - Alternativas:**
-1. [letra correcta] - [breve justificación]
-2. [letra correcta] - [breve justificación]
-...
+1. **Respuesta correcta: [LETRA])**
+   **Justificación:** [Explicación detallada de por qué esta es la respuesta correcta y por qué las otras opciones son incorrectas. Mínimo 2-3 líneas.]
 
-**Sección II - Desarrollo:**
-1. [Respuesta modelo o criterios de evaluación]
-...
+2. **Respuesta correcta: [LETRA])**
+   **Justificación:** [Explicación detallada...]
 
-4. REGLAS:
+[Continuar con todas las preguntas...]
+
+---
+
+## SECCIÓN II: RESPUESTAS DE DESARROLLO
+
+1. **Respuesta modelo:**
+   [Respuesta completa y detallada que serviría como ejemplo de respuesta perfecta]
+   
+   **Criterios de evaluación:**
+   - [Criterio 1]: [X puntos]
+   - [Criterio 2]: [X puntos]
+   - [Criterio 3]: [X puntos]
+
+[Continuar con todas las preguntas...]
+
+4. REGLAS IMPORTANTES:
    - Las preguntas de alternativa deben tener UNA sola respuesta correcta
    - Los distractores (opciones incorrectas) deben ser plausibles
-   - Las preguntas de desarrollo deben requerir análisis, no solo memorización
-   - Incluye el puntaje de cada pregunta de desarrollo
-   - La dificultad {dificultad}/10 debe reflejarse en la complejidad de las preguntas
-
-5. CALIDAD:
-   - Preguntas claras sin ambigüedades
-   - Contenido académicamente preciso
-   - Vocabulario apropiado para el nivel {nivel}
-   - Balance entre diferentes aspectos del tema"""
+   - CADA respuesta de alternativa DEBE tener una justificación detallada
+   - La dificultad {dificultad}/10 debe reflejarse en las preguntas
+   - El marcador ===SOLUCIONARIO=== es OBLIGATORIO para separar las dos partes"""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,
@@ -120,23 +139,13 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
     """
     Generate a formal test/exam using ChatGPT.
     
-    Args:
-        tema: The topic/content the test should cover
-        asignatura: Subject type (e.g., Historia, Matemáticas)
-        nivel: Educational level (e.g., 4to Medio, Universidad)
-        preguntas_alternativa: Number of multiple choice questions
-        preguntas_desarrollo: Number of development/essay questions
-        dificultad: Difficulty level 1-10 (default 7)
-    
     Returns:
-        dict with 'contenido' (full test content) and 'success' status
+        dict with 'examen' (test for student), 'solucionario' (answer key), and 'success' status
     """
     
     if not client:
         print("MOCK: Generating test (No API Key)...")
-        return {
-            "success": True,
-            "contenido": f"""## PRUEBA DE {asignatura.upper()}
+        examen_mock = f"""## PRUEBA DE {asignatura.upper()}
 
 **Tema:** {tema}
 **Nombre del estudiante:** _______________________
@@ -146,8 +155,6 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
 ---
 
 ## SECCIÓN I: PREGUNTAS DE ALTERNATIVA
-
-[Esta es una prueba de demostración - Conecte OpenAI para generar contenido real]
 
 1. Pregunta de ejemplo sobre {tema}
    a) Opción A
@@ -160,14 +167,33 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
 ## SECCIÓN II: PREGUNTAS DE DESARROLLO
 
 1. Explique los conceptos principales de {tema}. (20 puntos)
+"""
+        solucionario_mock = f"""## SOLUCIONARIO - {asignatura.upper()}
+
+**Tema:** {tema}
 
 ---
 
-## PAUTA DE RESPUESTAS
+## SECCIÓN I: RESPUESTAS DE ALTERNATIVA
 
-**Sección I:** 1. c)
-**Sección II:** [Respuesta modelo]
+1. **Respuesta correcta: C)**
+   **Justificación:** Esta es una demostración. Conecte OpenAI para generar contenido real con justificaciones detalladas.
+
+---
+
+## SECCIÓN II: RESPUESTAS DE DESARROLLO
+
+1. **Respuesta modelo:**
+   Respuesta de demostración para {tema}.
+   
+   **Criterios de evaluación:**
+   - Comprensión del tema: 10 puntos
+   - Desarrollo de ideas: 10 puntos
 """
+        return {
+            "success": True,
+            "examen": examen_mock,
+            "solucionario": solucionario_mock
         }
     
     try:
@@ -182,18 +208,39 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Genera una prueba completa sobre: {tema}"}
+                {"role": "user", "content": f"Genera una prueba completa sobre: {tema}. Recuerda usar el marcador ===SOLUCIONARIO=== para separar la prueba del solucionario."}
             ],
             temperature=0.4,
-            max_tokens=4000
+            max_tokens=6000
         )
         
-        contenido = response.choices[0].message.content.strip()
+        contenido_completo = response.choices[0].message.content.strip()
         print("✅ Prueba generada exitosamente")
+        
+        # Split into exam and answer key
+        if "===SOLUCIONARIO===" in contenido_completo:
+            partes = contenido_completo.split("===SOLUCIONARIO===")
+            examen = partes[0].strip()
+            solucionario = partes[1].strip() if len(partes) > 1 else ""
+        else:
+            # Fallback: try to split at "SOLUCIONARIO" or "PAUTA"
+            if "## SOLUCIONARIO" in contenido_completo:
+                idx = contenido_completo.find("## SOLUCIONARIO")
+                examen = contenido_completo[:idx].strip()
+                solucionario = contenido_completo[idx:].strip()
+            elif "## PAUTA" in contenido_completo:
+                idx = contenido_completo.find("## PAUTA")
+                examen = contenido_completo[:idx].strip()
+                solucionario = contenido_completo[idx:].strip()
+            else:
+                # Last resort: return everything as exam
+                examen = contenido_completo
+                solucionario = "## SOLUCIONARIO\n\n[No se pudo separar el solucionario automáticamente]"
         
         return {
             "success": True,
-            "contenido": contenido
+            "examen": examen,
+            "solucionario": solucionario
         }
         
     except Exception as e:
@@ -201,5 +248,6 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
         return {
             "success": False,
             "error": str(e),
-            "contenido": None
+            "examen": None,
+            "solucionario": None
         }
