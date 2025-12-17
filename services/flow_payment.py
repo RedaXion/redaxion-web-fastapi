@@ -103,15 +103,16 @@ def crear_pago_flow(
         print(f"💳 Creando pago Flow: {orden_id} - ${monto} CLP")
         resultado = Payment.create(client, pago_data)
         
-        checkout_url = f"{resultado['url']}?token={resultado['token']}"
+        # pyflowcl returns a PaymentResponse object, access properties with dot notation
+        checkout_url = f"{resultado.url}?token={resultado.token}"
         
-        print(f"✅ Pago Flow creado: {resultado['flowOrder']}")
+        print(f"✅ Pago Flow creado: {resultado.flowOrder}")
         
         return {
             "success": True,
             "checkout_url": checkout_url,
-            "flow_order": resultado["flowOrder"],
-            "token": resultado["token"],
+            "flow_order": resultado.flowOrder,
+            "token": resultado.token,
             "mock": False
         }
         
