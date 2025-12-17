@@ -228,13 +228,25 @@ from io import BytesIO
 import requests
 from openai import OpenAI
 
-# Initialize OpenAI client for DALL-E
-_dalle_client = None
+# Initialize OpenAI client for GPT (used for theme expansion)
+_openai_client = None
 if os.getenv("OPENAI_API_KEY"):
-    _dalle_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Color descriptions for DALL-E prompt
-DALLE_COLOR_MAP = {
+# Initialize Google Generative AI for Gemini Imagen
+_gemini_client = None
+GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
+if GOOGLE_AI_API_KEY:
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=GOOGLE_AI_API_KEY)
+        _gemini_client = genai
+        print("✅ Gemini Imagen client inicializado")
+    except Exception as e:
+        print(f"⚠️ Error initializing Gemini: {e}")
+
+# Color descriptions for image prompt
+COLOR_MAP = {
     "azul elegante": "navy blue and white",
     "azul pastel": "soft sky blue and white",
     "rojo elegante": "deep burgundy red and cream",
@@ -259,11 +271,11 @@ def extract_titles_from_text(texto: str) -> str:
 
 def summarize_titles_with_gpt(titles: str) -> str:
     """Use GPT to create an expanded thematic description from titles."""
-    if not _dalle_client:
+    if not _openai_client:
         return titles[:200]  # Fallback: just truncate
     
     try:
-        response = _dalle_client.chat.completions.create(
+        response = _openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant. Given a list of academic topics/titles, create a rich, descriptive summary (2-3 sentences) that captures the full scope and key concepts. This will be used to generate an educational diagram. Output ONLY the description in English."},
@@ -279,13 +291,14 @@ def summarize_titles_with_gpt(titles: str) -> str:
         print(f"⚠️ Error summarizing with GPT: {e}")
         return titles[:200]  # Fallback
 
-def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> BytesIO:
+def generate_cover_image_gemini(texto: str, color: str = "azul elegante") -> BytesIO:
     """
-    Generate a cover image using DALL-E 3 based on document titles and color scheme.
+    Generate a cover image using Gemini Imagen based on document titles and color scheme.
+    Creates minimalist Napkin-style educational diagrams.
     Returns image as BytesIO or None if generation fails.
     """
-    if not _dalle_client:
-        print("⚠️ No OPENAI_API_KEY configured. Skipping DALL-E image generation.")
+    if not _gemini_client:
+        print("⚠️ No GOOGLE_AI_API_KEY configured. Skipping Gemini image generation.")
         return None
     
     try:
@@ -297,36 +310,50 @@ def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> Byte
         
         # Get color description
         color_normalized = color.strip().lower()
-        color_desc = DALLE_COLOR_MAP.get(color_normalized, "blue and white")
+        color_desc = COLOR_MAP.get(color_normalized, "blue and white")
         
-        # Build prompt with expanded theme
-        prompt = f"""Create a clean, professional academic infographic or conceptual diagram.
-Topic and scope: {theme_description}
-Style: Modern, minimalist, medical/academic aesthetic. Abstract conceptual representation.
-Color palette: Predominantly {color_desc} tones.
-Important: No text, no letters, no words in the image. Pure visual/abstract representation."""
+        # Build prompt for Napkin-style minimalist diagram
+        prompt = f"""Create a clean, minimalist educational infographic or flowchart diagram.
 
-        print(f"🎨 Generando imagen DALL-E con colores: {color_desc}")
+Topic: {theme_description}
+
+Style requirements:
+- Minimalist design like Napkin AI diagrams
+- Simple geometric shapes and icons
+- Clean connecting lines and arrows
+- {color_desc} color palette on white background
+- Abstract conceptual representation
+- NO realistic images or photographs
+- NO text, letters, or words in the image
+- Professional academic/medical aesthetic"""
+
+        print(f"🎨 Generando imagen Gemini con estilo Napkin: {color_desc}")
         
-        response = _dalle_client.images.generate(
-            model="dall-e-3",
+        # Use Gemini Imagen model
+        imagen_model = _gemini_client.ImageGenerationModel("imagen-3.0-generate-001")
+        
+        result = imagen_model.generate_images(
             prompt=prompt,
-            size="1024x1024",
-            quality="standard",
-            n=1,
+            number_of_images=1,
+            aspect_ratio="1:1",
+            safety_filter_level="block_only_high",
         )
         
-        image_url = response.data[0].url
-        
-        # Download the image
-        img_response = requests.get(image_url)
-        img_response.raise_for_status()
-        
-        print("✅ Imagen DALL-E generada exitosamente")
-        return BytesIO(img_response.content)
+        if result.images:
+            image_bytes = result.images[0]._pil_image
+            # Convert PIL image to BytesIO
+            img_buffer = BytesIO()
+            image_bytes.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            
+            print("✅ Imagen Gemini generada exitosamente")
+            return img_buffer
+        else:
+            print("⚠️ Gemini no generó ninguna imagen")
+            return None
         
     except Exception as e:
-        print(f"❌ Error generando imagen DALL-E: {e}")
+        print(f"❌ Error generando imagen Gemini: {e}")
         return None
 
 def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscuro", columnas="simple"):
@@ -345,8 +372,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # Generate cover image with DALL-E (using titles and color scheme)
-    cover_img = generate_cover_image_dalle(texto, color)
+    # Generate cover image with Gemini (using titles and color scheme)
+    cover_img = generate_cover_image_gemini(texto, color)
     if cover_img:
         try:
             doc.add_picture(cover_img, width=Inches(3) if columnas=="doble" else Inches(5))
@@ -354,7 +381,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             doc.add_paragraph("") # Spacing
         except Exception as e:
-            print(f"Error inserting DALL-E cover image: {e}")
+            print(f"Error inserting Gemini cover image: {e}")
 
     texto_lineas = texto.split('\n')
     titulo_agregado = False
