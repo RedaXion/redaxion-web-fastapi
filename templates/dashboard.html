@@ -59,6 +59,16 @@
             }
         }
 
+        /* Stop animation when completed */
+        .progress-bar.completed::after {
+            animation: none;
+            background: none;
+        }
+
+        .progress-bar.completed {
+            background: linear-gradient(90deg, #00d26a, #00f260) !important;
+        }
+
         .progress-text {
             text-align: center;
             margin-top: 1rem;
@@ -342,6 +352,10 @@
                     // Only notify once
                     if (!completionNotified) {
                         completionNotified = true;
+
+                        // Stop the progress bar animation
+                        const bar = document.getElementById('progress-bar');
+                        bar.classList.add('completed');
 
                         // Render files if available
                         if (data.files && data.files.length > 0) {
