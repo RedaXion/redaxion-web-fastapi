@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Pruebas | RedaXion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            border-radius: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .difficulty-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .difficulty-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .difficulty-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .difficulty-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-orange);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* Status Messages */
+        #status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+            text-align: center;
+        }
+
+        .success {
+            background: rgba(28, 198, 194, 0.2);
+            color: #fff;
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .error {
+            background: rgba(255, 99, 71, 0.2);
+            color: #fff;
+            border: 1px solid tomato;
+        }
+
+        .price-tag {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: rgba(250, 140, 22, 0.1);
+            border: 1px solid var(--accent-orange);
+            border-radius: 8px;
+        }
+
+        .price-tag .price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-orange);
+        }
+
+        .price-tag .label {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+
+        .info-box {
+            background: rgba(28, 198, 194, 0.1);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            color: var(--text-gray);
+        }
+
+        .info-box strong {
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 3rem;">
+                <h1>Generador de <span class="text-gradient">Pruebas</span></h1>
+                <p style="color: var(--text-gray);">Crea exámenes profesionales con IA. Recibe preguntas de alternativas
+                    y desarrollo personalizadas.</p>
+            </div>
+
+            <div class="form-container">
+                <div class="info-box">
+                    <strong>¿Cómo funciona?</strong><br>
+                    Ingresa el tema, cantidad de preguntas y dificultad. Nuestro sistema generará una prueba formal
+                    con preguntas de alternativas (a, b, c, d) y desarrollo, junto con la pauta de respuestas.
+                </div>
+
+                <form id="testGeneratorForm">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Nombre Completo</label>
+                            <input type="text" name="nombre" placeholder="Ej. María González" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Correo Electrónico</label>
+                            <input type="email" name="correo" placeholder="tu@email.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tema de la Prueba</label>
+                        <textarea name="tema"
+                            placeholder="Describe el tema o contenido que debe cubrir la prueba. Por ejemplo: 'Revolución Francesa: causas, desarrollo y consecuencias' o 'Ecuaciones de segundo grado y sus aplicaciones'"
+                            required></textarea>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Tipo de Asignatura</label>
+                            <input type="text" name="asignatura" placeholder="Ej. Historia, Matemáticas, Biología..."
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nivel Educativo</label>
+                            <input type="text" name="nivel" placeholder="Ej. 4to Medio, Universidad, Postgrado..."
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Preguntas de Alternativa (a, b, c, d)</label>
+                            <input type="number" name="preguntas_alternativa" value="10" min="0" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Preguntas de Desarrollo</label>
+                            <input type="number" name="preguntas_desarrollo" value="3" min="0" max="20" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Dificultad de la Prueba</label>
+                        <div class="difficulty-container">
+                            <span style="color: var(--text-gray);">Fácil</span>
+                            <input type="range" name="dificultad" class="difficulty-slider" min="1" max="10" value="7"
+                                id="difficultySlider">
+                            <span style="color: var(--text-gray);">Difícil</span>
+                            <span class="difficulty-value" id="difficultyValue">7</span>
+                        </div>
+                    </div>
+
+                    <div class="price-tag">
+                        <div class="label">Precio del servicio</div>
+                        <div class="price">$1.500 CLP</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
+                        Generar Prueba y Pagar
+                    </button>
+
+                    <!-- Skip payment for testing -->
+                    <button type="button" id="skipPaymentBtn" class="btn btn-outline"
+                        style="width: 100%; font-size: 1rem; margin-top: 0.5rem; border-color: var(--accent-orange); color: var(--accent-orange);">
+                        🧪 Probar sin Pago (Dev)
+                    </button>
+                </form>
+
+                <div id="status"></div>
+            </div>
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        // Difficulty slider value display
+        const slider = document.getElementById('difficultySlider');
+        const valueDisplay = document.getElementById('difficultyValue');
+
+        slider.addEventListener('input', () => {
+            valueDisplay.textContent = slider.value;
+        });
+
+        // Form Submission
+        document.getElementById('testGeneratorForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const statusDiv = document.getElementById('status');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+
+            statusDiv.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
+
+            try {
+                const formData = new FormData(e.target);
+
+                const response = await fetch('/api/crear-prueba', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Error creando orden');
+                }
+
+                const result = await response.json();
+
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>¡Éxito!</strong> Orden creada.<br>
+                    Redirigiendo al pago...
+                `;
+
+                // Redirect to MercadoPago checkout
+                setTimeout(() => {
+                    window.location.href = result.checkout_url;
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'error';
+                statusDiv.textContent = 'Error: ' + error.message;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generar Prueba y Pagar';
+            }
+        });
+
+        // Skip payment button - for testing
+        document.getElementById('skipPaymentBtn').addEventListener('click', async function () {
+            const statusDiv = document.getElementById('status');
+            const skipBtn = this;
+            const form = document.getElementById('testGeneratorForm');
+
+            // Validate form
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            statusDiv.style.display = 'none';
+            skipBtn.disabled = true;
+            skipBtn.textContent = '🧪 Generando...';
+
+            try {
+                const formData = new FormData(form);
+                formData.append('skip_payment', 'true');
+
+                const response = await fetch('/api/crear-prueba-test', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Error generando prueba');
+                }
+
+                const result = await response.json();
+
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>🧪 Modo Test</strong><br>
+                    Generando prueba sin pago...<br>
+                    <a href="/dashboard?external_reference=${result.orden_id}" style="color: var(--accent-cyan);">
+                        Ver estado de la orden →
+                    </a>
+                `;
+
+                // Redirect after a moment
+                setTimeout(() => {
+                    window.location.href = `/dashboard?external_reference=${result.orden_id}`;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'error';
+                statusDiv.textContent = 'Error: ' + error.message;
+                skipBtn.disabled = false;
+                skipBtn.textContent = '🧪 Probar sin Pago (Dev)';
+            }
+        });
+    </script>
+</body>
+
+</html>

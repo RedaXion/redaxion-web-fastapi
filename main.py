@@ -42,6 +42,9 @@ print(f"📦 GCS_BUCKET_NAME configurado: {GCS_BUCKET_NAME or '(no configurado)'
 PRICE_AMOUNT = 3000
 PRICE_CURRENCY = "CLP"
 
+# Price for special services (Generador de Pruebas, Transcribe Tu Reunión)
+SPECIAL_SERVICES_PRICE = 1500
+
 # Base URL for callbacks (use production URL in Railway)
 BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8002")
 
@@ -94,6 +97,12 @@ from services.text_processing import procesar_txt_con_chatgpt
 from services.formatting import guardar_como_docx, guardar_quiz_como_docx, convert_to_pdf
 from services.quiz_generation import generar_quiz_desde_docx
 from services.delivery import subir_archivo_a_drive, enviar_correo_con_adjuntos
+
+# New Special Services
+from services.exam_generator import generar_prueba
+from services.exam_formatting import guardar_examen_como_docx, guardar_examen_como_pdf
+from services.meeting_processing import procesar_reunion
+from services.meeting_formatting import guardar_acta_reunion_como_docx, guardar_acta_reunion_como_pdf
 
 # ORDERS_DB Removed - Using SQLite now
 
@@ -235,7 +244,396 @@ async def como_funciona(request: Request):
 async def testimonios(request: Request):
     return templates.TemplateResponse("testimonios.html", {"request": request})
 
-# --- Direct GCS Upload Endpoint ---
+# --- Special Services Routes ---
+@app.get("/generador-pruebas", response_class=HTMLResponse)
+async def generador_pruebas(request: Request):
+    return templates.TemplateResponse("generador_pruebas.html", {"request": request})
+
+@app.get("/transcribe-reunion", response_class=HTMLResponse)
+async def transcribe_reunion(request: Request):
+    return templates.TemplateResponse("transcribe_reunion.html", {"request": request})
+
+
+# --- Special Services API Endpoints ---
+
+async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, nivel: str,
+                                    preguntas_alternativa: int, preguntas_desarrollo: int,
+                                    dificultad: int, correo: str, nombre: str):
+    """Background task to generate exam and send to client."""
+    print(f"[{orden_id}] Generando prueba: {asignatura} - {tema}")
+    database.update_order_status(orden_id, "processing")
+    
+    try:
+        # Generate exam with ChatGPT
+        resultado = generar_prueba(tema, asignatura, nivel, preguntas_alternativa, 
+                                   preguntas_desarrollo, dificultad)
+        
+        if not resultado["success"]:
+            raise Exception(resultado.get("error", "Error generando prueba"))
+        
+        contenido = resultado["contenido"]
+        
+        # Generate DOCX and PDF
+        path_docx = f"static/generated/Prueba-{orden_id}.docx"
+        path_pdf = f"static/generated/Prueba-{orden_id}.pdf"
+        
+        guardar_examen_como_docx(contenido, path_docx)
+        guardar_examen_como_pdf(contenido, path_pdf)
+        
+        print(f"[{orden_id}] Prueba generada: {path_pdf}")
+        
+        # Update DB with files
+        import os
+        base_url_path = "/static/generated"
+        files_list = [
+            {"name": "Prueba PDF", "url": f"{base_url_path}/Prueba-{orden_id}.pdf", "type": "pdf"},
+            {"name": "Prueba Editable", "url": f"{base_url_path}/Prueba-{orden_id}.docx", "type": "docx"}
+        ]
+        database.update_order_files(orden_id, files_list)
+        database.update_order_status(orden_id, "completed")
+        
+        # Send email
+        if correo:
+            cuerpo = f"""Hola {nombre},
+
+¡Tu prueba de {asignatura} está lista! 🎓
+
+Tema: {tema}
+Nivel: {nivel}
+Dificultad: {dificultad}/10
+Preguntas de alternativa: {preguntas_alternativa}
+Preguntas de desarrollo: {preguntas_desarrollo}
+
+Adjuntamos tu prueba en formato PDF y DOCX (editable).
+
+Puedes ver y descargar tus archivos en:
+{BASE_URL}/dashboard?external_reference={orden_id}
+
+Gracias por usar RedaXion.
+"""
+            enviar_correo_con_adjuntos(
+                destinatario=correo,
+                asunto=f"Tu Prueba de {asignatura} está lista - RedaXion",
+                cuerpo=cuerpo,
+                lista_archivos=[path_pdf, path_docx]
+            )
+            print(f"[{orden_id}] Correo enviado a {correo}")
+            
+    except Exception as e:
+        print(f"[{orden_id}] Error generando prueba: {e}")
+        database.update_order_status(orden_id, "error")
+
+
+@app.post("/api/crear-prueba")
+async def crear_prueba(
+    background_tasks: BackgroundTasks,
+    nombre: str = Form(...),
+    correo: str = Form(...),
+    tema: str = Form(...),
+    asignatura: str = Form(...),
+    nivel: str = Form(...),
+    preguntas_alternativa: int = Form(...),
+    preguntas_desarrollo: int = Form(...),
+    dificultad: int = Form(7)
+):
+    """Create a test/exam order and generate payment."""
+    orden_id = str(uuid.uuid4())
+    
+    # Save to DB with exam-specific type
+    order_data = {
+        "id": orden_id,
+        "status": "pending",
+        "client": nombre,
+        "email": correo,
+        "color": "azul elegante",
+        "columnas": "una",
+        "files": [],
+        "audio_url": "",  # No audio for exam service
+        "service_type": "exam"
+    }
+    database.create_order(order_data)
+    
+    print(f"Nueva orden de prueba: {orden_id} - {asignatura} - {tema}")
+    
+    # Store exam params in a simple way (could be JSON in a field, but using notes-style here)
+    exam_metadata = {
+        "tema": tema,
+        "asignatura": asignatura,
+        "nivel": nivel,
+        "preguntas_alternativa": preguntas_alternativa,
+        "preguntas_desarrollo": preguntas_desarrollo,
+        "dificultad": dificultad
+    }
+    
+    try:
+        preference_data = {
+            "items": [{
+                "title": f"Generador de Pruebas - {asignatura}",
+                "quantity": 1,
+                "unit_price": float(SPECIAL_SERVICES_PRICE),
+                "currency_id": PRICE_CURRENCY
+            }],
+            "payer": {"email": correo},
+            "back_urls": {
+                "success": f"{BASE_URL}/dashboard",
+                "failure": f"{BASE_URL}/dashboard",
+                "pending": f"{BASE_URL}/dashboard"
+            },
+            "external_reference": orden_id,
+            "metadata": {
+                "orden_id": orden_id,
+                "service_type": "exam",
+                **exam_metadata
+            }
+        }
+        
+        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+            preference_data["auto_return"] = "approved"
+        
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
+        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
+        
+        if not checkout_url:
+            # Mock payment for testing
+            background_tasks.add_task(
+                procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
+                preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+            )
+            return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
+        
+        return {"orden_id": orden_id, "checkout_url": checkout_url}
+        
+    except Exception as e:
+        print(f"Error creating exam order: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def procesar_y_enviar_reunion(orden_id: str, audio_url: str, titulo: str,
+                                     asistentes: str, agenda: str, correo: str, nombre: str):
+    """Background task to transcribe meeting and generate minutes."""
+    print(f"[{orden_id}] Procesando reunión: {titulo or 'Sin título'}")
+    database.update_order_status(orden_id, "processing")
+    
+    try:
+        # 1. Transcribe audio with AssemblyAI
+        transcripcion = await transcribir_audio_async(audio_url)
+        print(f"[{orden_id}] Transcripción completada")
+        
+        # 2. Process with ChatGPT meeting prompt
+        resultado = procesar_reunion(transcripcion, titulo, asistentes, agenda)
+        
+        if not resultado["success"]:
+            raise Exception(resultado.get("error", "Error procesando reunión"))
+        
+        contenido = resultado["contenido"]
+        
+        # 3. Generate DOCX and PDF
+        path_docx = f"static/generated/Acta-{orden_id}.docx"
+        path_pdf = f"static/generated/Acta-{orden_id}.pdf"
+        
+        guardar_acta_reunion_como_docx(contenido, path_docx)
+        guardar_acta_reunion_como_pdf(contenido, path_pdf)
+        
+        print(f"[{orden_id}] Acta generada: {path_pdf}")
+        
+        # 4. Update DB
+        import os
+        base_url_path = "/static/generated"
+        files_list = [
+            {"name": "Acta PDF", "url": f"{base_url_path}/Acta-{orden_id}.pdf", "type": "pdf"},
+            {"name": "Acta Editable", "url": f"{base_url_path}/Acta-{orden_id}.docx", "type": "docx"}
+        ]
+        database.update_order_files(orden_id, files_list)
+        database.update_order_status(orden_id, "completed")
+        
+        # 5. Send email
+        if correo:
+            cuerpo = f"""Hola {nombre},
+
+¡Tu acta de reunión está lista! 📋
+
+{f'Reunión: {titulo}' if titulo else ''}
+
+Adjuntamos el acta en formato PDF y DOCX (editable).
+El documento incluye:
+- Resumen ejecutivo
+- Decisiones tomadas
+- Lista de acciones con responsables
+- Preguntas pendientes
+- Bloqueadores identificados
+
+Puedes ver y descargar tus archivos en:
+{BASE_URL}/dashboard?external_reference={orden_id}
+
+Gracias por usar RedaXion.
+"""
+            enviar_correo_con_adjuntos(
+                destinatario=correo,
+                asunto=f"Tu Acta de Reunión está lista - RedaXion",
+                cuerpo=cuerpo,
+                lista_archivos=[path_pdf, path_docx]
+            )
+            print(f"[{orden_id}] Correo enviado a {correo}")
+            
+    except Exception as e:
+        print(f"[{orden_id}] Error procesando reunión: {e}")
+        database.update_order_status(orden_id, "error")
+
+
+@app.post("/api/crear-orden-reunion")
+async def crear_orden_reunion(
+    background_tasks: BackgroundTasks,
+    nombre: str = Form(...),
+    correo: str = Form(...),
+    titulo_reunion: str = Form(""),
+    asistentes: str = Form(""),
+    agenda: str = Form(""),
+    audio_url: str = Form(...),
+    orden_id: str = Form(...)
+):
+    """Create a meeting transcription order."""
+    # Save to DB
+    order_data = {
+        "id": orden_id,
+        "status": "pending",
+        "client": nombre,
+        "email": correo,
+        "color": "azul elegante",
+        "columnas": "una",
+        "files": [],
+        "audio_url": audio_url,
+        "service_type": "meeting"
+    }
+    database.create_order(order_data)
+    
+    print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'}")
+    
+    try:
+        preference_data = {
+            "items": [{
+                "title": "Transcripción de Reunión - RedaXion",
+                "quantity": 1,
+                "unit_price": float(SPECIAL_SERVICES_PRICE),
+                "currency_id": PRICE_CURRENCY
+            }],
+            "payer": {"email": correo},
+            "back_urls": {
+                "success": f"{BASE_URL}/dashboard",
+                "failure": f"{BASE_URL}/dashboard",
+                "pending": f"{BASE_URL}/dashboard"
+            },
+            "external_reference": orden_id,
+            "metadata": {
+                "orden_id": orden_id,
+                "service_type": "meeting",
+                "titulo_reunion": titulo_reunion,
+                "asistentes": asistentes,
+                "agenda": agenda
+            }
+        }
+        
+        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+            preference_data["auto_return"] = "approved"
+        
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
+        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
+        
+        if not checkout_url:
+            # Mock payment for testing
+            background_tasks.add_task(
+                procesar_y_enviar_reunion, orden_id, audio_url, titulo_reunion,
+                asistentes, agenda, correo, nombre
+            )
+            return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
+        
+        return {"orden_id": orden_id, "checkout_url": checkout_url}
+        
+    except Exception as e:
+        print(f"Error creating meeting order: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Test Endpoints (Skip Payment for Development) ---
+
+@app.post("/api/crear-prueba-test")
+async def crear_prueba_test(
+    background_tasks: BackgroundTasks,
+    nombre: str = Form(...),
+    correo: str = Form(...),
+    tema: str = Form(...),
+    asignatura: str = Form(...),
+    nivel: str = Form(...),
+    preguntas_alternativa: int = Form(...),
+    preguntas_desarrollo: int = Form(...),
+    dificultad: int = Form(7)
+):
+    """Test endpoint - Create exam without payment (for development only)."""
+    orden_id = str(uuid.uuid4())
+    
+    order_data = {
+        "id": orden_id,
+        "status": "pending",
+        "client": nombre,
+        "email": correo,
+        "color": "azul elegante",
+        "columnas": "una",
+        "files": [],
+        "audio_url": "",
+        "service_type": "exam_test"
+    }
+    database.create_order(order_data)
+    
+    print(f"🧪 [TEST] Nueva orden de prueba (sin pago): {orden_id}")
+    
+    # Immediately start processing
+    background_tasks.add_task(
+        procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
+        preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+    )
+    
+    return {"orden_id": orden_id, "message": "Procesando en modo test"}
+
+
+@app.post("/api/crear-orden-reunion-test")
+async def crear_orden_reunion_test(
+    background_tasks: BackgroundTasks,
+    nombre: str = Form(...),
+    correo: str = Form(...),
+    titulo_reunion: str = Form(""),
+    asistentes: str = Form(""),
+    agenda: str = Form(""),
+    audio_url: str = Form(...),
+    orden_id: str = Form(...)
+):
+    """Test endpoint - Create meeting order without payment (for development only)."""
+    order_data = {
+        "id": orden_id,
+        "status": "pending",
+        "client": nombre,
+        "email": correo,
+        "color": "azul elegante",
+        "columnas": "una",
+        "files": [],
+        "audio_url": audio_url,
+        "service_type": "meeting_test"
+    }
+    database.create_order(order_data)
+    
+    print(f"🧪 [TEST] Nueva orden de reunión (sin pago): {orden_id}")
+    
+    # Immediately start processing
+    background_tasks.add_task(
+        procesar_y_enviar_reunion, orden_id, audio_url, titulo_reunion,
+        asistentes, agenda, correo, nombre
+    )
+    
+    return {"orden_id": orden_id, "message": "Procesando en modo test"}
+
+
 @app.post("/api/get-upload-url")
 async def get_upload_url(filename: str = Form(...)):
     """
@@ -418,8 +816,8 @@ async def crear_orden(
         preference_response = sdk.preference().create(preference_data)
         preference = preference_response["response"]
         
-        # Prioritize Sandbox URL for testing
-        checkout_url = preference.get("sandbox_init_point") or preference.get("init_point")
+        # Use production URL first, fallback to sandbox
+        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
         
         if not checkout_url:
              print(f"Error: No checkout URL in response. Full response: {preference}")
