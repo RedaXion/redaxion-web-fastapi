@@ -275,16 +275,16 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
         # Check for image insertion point
         if word_count_since_last_image >= IMAGE_THRESHOLD:
              print(f"🖼️ Threshold reached. Topic: '{current_topic}'")
-             # Optimization: Send ONLY the topic to the image generator, checking cost.
-             img_stream = generate_image_from_text(current_topic)
-             if img_stream:
-                 try:
-                     doc.add_picture(img_stream, width=Inches(3) if columnas=="doble" else Inches(5.5))
-                     last_p = doc.paragraphs[-1] 
-                     last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                     doc.add_paragraph("")
-                 except Exception as e:
-                     print(f"Error inserting generated image: {e}")
+             # DISABLED UNTIL NAPKIN AI IS READY
+             # img_stream = generate_image_from_text(current_topic)
+             # if img_stream:
+             #     try:
+             #         doc.add_picture(img_stream, width=Inches(3) if columnas=="doble" else Inches(5.5))
+             #         last_p = doc.paragraphs[-1] 
+             #         last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+             #         doc.add_paragraph("")
+             #     except Exception as e:
+             #         print(f"Error inserting generated image: {e}")
              
              # Reset counters
              word_count_since_last_image = 0
