@@ -367,12 +367,6 @@
                         style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
                         Generar Prueba y Pagar
                     </button>
-
-                    <!-- Skip payment for testing -->
-                    <button type="button" id="skipPaymentBtn" class="btn btn-outline"
-                        style="width: 100%; font-size: 1rem; margin-top: 0.5rem; border-color: var(--accent-orange); color: var(--accent-orange);">
-                        🧪 Probar sin Pago (Dev)
-                    </button>
                 </form>
 
                 <!-- Progress Bar -->
@@ -500,110 +494,7 @@
         payWithFlowBtn.addEventListener('click', () => processPayment('flow'));
         payWithMercadoPagoBtn.addEventListener('click', () => processPayment('mercadopago'));
 
-        // Skip payment button - for testing
-        document.getElementById('skipPaymentBtn').addEventListener('click', async function () {
-            const statusDiv = document.getElementById('status');
-            const skipBtn = this;
-            const form = document.getElementById('testGeneratorForm');
-            const progressContainer = document.getElementById('progress-container');
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
 
-            // Validate form
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
-            // Show progress bar
-            progressContainer.classList.add('active');
-            progressText.style.display = 'block';
-            progressBar.style.width = '0%';
-            progressText.textContent = '🧪 Iniciando generación de prueba...';
-
-            statusDiv.style.display = 'none';
-            skipBtn.disabled = true;
-            skipBtn.textContent = '🧪 Generando...';
-
-            // Animate progress
-            let progress = 0;
-            const messages = [
-                { pct: 10, msg: '📝 Enviando parámetros...' },
-                { pct: 25, msg: '🧠 ChatGPT generando preguntas de alternativa...' },
-                { pct: 50, msg: '✍️ Generando preguntas de desarrollo...' },
-                { pct: 70, msg: '📋 Creando solucionario con justificaciones...' },
-                { pct: 85, msg: '📄 Formateando documentos PDF y DOCX...' },
-                { pct: 95, msg: '📧 Enviando correo con archivos...' },
-            ];
-
-            const updateProgress = (pct, msg) => {
-                progressBar.style.width = pct + '%';
-                progressText.textContent = msg;
-            };
-
-            try {
-                const formData = new FormData(form);
-                formData.append('skip_payment', 'true');
-
-                // Start progress animation
-                let msgIndex = 0;
-                const progressInterval = setInterval(() => {
-                    if (msgIndex < messages.length) {
-                        updateProgress(messages[msgIndex].pct, messages[msgIndex].msg);
-                        msgIndex++;
-                    }
-                }, 2000);
-
-                updateProgress(5, '📤 Enviando solicitud...');
-
-                const response = await fetch('/api/crear-prueba-test', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    clearInterval(progressInterval);
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Error generando prueba');
-                }
-
-                const result = await response.json();
-
-                // Complete the animation
-                clearInterval(progressInterval);
-                updateProgress(100, '✅ ¡Prueba generada exitosamente!');
-
-                setTimeout(() => {
-                    progressContainer.classList.remove('active');
-                    progressText.style.display = 'none';
-
-                    statusDiv.style.display = 'block';
-                    statusDiv.className = 'success';
-                    statusDiv.innerHTML = `
-                        <strong>🧪 Modo Test</strong><br>
-                        Prueba y solucionario generados.<br>
-                        <a href="/dashboard?external_reference=${result.orden_id}" style="color: var(--accent-cyan);">
-                            Ver y descargar archivos →
-                        </a>
-                    `;
-
-                    // Redirect after a moment
-                    setTimeout(() => {
-                        window.location.href = `/dashboard?external_reference=${result.orden_id}`;
-                    }, 2000);
-                }, 1000);
-
-            } catch (error) {
-                console.error('Error:', error);
-                progressContainer.classList.remove('active');
-                progressText.style.display = 'none';
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'error';
-                statusDiv.textContent = 'Error: ' + error.message;
-                skipBtn.disabled = false;
-                skipBtn.textContent = '🧪 Probar sin Pago (Dev)';
-            }
-        });
     </script>
 </body>
 

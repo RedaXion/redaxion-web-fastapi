@@ -393,12 +393,6 @@ María García - QA Lead"></textarea>
                         style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
                         Transcribir y Pagar
                     </button>
-
-                    <!-- Skip payment for testing -->
-                    <button type="button" id="skipPaymentBtn" class="btn btn-outline"
-                        style="width: 100%; font-size: 1rem; margin-top: 0.5rem; border-color: var(--accent-orange); color: var(--accent-orange);">
-                        🧪 Probar sin Pago (Dev)
-                    </button>
                 </form>
 
                 <!-- Upload Progress Bar -->
@@ -624,108 +618,6 @@ María García - QA Lead"></textarea>
         // Payment option click handlers
         payWithFlowBtn.addEventListener('click', () => processMeetingWithPayment('flow'));
         payWithMercadoPagoBtn.addEventListener('click', () => processMeetingWithPayment('mercadopago'));
-
-        // Skip payment button - for testing
-        document.getElementById('skipPaymentBtn').addEventListener('click', async function () {
-            const statusDiv = document.getElementById('status');
-            const skipBtn = this;
-            const form = document.getElementById('meetingForm');
-            const progressContainer = document.getElementById('upload-progress-container');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const progressText = document.getElementById('upload-progress-text');
-            const audioFile = document.querySelector('[name="audio_file"]').files[0];
-
-            // Validate form
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-
-            if (!audioFile) {
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'error';
-                statusDiv.textContent = 'Por favor selecciona un archivo de audio.';
-                return;
-            }
-
-            progressContainer.classList.add('active');
-            progressText.style.display = 'block';
-            progressBar.style.width = '0%';
-            progressText.textContent = '🧪 Modo Test - Subiendo audio...';
-
-            statusDiv.style.display = 'none';
-            skipBtn.disabled = true;
-            skipBtn.textContent = '🧪 Procesando...';
-
-            try {
-                // Get upload URL
-                const urlFormData = new FormData();
-                urlFormData.append('filename', audioFile.name);
-                const urlResponse = await fetch('/api/get-upload-url', { method: 'POST', body: urlFormData });
-                if (!urlResponse.ok) throw new Error('Error obteniendo URL de subida');
-                const { upload_url, public_url, orden_id } = await urlResponse.json();
-
-                // Upload to GCS
-                progressText.textContent = 'Subiendo audio... 0%';
-                await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.upload.addEventListener('progress', e => {
-                        if (e.lengthComputable) {
-                            const pct = Math.round((e.loaded / e.total) * 100);
-                            progressBar.style.width = pct + '%';
-                            progressText.textContent = `Subiendo audio... ${pct}%`;
-                        }
-                    });
-                    xhr.addEventListener('load', () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('Error GCS')));
-                    xhr.addEventListener('error', () => reject(new Error('Error de red')));
-                    xhr.open('PUT', upload_url);
-                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-                    xhr.send(audioFile);
-                });
-
-                progressBar.style.width = '100%';
-                progressText.textContent = '🧪 Creando orden de prueba...';
-
-                // Create test order
-                const orderFormData = new FormData();
-                orderFormData.append('nombre', document.querySelector('[name="nombre"]').value);
-                orderFormData.append('correo', document.querySelector('[name="correo"]').value);
-                orderFormData.append('titulo_reunion', document.querySelector('[name="titulo_reunion"]').value);
-                orderFormData.append('asistentes', document.querySelector('[name="asistentes"]').value);
-                orderFormData.append('agenda', document.querySelector('[name="agenda"]').value);
-                orderFormData.append('audio_url', public_url);
-                orderFormData.append('orden_id', orden_id);
-
-                const orderResponse = await fetch('/api/crear-orden-reunion-test', { method: 'POST', body: orderFormData });
-                if (!orderResponse.ok) throw new Error((await orderResponse.json()).detail || 'Error');
-                const result = await orderResponse.json();
-
-                progressContainer.classList.remove('active');
-                progressText.style.display = 'none';
-
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'success';
-                statusDiv.innerHTML = `
-                    <strong>🧪 Modo Test</strong><br>
-                    Procesando reunión sin pago...<br>
-                    <a href="/dashboard?external_reference=${result.orden_id}" style="color: var(--accent-cyan);">
-                        Ver estado de la orden →
-                    </a>
-                `;
-
-                setTimeout(() => { window.location.href = `/dashboard?external_reference=${result.orden_id}`; }, 2000);
-
-            } catch (error) {
-                console.error('Error:', error);
-                progressContainer.classList.remove('active');
-                progressText.style.display = 'none';
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'error';
-                statusDiv.textContent = 'Error: ' + error.message;
-                skipBtn.disabled = false;
-                skipBtn.textContent = '🧪 Probar sin Pago (Dev)';
-            }
-        });
     </script>
 </body>
 
