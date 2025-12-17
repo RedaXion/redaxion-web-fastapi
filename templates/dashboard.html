@@ -319,33 +319,58 @@
             }
         }
 
+        let completionNotified = false;
+
         async function pollStatus() {
             if (!ordenId) return;
 
             try {
                 const response = await fetch(`/api/status/${ordenId}`);
-                if (!response.ok) return; // Wait for server
+                if (!response.ok) {
+                    // Server returned error - continue polling
+                    console.log("Status API returned error, retrying...");
+                    setTimeout(pollStatus, 3000);
+                    return;
+                }
 
                 const data = await response.json();
                 console.log("Status update:", data);
 
                 updateProgress(data.status);
 
-                if (data.status === 'completed' && data.files) {
-                    renderFiles(data.files);
-                    // Stop polling if done
-                    // return; // Optional: keep polling if we expect more updates
-                    confetti({
-                        particleCount: 100,
-                        spread: 70,
-                        origin: { y: 0.6 }
-                    });
+                if (data.status === 'completed') {
+                    // Only notify once
+                    if (!completionNotified) {
+                        completionNotified = true;
+
+                        // Render files if available
+                        if (data.files && data.files.length > 0) {
+                            renderFiles(data.files);
+                        }
+
+                        // Show confetti celebration
+                        confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 0.6 }
+                        });
+
+                        // Play notification sound (optional)
+                        try {
+                            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fZJJkgXZkXnJ3e26GgX1ze3h7b3J8eHN6');
+                            audio.play().catch(() => { });
+                        } catch (e) { }
+
+                        console.log("✅ Proceso completado!");
+                    }
+                    // Stop polling after completion
+                    return;
                 } else {
                     setTimeout(pollStatus, 3000); // Poll every 3s
                 }
             } catch (e) {
                 console.error("Polling error", e);
-                setTimeout(pollStatus, 5000);
+                setTimeout(pollStatus, 5000); // Retry on error
             }
         }
 
