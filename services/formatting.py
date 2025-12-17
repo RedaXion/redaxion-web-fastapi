@@ -224,6 +224,86 @@ def configurar_columnas(doc, tipo):
 
 from services.image_generation import generate_image_from_text
 from services.napkin_integration import generate_napkin_visual
+from io import BytesIO
+import requests
+from openai import OpenAI
+
+# Initialize OpenAI client for DALL-E
+_dalle_client = None
+if os.getenv("OPENAI_API_KEY"):
+    _dalle_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Color descriptions for DALL-E prompt
+DALLE_COLOR_MAP = {
+    "azul elegante": "navy blue and white",
+    "azul pastel": "soft sky blue and white",
+    "rojo elegante": "deep burgundy red and cream",
+    "rojo pastel": "soft pink and white",
+    "gris elegante": "elegant gray and white",
+    "morado pastel": "soft lavender purple and white",
+    "verde pastel": "soft sage green and white",
+}
+
+def extract_titles_from_text(texto: str) -> str:
+    """Extract all # and ## titles from the processed text."""
+    titles = []
+    for line in texto.split('\n'):
+        line = line.strip()
+        if line.startswith('## ') or line.startswith('# '):
+            title = line.lstrip('#').strip()
+            if title and len(title) > 2:
+                titles.append(title)
+    
+    # Limit to first 5 titles to keep prompt concise
+    return ", ".join(titles[:5]) if titles else "academic educational content"
+
+def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> BytesIO:
+    """
+    Generate a cover image using DALL-E 3 based on document titles and color scheme.
+    Returns image as BytesIO or None if generation fails.
+    """
+    if not _dalle_client:
+        print("⚠️ No OPENAI_API_KEY configured. Skipping DALL-E image generation.")
+        return None
+    
+    try:
+        # Extract titles for context
+        titles = extract_titles_from_text(texto)
+        
+        # Get color description
+        color_normalized = color.strip().lower()
+        color_desc = DALLE_COLOR_MAP.get(color_normalized, "blue and white")
+        
+        # Build prompt
+        prompt = f"""Create a clean, professional academic infographic or conceptual diagram.
+Topic: {titles}
+Style: Modern, minimalist, medical/academic aesthetic. Abstract conceptual representation.
+Color palette: Predominantly {color_desc} tones.
+Important: No text, no letters, no words in the image. Pure visual/abstract representation."""
+
+        print(f"🎨 Generando imagen DALL-E con colores: {color_desc}")
+        print(f"📝 Títulos: {titles[:100]}...")
+        
+        response = _dalle_client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        
+        image_url = response.data[0].url
+        
+        # Download the image
+        img_response = requests.get(image_url)
+        img_response.raise_for_status()
+        
+        print("✅ Imagen DALL-E generada exitosamente")
+        return BytesIO(img_response.content)
+        
+    except Exception as e:
+        print(f"❌ Error generando imagen DALL-E: {e}")
+        return None
 
 def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscuro", columnas="simple"):
     preparar_logo()
@@ -241,16 +321,16 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # Napkin AI Visual at start
-    napkin_img = generate_napkin_visual(texto[:2000])
-    if napkin_img:
+    # Generate cover image with DALL-E (using titles and color scheme)
+    cover_img = generate_cover_image_dalle(texto, color)
+    if cover_img:
         try:
-            doc.add_picture(napkin_img, width=Inches(3) if columnas=="doble" else Inches(5))
+            doc.add_picture(cover_img, width=Inches(3) if columnas=="doble" else Inches(5))
             last_p = doc.paragraphs[-1] 
             last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             doc.add_paragraph("") # Spacing
         except Exception as e:
-            print(f"Error inserting Napkin visual: {e}")
+            print(f"Error inserting DALL-E cover image: {e}")
 
     texto_lineas = texto.split('\n')
     titulo_agregado = False
