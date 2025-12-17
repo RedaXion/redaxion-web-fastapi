@@ -65,6 +65,24 @@ try:
         # Option 2: Try default credentials (local dev with gcloud auth)
         storage_client = storage.Client()
         print("✅ GCS Client inicializado con credenciales por defecto")
+    
+    # Configure CORS on bucket for direct browser uploads
+    if storage_client and GCS_BUCKET_NAME:
+        try:
+            bucket = storage_client.bucket(GCS_BUCKET_NAME)
+            bucket.cors = [
+                {
+                    "origin": ["*"],  # Allow all origins for now
+                    "method": ["GET", "PUT", "POST", "OPTIONS"],
+                    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
+                    "maxAgeSeconds": 3600
+                }
+            ]
+            bucket.patch()
+            print("✅ CORS configurado en bucket GCS")
+        except Exception as e:
+            print(f"⚠️ No se pudo configurar CORS en bucket: {e}")
+            
 except Exception as e:
     print(f"⚠️ Warning: Could not initialize GCS client: {e}")
     print("   El sistema usará almacenamiento local como fallback.")
