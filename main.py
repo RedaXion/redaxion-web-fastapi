@@ -363,7 +363,8 @@ async def crear_prueba(
     nivel: str = Form(...),
     preguntas_alternativa: int = Form(...),
     preguntas_desarrollo: int = Form(...),
-    dificultad: int = Form(7)
+    dificultad: int = Form(7),
+    gateway: str = Form("flow")  # User's payment gateway choice
 ):
     """Create a test/exam order and generate payment."""
     orden_id = str(uuid.uuid4())
@@ -382,7 +383,7 @@ async def crear_prueba(
     }
     database.create_order(order_data)
     
-    print(f"Nueva orden de prueba: {orden_id} - {asignatura} - {tema}")
+    print(f"Nueva orden de prueba: {orden_id} - {asignatura} - {tema} (Gateway: {gateway})")
     
     # Store exam params in a simple way (could be JSON in a field, but using notes-style here)
     exam_metadata = {
@@ -395,8 +396,8 @@ async def crear_prueba(
     }
     
     try:
-        # Use Flow or MercadoPago based on configuration
-        if PAYMENT_GATEWAY == "flow":
+        # Use Flow or MercadoPago based on user selection
+        if gateway == "flow":
             resultado_pago = crear_pago_flow(
                 orden_id=orden_id,
                 monto=SPECIAL_SERVICES_PRICE,
@@ -547,7 +548,8 @@ async def crear_orden_reunion(
     asistentes: str = Form(""),
     agenda: str = Form(""),
     audio_url: str = Form(...),
-    orden_id: str = Form(...)
+    orden_id: str = Form(...),
+    gateway: str = Form("flow")  # User's payment gateway choice
 ):
     """Create a meeting transcription order."""
     # Save to DB
@@ -564,7 +566,7 @@ async def crear_orden_reunion(
     }
     database.create_order(order_data)
     
-    print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'}")
+    print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'} (Gateway: {gateway})")
     
     meeting_metadata = {
         "titulo_reunion": titulo_reunion,
@@ -573,8 +575,8 @@ async def crear_orden_reunion(
     }
     
     try:
-        # Use Flow or MercadoPago based on configuration
-        if PAYMENT_GATEWAY == "flow":
+        # Use Flow or MercadoPago based on user selection
+        if gateway == "flow":
             resultado_pago = crear_pago_flow(
                 orden_id=orden_id,
                 monto=SPECIAL_SERVICES_PRICE,

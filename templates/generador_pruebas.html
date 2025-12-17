@@ -194,6 +194,95 @@
             color: var(--accent-cyan);
             font-weight: 600;
         }
+
+        /* Payment Selection Modal */
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .payment-modal.active {
+            display: flex;
+        }
+
+        .payment-modal-content {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .payment-modal h3 {
+            color: #fff;
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+        }
+
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .payment-option {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 2px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .payment-option:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(28, 198, 194, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .payment-option .icon {
+            font-size: 2rem;
+        }
+
+        .payment-option .info {
+            text-align: left;
+        }
+
+        .payment-option .title {
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .payment-option .subtitle {
+            color: var(--text-gray);
+            font-size: 0.85rem;
+        }
+
+        .payment-modal-close {
+            margin-top: 1.5rem;
+            color: var(--text-gray);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .payment-modal-close:hover {
+            color: #fff;
+        }
     </style>
 </head>
 
@@ -274,7 +363,7 @@
                         <div class="price">$1.500 CLP</div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary"
+                    <button type="button" id="showPaymentModal" class="btn btn-primary"
                         style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
                         Generar Prueba y Pagar
                     </button>
@@ -297,6 +386,30 @@
         </div>
     </main>
 
+    <!-- Payment Selection Modal -->
+    <div class="payment-modal" id="paymentModal">
+        <div class="payment-modal-content">
+            <h3>¿Cómo deseas pagar?</h3>
+            <div class="payment-options">
+                <div class="payment-option" id="payWithFlow">
+                    <span class="icon">💳</span>
+                    <div class="info">
+                        <div class="title">Flow (Tarjeta/Débito)</div>
+                        <div class="subtitle">Visa, Mastercard, Redcompra</div>
+                    </div>
+                </div>
+                <div class="payment-option" id="payWithMercadoPago">
+                    <span class="icon">🏦</span>
+                    <div class="info">
+                        <div class="title">MercadoPago</div>
+                        <div class="subtitle">Múltiples opciones de pago</div>
+                    </div>
+                </div>
+            </div>
+            <div class="payment-modal-close" id="closePaymentModal">Cancelar</div>
+        </div>
+    </div>
+
     {% include 'footer.html' %}
 
     <script src="/static/js/main.js"></script>
@@ -309,18 +422,45 @@
             valueDisplay.textContent = slider.value;
         });
 
-        // Form Submission
-        document.getElementById('testGeneratorForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const statusDiv = document.getElementById('status');
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+        // Payment Modal Elements
+        const paymentModal = document.getElementById('paymentModal');
+        const showPaymentModalBtn = document.getElementById('showPaymentModal');
+        const closePaymentModalBtn = document.getElementById('closePaymentModal');
+        const payWithFlowBtn = document.getElementById('payWithFlow');
+        const payWithMercadoPagoBtn = document.getElementById('payWithMercadoPago');
+        const form = document.getElementById('testGeneratorForm');
 
-            statusDiv.style.display = 'none';
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Procesando...';
+        // Show payment modal
+        showPaymentModalBtn.addEventListener('click', function () {
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            paymentModal.classList.add('active');
+        });
+
+        // Close payment modal
+        closePaymentModalBtn.addEventListener('click', function () {
+            paymentModal.classList.remove('active');
+        });
+
+        // Close modal on background click
+        paymentModal.addEventListener('click', function (e) {
+            if (e.target === paymentModal) {
+                paymentModal.classList.remove('active');
+            }
+        });
+
+        // Process payment with selected gateway
+        async function processPayment(gateway) {
+            const statusDiv = document.getElementById('status');
+            paymentModal.classList.remove('active');
+            showPaymentModalBtn.disabled = true;
+            showPaymentModalBtn.textContent = 'Procesando...';
 
             try {
-                const formData = new FormData(e.target);
+                const formData = new FormData(form);
+                formData.append('gateway', gateway);
 
                 const response = await fetch('/api/crear-prueba', {
                     method: 'POST',
@@ -338,10 +478,10 @@
                 statusDiv.className = 'success';
                 statusDiv.innerHTML = `
                     <strong>¡Éxito!</strong> Orden creada.<br>
-                    Redirigiendo al pago...
+                    Redirigiendo al pago con ${gateway === 'flow' ? 'Flow' : 'MercadoPago'}...
                 `;
 
-                // Redirect to MercadoPago checkout
+                // Redirect to checkout
                 setTimeout(() => {
                     window.location.href = result.checkout_url;
                 }, 1500);
@@ -351,10 +491,14 @@
                 statusDiv.style.display = 'block';
                 statusDiv.className = 'error';
                 statusDiv.textContent = 'Error: ' + error.message;
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Generar Prueba y Pagar';
+                showPaymentModalBtn.disabled = false;
+                showPaymentModalBtn.textContent = 'Generar Prueba y Pagar';
             }
-        });
+        }
+
+        // Payment option click handlers
+        payWithFlowBtn.addEventListener('click', () => processPayment('flow'));
+        payWithMercadoPagoBtn.addEventListener('click', () => processPayment('mercadopago'));
 
         // Skip payment button - for testing
         document.getElementById('skipPaymentBtn').addEventListener('click', async function () {
