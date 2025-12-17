@@ -379,16 +379,16 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # Generate cover image with DALL-E (using titles and color scheme)
-    cover_img = generate_cover_image_dalle(texto, color)
-    if cover_img:
-        try:
-            doc.add_picture(cover_img, width=Inches(3) if columnas=="doble" else Inches(5))
-            last_p = doc.paragraphs[-1] 
-            last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            doc.add_paragraph("") # Spacing
-        except Exception as e:
-            print(f"Error inserting DALL-E cover image: {e}")
+    # DISABLED: Image generation until Napkin AI is available
+    # cover_img = generate_cover_image_dalle(texto, color)
+    # if cover_img:
+    #     try:
+    #         doc.add_picture(cover_img, width=Inches(3) if columnas=="doble" else Inches(5))
+    #         last_p = doc.paragraphs[-1] 
+    #         last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    #         doc.add_paragraph("") # Spacing
+    #     except Exception as e:
+    #         print(f"Error inserting DALL-E cover image: {e}")
 
     texto_lineas = texto.split('\n')
     titulo_agregado = False
