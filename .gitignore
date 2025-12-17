@@ -35,6 +35,9 @@ static/generated/*.docx
 static/generated/*.pdf
 !static/generated/.gitkeep
 
+# User uploads (audio files saved locally)
+static/uploads/
+
 # Videos (too large for GitHub, host externally)
 static/video/*.MP4
 static/video/*.mp4

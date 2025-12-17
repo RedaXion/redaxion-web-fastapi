@@ -206,11 +206,28 @@ async def testimonios(request: Request):
 import traceback
 
 async def upload_to_gcs(file: UploadFile, destination_blob_name: str) -> str:
-    # Simplified mock for now as we don't have credentials in environment
-    # In production use proper GCS upload
-    print(f"MOCK: Uploading {file.filename} to {destination_blob_name}")
-    # Use a custom scheme to trigger the transcription service's mock mode immediately
-    return f"mock://storage.googleapis.com/{GCS_BUCKET_NAME}/{destination_blob_name}"
+    """
+    Saves audio file locally and returns a public URL.
+    AssemblyAI will download from this URL for transcription.
+    """
+    upload_dir = "static/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Sanitize filename
+    safe_filename = destination_blob_name.replace("/", "_")
+    file_path = f"{upload_dir}/{safe_filename}"
+    
+    # Save the file
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    print(f"✅ Audio guardado: {file_path} ({len(content)} bytes)")
+    
+    # Return public URL (BASE_URL must be set in production)
+    public_url = f"{BASE_URL}/{file_path}"
+    print(f"📎 URL pública: {public_url}")
+    return public_url
 
 @app.post("/api/orden")
 async def crear_orden(
