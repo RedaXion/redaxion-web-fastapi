@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soluciones IA Personalizadas | RedaXion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .form-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            border-radius: 16px;
+        }
+
+        .hero-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero-section p {
+            color: var(--text-gray);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .ideas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .idea-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .idea-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-3px);
+        }
+
+        .idea-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .idea-card h4 {
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .idea-card p {
+            color: var(--text-gray);
+            font-size: 0.85rem;
+        }
+
+        .success-message {
+            background: rgba(28, 198, 194, 0.15);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .success-message h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message {
+            background: rgba(255, 99, 71, 0.15);
+            border: 1px solid tomato;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .contact-note {
+            background: rgba(250, 140, 22, 0.1);
+            border: 1px solid var(--accent-orange);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .contact-note a {
+            color: var(--accent-orange);
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main class="section-padding" style="padding-top: 8rem;">
+        <div class="container">
+            <div class="hero-section">
+                <h1>Soluciones <span class="text-gradient">IA Personalizadas</span></h1>
+                <p>¿No encuentras lo que necesitas? Cuéntanos tu idea y te ayudamos a construirla con inteligencia
+                    artificial.</p>
+            </div>
+
+            <!-- Ideas Examples -->
+            <div class="ideas-grid">
+                <div class="idea-card">
+                    <div class="icon">🤖</div>
+                    <h4>Agentes IA</h4>
+                    <p>Asistentes virtuales para atención, ventas o soporte</p>
+                </div>
+                <div class="idea-card">
+                    <div class="icon">📊</div>
+                    <h4>Análisis de Datos</h4>
+                    <p>Procesamiento inteligente de documentos y reportes</p>
+                </div>
+                <div class="idea-card">
+                    <div class="icon">🔄</div>
+                    <h4>Automatización</h4>
+                    <p>Flujos de trabajo automatizados con IA</p>
+                </div>
+                <div class="idea-card">
+                    <div class="icon">💡</div>
+                    <h4>Tu Idea</h4>
+                    <p>Cuéntanos qué problema quieres resolver</p>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <form id="solucionesForm">
+                    <div class="form-group">
+                        <label for="nombre">Tu Nombre *</label>
+                        <input type="text" id="nombre" name="nombre" required placeholder="¿Cómo te llamas?">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="correo">Tu Correo *</label>
+                        <input type="email" id="correo" name="correo" required placeholder="correo@ejemplo.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empresa">Empresa u Organización (opcional)</label>
+                        <input type="text" id="empresa" name="empresa" placeholder="Nombre de tu empresa">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descripcion">Cuéntanos tu idea o necesidad *</label>
+                        <textarea id="descripcion" name="descripcion" required
+                            placeholder="Describe qué problema quieres resolver, qué proceso quieres automatizar, o qué solución con IA te gustaría tener..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1rem;">
+                        Enviar Consulta
+                    </button>
+
+                    <div class="error-message" id="error-message"></div>
+                </form>
+
+                <div class="success-message" id="success-message">
+                    <h3>✅ ¡Mensaje Recibido!</h3>
+                    <p>Gracias por contactarnos. Te responderemos pronto para explorar cómo podemos ayudarte.</p>
+                </div>
+
+                <div class="contact-note">
+                    También puedes escribirnos directamente a: <a
+                        href="mailto:contacto@redaxion.cl">contacto@redaxion.cl</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+
+    <script src="/static/js/main.js"></script>
+    <script>
+        document.getElementById('solucionesForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando...';
+            errorDiv.classList.remove('show');
+
+            try {
+                const formData = new FormData(form);
+
+                const response = await fetch('/api/consulta-soluciones', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Error enviando consulta');
+                }
+
+                // Success
+                form.style.display = 'none';
+                successDiv.classList.add('show');
+
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar Consulta';
+            }
+        });
+    </script>
+</body>
+
+</html>

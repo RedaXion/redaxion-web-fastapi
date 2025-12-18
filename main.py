@@ -267,6 +267,10 @@ async def generador_pruebas(request: Request):
 async def transcribe_reunion(request: Request):
     return templates.TemplateResponse("transcribe_reunion.html", {"request": request})
 
+@app.get("/soluciones-ia", response_class=HTMLResponse)
+async def soluciones_ia(request: Request):
+    return templates.TemplateResponse("soluciones_ia.html", {"request": request})
+
 
 # --- Special Services API Endpoints ---
 
@@ -644,6 +648,69 @@ async def crear_orden_reunion(
         print(f"Error creating meeting order: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Consulting / Soluciones IA ---
+
+@app.post("/api/consulta-soluciones")
+async def consulta_soluciones(
+    nombre: str = Form(...),
+    correo: str = Form(...),
+    empresa: str = Form(""),
+    descripcion: str = Form(...)
+):
+    """Receive AI solutions consulting requests and notify via email."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    print(f"📩 Nueva consulta de soluciones IA de: {nombre} ({correo})")
+    
+    # Prepare email content
+    email_body = f"""
+    Nueva consulta de Soluciones IA - RedaXion
+    
+    ==========================================
+    Nombre: {nombre}
+    Correo: {correo}
+    Empresa: {empresa or 'No especificada'}
+    ==========================================
+    
+    Descripción de la necesidad:
+    {descripcion}
+    
+    ==========================================
+    Responder a: {correo}
+    """
+    
+    try:
+        # Try to send notification email to admin
+        sender_email = os.getenv("SMTP_USER", "contacto@redaxion.cl")
+        admin_email = os.getenv("ADMIN_EMAIL", sender_email)
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        
+        if smtp_password:
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = admin_email
+            msg['Subject'] = f"🤖 Nueva Consulta Soluciones IA - {nombre}"
+            msg.attach(MIMEText(email_body, 'plain'))
+            
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(sender_email, smtp_password)
+                server.sendmail(sender_email, admin_email, msg.as_string())
+            
+            print(f"✅ Email de notificación enviado a {admin_email}")
+        else:
+            print(f"⚠️ SMTP no configurado. Consulta guardada en logs:")
+            print(email_body)
+        
+        return {"success": True, "message": "Consulta recibida"}
+        
+    except Exception as e:
+        print(f"❌ Error procesando consulta: {e}")
+        # Still return success to user - we have the data in logs
+        return {"success": True, "message": "Consulta recibida"}
 
 
 # --- Test Endpoints (Skip Payment for Development) ---
