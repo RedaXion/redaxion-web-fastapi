@@ -152,11 +152,57 @@ def obtener_estado_pago(token: str) -> dict:
         resultado = Payment.getStatus(client, {"token": token})
         return resultado
     except Exception as e:
-        print(f"❌ Error obteniendo estado de pago: {e}")
+        print(f"❌ Error pyflowcl, intentando manual: {e}")
+        return obtener_estado_pago_manual(token)
+
+def obtener_estado_pago_manual(token: str) -> dict:
+    """Manual implementation of Flow getStatus to avoid library issues."""
+    import httpx
+    import hashlib
+    import hmac
+    
+    api_key = os.getenv("FLOW_API_KEY")
+    secret = os.getenv("FLOW_API_SECRET")
+    use_sandbox = os.getenv("FLOW_SANDBOX", "true").lower() == "true"
+    base_url = "https://sandbox.flow.cl/api" if use_sandbox else "https://www.flow.cl/api"
+    
+    # 1. Prepare parameters sorted alphabetically
+    params = {
+        "apiKey": api_key,
+        "token": token
+    }
+    
+    # 2. Generate signature string: key1value1key2value2...
+    keys_sorted = sorted(params.keys())
+    to_sign = "".join([f"{k}{params[k]}" for k in keys_sorted])
+    
+    # 3. Calculate HMAC SHA256
+    signature = hmac.new(
+        secret.encode('utf-8'),
+        to_sign.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    params["s"] = signature
+    
+    print(f"🔐 Firma Manual Generada: {signature[:10]}... para string: {to_sign[:20]}...")
+    
+    try:
+        url = f"{base_url}/payment/getStatus"
+        with httpx.Client() as client:
+            response = client.get(url, params=params)
+            
+        print(f"📡 Respuesta Flow Manual: {response.status_code}")
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"❌ Error Flow API Manual: {response.text}")
+            return {"error": f"Flow Error {response.status_code}: {response.text}"}
+            
+    except Exception as e:
+        print(f"❌ Excepción manual Flow: {e}")
         return {"error": str(e)}
-
-
-def verificar_firma_webhook(data: dict, firma_recibida: str) -> bool:
     """
     Verify the signature of a Flow webhook notification.
     

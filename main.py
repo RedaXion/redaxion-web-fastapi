@@ -908,11 +908,17 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
     Flow sends parameters via POST including status.
     We process payment here to bypass potential webhook/signature issues.
     """
+    """
     try:
+        # Debug incoming data
+        query_params = dict(request.query_params)
         form_data = await request.form()
-        orden_id = form_data.get("commerceOrder")
-        token = form_data.get("token")
-        status = form_data.get("status") # "1": pending, "2": paid, "3": rejected, "4": cancelled
+        print(f"📥 Flow Return Payload: QUERY={query_params}, FORM={dict(form_data)}")
+        
+        # Try to find data in FORM first, then QUERY
+        orden_id = form_data.get("commerceOrder") or query_params.get("commerceOrder")
+        token = form_data.get("token") or query_params.get("token")
+        status = form_data.get("status") or query_params.get("status")
         
         print(f"🔄 Flow return received: Order={orden_id}, Status={status}")
         
