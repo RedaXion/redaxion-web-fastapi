@@ -908,7 +908,6 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
     Flow sends parameters via POST including status.
     We process payment here to bypass potential webhook/signature issues.
     """
-    """
     try:
         # Debug incoming data
         query_params = dict(request.query_params)
