@@ -816,7 +816,7 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
             print("⚠️ Flow webhook: No token received")
             return JSONResponse({"error": "No token"}, status_code=400)
         
-        print(f"💳 Flow webhook recibido: token={token[:20]}...")
+        print(f"🔵 [NEW CODE] Flow webhook recibido: token={token[:20]}...")
         
         # Get payment status from Flow
         try:

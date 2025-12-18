@@ -132,27 +132,24 @@ def crear_pago_flow(
 def obtener_estado_pago(token: str) -> dict:
     """
     Get the status of a payment by token.
-    
-    Returns:
-        dict with payment status information
+    NEVER raises exceptions - always returns a dict.
     """
+    print(f"🔵 [NEW CODE] obtener_estado_pago called with token={token[:20]}...")
+    
+    # Try pyflowcl first, but immediately fallback to manual on ANY error
     client = get_flow_client()
     
     if not client:
         return {"status": 2, "statusStr": "PAGADA", "mock": True}
     
     try:
-        # Debug Info
-        print(f"🔍 Debug Flow getStatus - Token: '{token}'")
-        print(f"🔍 Debug Flow Client URL: {client.api_url}")
-        
-        # Clean token just in case
-        token = token.strip()
-        
-        resultado = Payment.getStatus(client, {"token": token})
+        print(f"🔍 Trying pyflowcl getStatus...")
+        resultado = Payment.getStatus(client, {"token": token.strip()})
+        print(f"✅ pyflowcl succeeded")
         return resultado
     except Exception as e:
-        print(f"❌ Error pyflowcl, intentando manual: {e}")
+        print(f"⚠️ pyflowcl failed (expected): {str(e)[:100]}")
+        print(f"🔄 Switching to manual implementation...")
         return obtener_estado_pago_manual(token)
 
 def obtener_estado_pago_manual(token: str) -> dict:
