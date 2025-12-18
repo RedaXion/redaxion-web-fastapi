@@ -111,16 +111,16 @@ def crear_pago_flow(
         return {
             "success": True,
             "checkout_url": checkout_url,
-            "flow_order": resultado.flowOrder,
-            "token": resultado.token,
-            "mock": False
+            "flow_order": str(resultado.flowOrder),
+            "token": str(resultado.token)
         }
         
     except Exception as e:
         print(f"❌ Error creando pago Flow: {e}")
+        # Return error dict instead of raising exception to crash endpoint
         return {
-            "success": False,
-            "error": str(e),
+            "success": False, 
+            "error": f"Error comunicando con Flow: {str(e)}",
             "checkout_url": None,
             "mock": False
         }

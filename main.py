@@ -420,8 +420,11 @@ async def crear_prueba(
                 )
             
             checkout_url = resultado_pago.get("checkout_url")
+            checkout_url = resultado_pago.get("checkout_url")
             if not checkout_url:
-                raise Exception(resultado_pago.get("error", "Error creando pago"))
+                # Return 400 so frontend shows alert with message, avoiding 500 HTML
+                error_msg = resultado_pago.get("error", "Error creando pago Flow")
+                raise HTTPException(status_code=400, detail=error_msg)
             
             return {"orden_id": orden_id, "checkout_url": checkout_url}
         
@@ -600,7 +603,8 @@ async def crear_orden_reunion(
             
             checkout_url = resultado_pago.get("checkout_url")
             if not checkout_url:
-                raise Exception(resultado_pago.get("error", "Error creando pago"))
+                error_msg = resultado_pago.get("error", "Error creando pago Flow")
+                raise HTTPException(status_code=400, detail=error_msg)
             
             return {"orden_id": orden_id, "checkout_url": checkout_url}
         
