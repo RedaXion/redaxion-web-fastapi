@@ -377,20 +377,7 @@ async def crear_prueba(
     # Save to DB with exam-specific type
     order_data = {
         "id": orden_id,
-        "status": "pending",
-        "client": nombre,
-        "email": correo,
-        "color": "azul elegante",
-        "columnas": "una",
-        "files": [],
-        "audio_url": "",  # No audio for exam service
-        "service_type": "exam"
-    }
-    database.create_order(order_data)
-    
-    print(f"Nueva orden de prueba: {orden_id} - {asignatura} - {tema} (Gateway: {gateway})")
-    
-    # Store exam params in a simple way (could be JSON in a field, but using notes-style here)
+    # Store exam params in metadata field for DB persisting
     exam_metadata = {
         "tema": tema,
         "asignatura": asignatura,
@@ -399,6 +386,20 @@ async def crear_prueba(
         "preguntas_desarrollo": preguntas_desarrollo,
         "dificultad": dificultad
     }
+    
+    order_data = {
+        "id": orden_id,
+        "status": "pending",
+        "client": nombre,
+        "email": correo,
+        "files": [],
+        "audio_url": "",
+        "service_type": "exam",
+        "metadata": exam_metadata
+    }
+    database.create_order(order_data)
+    
+    print(f"Nueva orden de prueba: {orden_id} - {asignatura} (Gateway: {gateway})")
     
     try:
         # Use Flow or MercadoPago based on user selection
@@ -410,7 +411,9 @@ async def crear_prueba(
                 descripcion=f"Generador de Pruebas - {asignatura}",
                 url_retorno=f"{BASE_URL}/api/flow-return",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
-                optional_data=exam_metadata
+                # No sending optional_data to Flow to avoid Error 2002 (Too long)
+                # We retrieve metadata from DB in webhook using order_id
+                optional_data=None 
             )
             
             if resultado_pago.get("mock"):
@@ -560,6 +563,12 @@ async def crear_orden_reunion(
     gateway: str = Form("flow")  # User's payment gateway choice
 ):
     """Create a meeting transcription order."""
+    meeting_metadata = {
+        "titulo_reunion": titulo_reunion,
+        "asistentes": asistentes,
+        "agenda": agenda
+    }
+    
     # Save to DB
     order_data = {
         "id": orden_id,
@@ -570,17 +579,12 @@ async def crear_orden_reunion(
         "columnas": "una",
         "files": [],
         "audio_url": audio_url,
-        "service_type": "meeting"
+        "service_type": "meeting",
+        "metadata": meeting_metadata
     }
     database.create_order(order_data)
     
     print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'} (Gateway: {gateway})")
-    
-    meeting_metadata = {
-        "titulo_reunion": titulo_reunion,
-        "asistentes": asistentes,
-        "agenda": agenda
-    }
     
     try:
         # Use Flow or MercadoPago based on user selection
@@ -592,7 +596,8 @@ async def crear_orden_reunion(
                 descripcion="Transcripción de Reunión - RedaXion",
                 url_retorno=f"{BASE_URL}/api/flow-return",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
-                optional_data=meeting_metadata
+                # No sending optional_data to Flow to avoid Error 2002 (Too long)
+                optional_data=None
             )
             
             if resultado_pago.get("mock"):
@@ -837,15 +842,47 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                 
                 # Trigger processing based on service type
                 if service_type == "exam":
-                    # For exam, we need the metadata that was stored
-                    # Since we don't store it directly, we'll need to handle this differently
-                    # For now, mark as paid and let dashboard show status
-                    database.update_order_status(commerce_order, "paid")
-                    print(f"✅ Pago confirmado para orden de examen: {commerce_order}")
+                    # For exam, retrieve metadata from DB
+                    metadata = order.get("metadata", {})
+                    if metadata:
+                        database.update_order_status(commerce_order, "paid")
+                        
+                        # Launch generation task
+                        background_tasks.add_task(
+                            procesar_y_enviar_prueba, 
+                            commerce_order, 
+                            metadata.get("tema"), 
+                            metadata.get("asignatura"), 
+                            metadata.get("nivel"),
+                            metadata.get("preguntas_alternativa"), 
+                            metadata.get("preguntas_desarrollo"), 
+                            metadata.get("dificultad"), 
+                            order["email"], 
+                            order["client"]
+                        )
+                        print(f"✅ Pago confirmado y examen en generación: {commerce_order}")
+                    else:
+                        print(f"⚠️ Error: Orden de examen pagada pero sin metadatos: {commerce_order}")
+                        database.update_order_status(commerce_order, "paid")
                     
                 elif service_type == "meeting":
                     database.update_order_status(commerce_order, "paid")
-                    print(f"✅ Pago confirmado para orden de reunión: {commerce_order}")
+                    
+                    # Try to retrieve metadata if available
+                    metadata = order.get("metadata", {})
+                    
+                    # Launch meeting meeting processing
+                    background_tasks.add_task(
+                        procesar_y_enviar_reunion, 
+                        commerce_order, 
+                        order.get("audio_url"), 
+                        metadata.get("titulo_reunion", ""), 
+                        metadata.get("asistentes", ""), 
+                        metadata.get("agenda", ""), 
+                        order["email"], 
+                        order["client"]
+                    )
+                    print(f"✅ Pago confirmado y reunión en proceso: {commerce_order}")
                     
                 else:
                     # Standard transcription order

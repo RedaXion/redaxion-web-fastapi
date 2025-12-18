@@ -19,9 +19,23 @@ def init_db():
             columnas TEXT,
             files TEXT,
             created_at TIMESTAMP,
-            audio_url TEXT
+            audio_url TEXT,
+            service_type TEXT,
+            metadata TEXT
         )
     ''')
+    
+    # Migration: Add columns if they don't exist (for existing DBs)
+    try:
+        c.execute('ALTER TABLE orders ADD COLUMN service_type TEXT')
+    except sqlite3.OperationalError:
+        pass
+        
+    try:
+        c.execute('ALTER TABLE orders ADD COLUMN metadata TEXT')
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
@@ -31,19 +45,23 @@ def create_order(data: dict):
     c = conn.cursor()
     try:
         files_json = json.dumps(data.get("files", []))
+        metadata_json = json.dumps(data.get("metadata", {}))
+        
         c.execute('''
-            INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data["id"],
             data["status"],
             data["client"],
             data["email"],
-            data["color"],
-            data["columnas"],
+            data.get("color", ""),
+            data.get("columnas", ""),
             files_json,
             datetime.now(),
-            data.get("audio_url", "")
+            data.get("audio_url", ""),
+            data.get("service_type", ""),
+            metadata_json
         ))
         conn.commit()
     except Exception as e:
@@ -70,6 +88,16 @@ def get_order(orden_id: str):
                 row_dict["files"] = json.loads(row_dict["files"])
             except:
                 row_dict["files"] = []
+                
+        # Parse metadata json back to dict
+        if row_dict.get("metadata"):
+            try:
+                row_dict["metadata"] = json.loads(row_dict["metadata"])
+            except:
+                row_dict["metadata"] = {}
+        else:
+            row_dict["metadata"] = {}
+            
         return row_dict
     return None
 
