@@ -659,58 +659,59 @@ async def consulta_soluciones(
     empresa: str = Form(""),
     descripcion: str = Form(...)
 ):
-    """Receive AI solutions consulting requests and notify via email."""
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
+    """Receive AI solutions consulting requests and notify via email using Resend."""
+    import httpx
     
     print(f"📩 Nueva consulta de soluciones IA de: {nombre} ({correo})")
     
     # Prepare email content
-    email_body = f"""
-    Nueva consulta de Soluciones IA - RedaXion
-    
-    ==========================================
-    Nombre: {nombre}
-    Correo: {correo}
-    Empresa: {empresa or 'No especificada'}
-    ==========================================
-    
-    Descripción de la necesidad:
-    {descripcion}
-    
-    ==========================================
-    Responder a: {correo}
+    email_html = f"""
+    <h2>🤖 Nueva consulta de Soluciones IA</h2>
+    <hr>
+    <p><strong>Nombre:</strong> {nombre}</p>
+    <p><strong>Correo:</strong> <a href="mailto:{correo}">{correo}</a></p>
+    <p><strong>Empresa:</strong> {empresa or 'No especificada'}</p>
+    <hr>
+    <h3>Descripción de la necesidad:</h3>
+    <p>{descripcion.replace(chr(10), '<br>')}</p>
+    <hr>
+    <p><em>Responder a: <a href="mailto:{correo}">{correo}</a></em></p>
     """
     
-    try:
-        # Try to send notification email to admin
-        sender_email = os.getenv("SMTP_USER", "contacto@redaxion.cl")
-        admin_email = os.getenv("ADMIN_EMAIL", sender_email)
-        smtp_password = os.getenv("SMTP_PASSWORD")
-        
-        if smtp_password:
-            msg = MIMEMultipart()
-            msg['From'] = sender_email
-            msg['To'] = admin_email
-            msg['Subject'] = f"🤖 Nueva Consulta Soluciones IA - {nombre}"
-            msg.attach(MIMEText(email_body, 'plain'))
-            
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                server.login(sender_email, smtp_password)
-                server.sendmail(sender_email, admin_email, msg.as_string())
-            
-            print(f"✅ Email de notificación enviado a {admin_email}")
-        else:
-            print(f"⚠️ SMTP no configurado. Consulta guardada en logs:")
-            print(email_body)
-        
-        return {"success": True, "message": "Consulta recibida"}
-        
-    except Exception as e:
-        print(f"❌ Error procesando consulta: {e}")
-        # Still return success to user - we have the data in logs
-        return {"success": True, "message": "Consulta recibida"}
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    admin_email = os.getenv("ADMIN_EMAIL", "contacto@redaxion.cl")
+    
+    if resend_api_key:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {resend_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "from": "RedaXion <notificaciones@redaxion.cl>",
+                        "to": [admin_email],
+                        "subject": f"🤖 Nueva Consulta Soluciones IA - {nombre}",
+                        "html": email_html,
+                        "reply_to": correo
+                    }
+                )
+                
+                if response.status_code == 200:
+                    print(f"✅ Email enviado via Resend a {admin_email}")
+                else:
+                    print(f"⚠️ Resend error: {response.status_code} - {response.text}")
+                    
+        except Exception as e:
+            print(f"❌ Error enviando email: {e}")
+    else:
+        print(f"⚠️ RESEND_API_KEY no configurada. Consulta guardada en logs:")
+        print(f"   Nombre: {nombre}, Email: {correo}, Empresa: {empresa}")
+        print(f"   Descripción: {descripcion}")
+    
+    return {"success": True, "message": "Consulta recibida"}
 
 
 # --- Test Endpoints (Skip Payment for Development) ---
