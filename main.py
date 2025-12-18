@@ -406,7 +406,7 @@ async def crear_prueba(
                 monto=SPECIAL_SERVICES_PRICE,
                 email=correo,
                 descripcion=f"Generador de Pruebas - {asignatura}",
-                url_retorno=f"{BASE_URL}/api/flow-return",
+                url_retorno=f"{BASE_URL}/api/flow-return?orden_id={orden_id}",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
                 # No sending optional_data to Flow to avoid Error 2002 (Too long)
                 # We retrieve metadata from DB in webhook using order_id
@@ -591,7 +591,7 @@ async def crear_orden_reunion(
                 monto=SPECIAL_SERVICES_PRICE,
                 email=correo,
                 descripcion="Transcripción de Reunión - RedaXion",
-                url_retorno=f"{BASE_URL}/api/flow-return",
+                url_retorno=f"{BASE_URL}/api/flow-return?orden_id={orden_id}",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
                 # No sending optional_data to Flow to avoid Error 2002 (Too long)
                 optional_data=None
@@ -910,119 +910,72 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
 async def flow_return(request: Request, background_tasks: BackgroundTasks):
     """
     Handle Flow return URL (User redirection after payment).
-    Flow sends parameters via POST including status.
-    We process payment here to bypass potential webhook/signature issues.
+    Flow redirects here ONLY on successful payment.
+    We get orden_id from query params (we put it there when creating payment).
     """
     try:
-        # Debug incoming data
+        # Get orden_id from our query param (we added it when creating the payment)
         query_params = dict(request.query_params)
-        form_data = await request.form()
-        print(f"📥 Flow Return Payload: QUERY={query_params}, FORM={dict(form_data)}")
+        orden_id = query_params.get("orden_id")
         
-        # Try to find data in FORM first, then QUERY
-        orden_id = form_data.get("commerceOrder") or query_params.get("commerceOrder")
-        token = form_data.get("token") or query_params.get("token")
-        status = form_data.get("status") or query_params.get("status")
-        
-        print(f"🔄 Flow return received: Order={orden_id}, Status={status}")
-        
-        # If we have Order ID and Status=2 (Paid), process immediately!
-        if orden_id and status == "2":
-            print(f"✅ Flow return: Orden {orden_id} PAGADA. Procesando...")
-            
-            # Get order to check current status
-            order = database.get_order(orden_id)
-            if order and order.get("status") != "paid":
-                # Mark as paid
-                database.update_order_status(orden_id, "paid")
-                
-                # Retrieve metadata and launch task
-                metadata = order.get("metadata", {})
-                service_type = order.get("service_type", "")
-                
-                if service_type == "exam" and metadata:
-                    background_tasks.add_task(
-                        procesar_y_enviar_prueba, 
-                        orden_id, 
-                        metadata.get("tema"), 
-                        metadata.get("asignatura"), 
-                        metadata.get("nivel"),
-                        metadata.get("preguntas_alternativa"), 
-                        metadata.get("preguntas_desarrollo"), 
-                        metadata.get("dificultad"), 
-                        order["email"], 
-                        order["client"]
-                    )
-                    print(f"🚀 Generación de examen iniciada desde Return Handler")
-                    
-                elif service_type == "meeting":
-                    background_tasks.add_task(
-                        procesar_y_enviar_reunion, 
-                        orden_id, 
-                        order.get("audio_url"), 
-                        metadata.get("titulo_reunion", ""), 
-                        metadata.get("asistentes", ""), 
-                        metadata.get("agenda", ""), 
-                        order["email"], 
-                        order["client"]
-                    )
-                    print(f"🚀 Procesamiento de reunión iniciado desde Return Handler")
-
-        # Fallback: If commerceOrder is missing but we have a token, ask Flow (prone to signature error)
-        if not orden_id and token:
-            print(f"🔄 Flow return: Recuperando ID de orden desde token...")
-            try:
-                status_data = obtener_estado_pago(token)
-                if status_data and "commerceOrder" in status_data:
-                    orden_id = status_data["commerceOrder"]
-                    print(f"✅ ID recuperado: {orden_id}")
-                else:
-                    print(f"⚠️ No se pudo recuperar ID. Response: {status_data}")
-            except Exception as e:
-                print(f"⚠️ Fallo recuperando ID desde token (credentials issue?): {e}")
-                # Don't crash, just log and continue
-        
-        # LAST RESORT: If we still don't have orden_id, find most recent pending exam order
-        # Flow only redirects on successful payment, so we can safely assume payment succeeded
-        if not orden_id and token:
-            print(f"🔄 Last resort: Buscando orden pendiente más reciente...")
-            latest_order = database.get_latest_pending_exam_order()
-            
-            if latest_order:
-                orden_id = latest_order["id"]
-                print(f"✅ Orden encontrada: {orden_id}")
-                
-                # Process it immediately!
-                database.update_order_status(orden_id, "paid")
-                metadata = latest_order.get("metadata", {})
-                
-                if metadata:
-                    background_tasks.add_task(
-                        procesar_y_enviar_prueba,
-                        orden_id,
-                        metadata.get("tema"),
-                        metadata.get("asignatura"),
-                        metadata.get("nivel"),
-                        metadata.get("preguntas_alternativa"),
-                        metadata.get("preguntas_desarrollo"),
-                        metadata.get("dificultad"),
-                        latest_order["email"],
-                        latest_order["client"]
-                    )
-                    print(f"🚀 [FALLBACK] Generación de examen iniciada para orden {orden_id}")
-            else:
-                print(f"⚠️ No se encontró ninguna orden pendiente")
-
+        print(f"🔵 [PRODUCTION] Flow return: orden_id={orden_id}")
         
         if not orden_id:
-            print("⚠️ Flow return: No se encontró orden_id, redirigiendo a dashboard genérico")
+            print("⚠️ Flow return: No orden_id in URL - redirecting to dashboard")
             return RedirectResponse(url="/dashboard", status_code=303)
+        
+        # Get order from database
+        order = database.get_order(orden_id)
+        
+        if not order:
+            print(f"⚠️ Flow return: Order {orden_id} not found in DB")
+            return RedirectResponse(url="/dashboard", status_code=303)
+        
+        # If order is still pending, mark as paid and process
+        if order.get("status") == "pending":
+            database.update_order_status(orden_id, "paid")
+            print(f"✅ Order {orden_id} marked as PAID")
             
-        print(f"🔄 Flow return redirect for order: {orden_id}")
+            # Get metadata and service type
+            metadata = order.get("metadata", {})
+            service_type = order.get("service_type", "")
+            
+            # Process based on service type
+            if service_type == "exam" and metadata:
+                background_tasks.add_task(
+                    procesar_y_enviar_prueba,
+                    orden_id,
+                    metadata.get("tema"),
+                    metadata.get("asignatura"),
+                    metadata.get("nivel"),
+                    metadata.get("preguntas_alternativa"),
+                    metadata.get("preguntas_desarrollo"),
+                    metadata.get("dificultad"),
+                    order["email"],
+                    order["client"]
+                )
+                print(f"🚀 [PRODUCTION] Exam generation started for order {orden_id}")
+                
+            elif service_type == "meeting":
+                background_tasks.add_task(
+                    procesar_y_enviar_reunion,
+                    orden_id,
+                    order.get("audio_url"),
+                    metadata.get("titulo_reunion", ""),
+                    metadata.get("asistentes", ""),
+                    metadata.get("agenda", ""),
+                    order["email"],
+                    order["client"]
+                )
+                print(f"🚀 [PRODUCTION] Meeting processing started for order {orden_id}")
+        else:
+            print(f"ℹ️ Order {orden_id} already processed (status: {order.get('status')})")
+        
+        # Redirect to dashboard with order ID
         return RedirectResponse(url=f"/dashboard?external_reference={orden_id}", status_code=303)
         
     except Exception as e:
-        print(f"❌ Error en redirect de Flow: {e}")
+        print(f"❌ Error in flow_return: {e}")
         traceback.print_exc()
         return RedirectResponse(url="/dashboard", status_code=303)
 
