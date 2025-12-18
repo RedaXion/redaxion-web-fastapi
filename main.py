@@ -374,9 +374,6 @@ async def crear_prueba(
     """Create a test/exam order and generate payment."""
     orden_id = str(uuid.uuid4())
     
-    # Save to DB with exam-specific type
-    order_data = {
-        "id": orden_id,
     # Store exam params in metadata field for DB persisting
     exam_metadata = {
         "tema": tema,
