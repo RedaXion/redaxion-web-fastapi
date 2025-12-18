@@ -137,3 +137,35 @@ def get_orders_by_email(email: str):
                 r["files"] = []
         results.append(r)
     return results
+
+def get_latest_pending_exam_order():
+    """Get the most recent pending exam order for fallback processing."""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute('''
+        SELECT * FROM orders 
+        WHERE status = 'pending' AND service_type = 'exam'
+        ORDER BY created_at DESC 
+        LIMIT 1
+    ''')
+    row = c.fetchone()
+    conn.close()
+    
+    if row:
+        r = dict(row)
+        if r.get("files"):
+            try:
+                r["files"] = json.loads(r["files"])
+            except:
+                r["files"] = []
+        if r.get("metadata"):
+            try:
+                r["metadata"] = json.loads(r["metadata"])
+            except:
+                r["metadata"] = {}
+        else:
+            r["metadata"] = {}
+        return r
+    return None
+

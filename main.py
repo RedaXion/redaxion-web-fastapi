@@ -982,6 +982,38 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
                 print(f"⚠️ Fallo recuperando ID desde token (credentials issue?): {e}")
                 # Don't crash, just log and continue
         
+        # LAST RESORT: If we still don't have orden_id, find most recent pending exam order
+        # Flow only redirects on successful payment, so we can safely assume payment succeeded
+        if not orden_id and token:
+            print(f"🔄 Last resort: Buscando orden pendiente más reciente...")
+            latest_order = database.get_latest_pending_exam_order()
+            
+            if latest_order:
+                orden_id = latest_order["id"]
+                print(f"✅ Orden encontrada: {orden_id}")
+                
+                # Process it immediately!
+                database.update_order_status(orden_id, "paid")
+                metadata = latest_order.get("metadata", {})
+                
+                if metadata:
+                    background_tasks.add_task(
+                        procesar_y_enviar_prueba,
+                        orden_id,
+                        metadata.get("tema"),
+                        metadata.get("asignatura"),
+                        metadata.get("nivel"),
+                        metadata.get("preguntas_alternativa"),
+                        metadata.get("preguntas_desarrollo"),
+                        metadata.get("dificultad"),
+                        latest_order["email"],
+                        latest_order["client"]
+                    )
+                    print(f"🚀 [FALLBACK] Generación de examen iniciada para orden {orden_id}")
+            else:
+                print(f"⚠️ No se encontró ninguna orden pendiente")
+
+        
         if not orden_id:
             print("⚠️ Flow return: No se encontró orden_id, redirigiendo a dashboard genérico")
             return RedirectResponse(url="/dashboard", status_code=303)
