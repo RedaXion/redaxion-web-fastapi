@@ -139,6 +139,13 @@ def obtener_estado_pago(token: str) -> dict:
         return {"status": 2, "statusStr": "PAGADA", "mock": True}
     
     try:
+        # Debug Info
+        print(f"🔍 Debug Flow getStatus - Token: '{token}'")
+        print(f"🔍 Debug Flow Client URL: {client.api_url}")
+        
+        # Clean token just in case
+        token = token.strip()
+        
         resultado = Payment.getStatus(client, {"token": token})
         return resultado
     except Exception as e:
