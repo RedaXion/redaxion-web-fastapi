@@ -244,6 +244,7 @@ SEGUNDA PARTE (SOLUCIONARIO PARA EL PROFESOR):
 [Continuar con todas las preguntas...]
 
 4. REGLAS IMPORTANTES:
+   - ⚠️ CRÍTICO: Debes generar EXACTAMENTE {preguntas_alternativa} preguntas de alternativa y EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo. Ni una más, ni una menos.
    - Las preguntas de alternativa deben tener UNA sola respuesta correcta
    - Los distractores (opciones incorrectas) deben ser plausibles
    - CADA respuesta de alternativa DEBE tener una justificación detallada
@@ -254,7 +255,12 @@ SEGUNDA PARTE (SOLUCIONARIO PARA EL PROFESOR):
      - En vez de \\frac{{a}}{{b}}, escribe (a/b)
      - En vez de x^2, escribe x²
      - En vez de H_2O, escribe H₂O
-     - Usa símbolos Unicode: × ÷ ± ≤ ≥ ≠ ² ³ ₂ etc."""
+     - Usa símbolos Unicode: × ÷ ± ≤ ≥ ≠ ² ³ ₂ etc.
+
+5. CONTEO OBLIGATORIO:
+   - Alternativas: Numerar del 1 al {preguntas_alternativa}
+   - Desarrollo: Numerar del 1 al {preguntas_desarrollo}
+   - VERIFICA que hayas generado TODAS las preguntas antes de terminar\"\"\""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,

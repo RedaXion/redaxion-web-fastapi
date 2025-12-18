@@ -58,6 +58,21 @@ def agregar_texto_con_negrita(parrafo, texto):
         _set_run_calibri(r2)
 
 
+# Color dictionary for exam styling
+COLORES_EXAMEN = {
+    "azul elegante": RGBColor(0, 75, 135),      # Deep blue
+    "verde académico": RGBColor(0, 100, 60),    # Forest green
+    "rojo institucional": RGBColor(140, 20, 20), # Burgundy
+    "morado moderno": RGBColor(90, 0, 120),     # Purple
+    "naranja vibrante": RGBColor(180, 80, 0)    # Burnt orange
+}
+
+
+def obtener_color_titulo(color: str) -> RGBColor:
+    """Get RGB color for exam titles/headers."""
+    return COLORES_EXAMEN.get(color.lower(), COLORES_EXAMEN["azul elegante"])
+
+
 def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.docx", color: str = "azul elegante") -> str:
     """
     Save exam content to a formal DOCX document.
@@ -123,7 +138,7 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
             _set_run_calibri(run)
             continue
         
-        # Main headers (## TITLE)
+        # Main headers (## TITLE) - Apply selected color
         if linea_normalizada.startswith('## '):
             texto = linea_normalizada.replace('## ', '')
             p = doc.add_paragraph()
@@ -132,10 +147,11 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
             run = p.add_run(texto.upper())
             run.bold = True
             run.font.size = Pt(14)
+            run.font.color.rgb = obtener_color_titulo(color)
             _set_run_calibri(run)
             continue
         
-        # Sub headers (### subtitle)
+        # Sub headers (### subtitle) - Apply selected color
         if linea_normalizada.startswith('### '):
             texto = linea_normalizada.replace('### ', '')
             p = doc.add_paragraph()
@@ -143,10 +159,11 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
             run = p.add_run(texto)
             run.bold = True
             run.font.size = Pt(12)
+            run.font.color.rgb = obtener_color_titulo(color)
             _set_run_calibri(run)
             continue
         
-        # Single # header
+        # Single # header - Apply selected color
         if linea_normalizada.startswith('# ') and not linea_normalizada.startswith('## '):
             texto = linea_normalizada.replace('# ', '')
             p = doc.add_paragraph()
@@ -156,6 +173,7 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
             run = p.add_run(texto.upper())
             run.bold = True
             run.font.size = Pt(16)
+            run.font.color.rgb = obtener_color_titulo(color)
             _set_run_calibri(run)
             continue
         
