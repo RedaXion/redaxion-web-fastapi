@@ -819,11 +819,16 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
         print(f"💳 Flow webhook recibido: token={token[:20]}...")
         
         # Get payment status from Flow
-        status_data = obtener_estado_pago(token)
+        try:
+            status_data = obtener_estado_pago(token)
+        except Exception as e:
+            print(f"❌ Error crítico obteniendo estado: {e}")
+            # Return success to Flow to avoid retries, but don't process order
+            return "OK"
         
-        if "error" in status_data:
-            print(f"❌ Error obteniendo estado de pago: {status_data['error']}")
-            return JSONResponse({"error": status_data["error"]}, status_code=500)
+        if not status_data or "error" in status_data:
+            print(f"❌ Error obteniendo estado de pago: {status_data.get('error') if status_data else 'No response'}")
+            return "OK"  # Return OK to Flow to prevent retries
         
         flow_status = status_data.get("status", 0)
         commerce_order = status_data.get("commerceOrder")  # This is our orden_id
@@ -968,11 +973,14 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
             print(f"🔄 Flow return: Recuperando ID de orden desde token...")
             try:
                 status_data = obtener_estado_pago(token)
-                if "commerceOrder" in status_data:
+                if status_data and "commerceOrder" in status_data:
                     orden_id = status_data["commerceOrder"]
                     print(f"✅ ID recuperado: {orden_id}")
+                else:
+                    print(f"⚠️ No se pudo recuperar ID. Response: {status_data}")
             except Exception as e:
-                print(f"⚠️ Fallo recuperando ID desde token: {e}")
+                print(f"⚠️ Fallo recuperando ID desde token (credentials issue?): {e}")
+                # Don't crash, just log and continue
         
         if not orden_id:
             print("⚠️ Flow return: No se encontró orden_id, redirigiendo a dashboard genérico")
