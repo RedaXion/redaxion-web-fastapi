@@ -7,7 +7,8 @@ from fastapi import FastAPI, UploadFile, Form, HTTPException, Request, Backgroun
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+import traceback
 import mercadopago
 import shutil
 import os

@@ -86,8 +86,11 @@ def crear_pago_flow(
         }
     
     try:
+        # Sanitize description for Flow (remove newlines, limit length)
+        clean_description = descripcion.replace('\n', ' ').replace('\r', '').strip()[:100]
+        
         pago_data = {
-            "subject": descripcion,
+            "subject": clean_description,
             "commerceOrder": orden_id,
             "amount": int(monto),
             "email": email,
