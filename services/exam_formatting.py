@@ -20,9 +20,7 @@ from services.formatting import (
     insertar_logo_encabezado_derecha,
     preparar_logo,
     fallback_pdf_conversion,
-    convert_to_pdf,
-    obtener_rgb,
-    aplicar_estilo
+    convert_to_pdf
 )
 from services.formula_utils import latex_to_text
 
