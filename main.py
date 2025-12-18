@@ -277,15 +277,16 @@ async def soluciones_ia(request: Request):
 
 async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, nivel: str,
                                     preguntas_alternativa: int, preguntas_desarrollo: int,
-                                    dificultad: int, correo: str, nombre: str):
+                                    dificultad: int, correo: str, nombre: str,
+                                    color: str = "azul elegante", eunacom: bool = False):
     """Background task to generate exam and send to client."""
-    print(f"[{orden_id}] Generando prueba: {asignatura} - {tema}")
+    print(f"[{orden_id}] Generando prueba: {asignatura} - {tema} (EUNACOM: {eunacom}, Color: {color})")
     database.update_order_status(orden_id, "processing")
     
     try:
         # Generate exam with ChatGPT
         resultado = generar_prueba(tema, asignatura, nivel, preguntas_alternativa, 
-                                   preguntas_desarrollo, dificultad)
+                                   preguntas_desarrollo, dificultad, eunacom=eunacom)
         
         if not resultado["success"]:
             raise Exception(resultado.get("error", "Error generando prueba"))
@@ -293,33 +294,38 @@ async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, ni
         # Get separate exam and solucionario content
         contenido_examen = resultado.get("examen", resultado.get("contenido", ""))
         contenido_solucionario = resultado.get("solucionario", "")
+        nombre_prueba = resultado.get("nombre_prueba", f"Prueba {asignatura}")
         
-        # Generate Exam DOCX and PDF
-        path_docx_examen = f"static/generated/Prueba-{orden_id}.docx"
-        path_pdf_examen = f"static/generated/Prueba-{orden_id}.pdf"
+        # Sanitize nombre_prueba for filename (remove special chars)
+        import re
+        nombre_archivo = re.sub(r'[^\w\s-]', '', nombre_prueba).strip().replace(' ', '_')
         
-        guardar_examen_como_docx(contenido_examen, path_docx_examen)
-        guardar_examen_como_pdf(contenido_examen, path_pdf_examen)
+        # Generate Exam DOCX and PDF with AI-generated name
+        path_docx_examen = f"static/generated/{nombre_archivo}-{orden_id}.docx"
+        path_pdf_examen = f"static/generated/{nombre_archivo}-{orden_id}.pdf"
         
-        print(f"[{orden_id}] Prueba generada: {path_pdf_examen}")
+        guardar_examen_como_docx(contenido_examen, path_docx_examen, color=color)
+        guardar_examen_como_pdf(contenido_examen, path_pdf_examen, color=color)
+        
+        print(f"[{orden_id}] Prueba '{nombre_prueba}' generada: {path_pdf_examen}")
         
         # Generate Solucionario DOCX and PDF (separate file)
-        path_docx_solucionario = f"static/generated/Solucionario-{orden_id}.docx"
-        path_pdf_solucionario = f"static/generated/Solucionario-{orden_id}.pdf"
+        path_docx_solucionario = f"static/generated/Solucionario-{nombre_archivo}-{orden_id}.docx"
+        path_pdf_solucionario = f"static/generated/Solucionario-{nombre_archivo}-{orden_id}.pdf"
         
         if contenido_solucionario:
-            guardar_examen_como_docx(contenido_solucionario, path_docx_solucionario)
-            guardar_examen_como_pdf(contenido_solucionario, path_pdf_solucionario)
+            guardar_examen_como_docx(contenido_solucionario, path_docx_solucionario, color=color)
+            guardar_examen_como_pdf(contenido_solucionario, path_pdf_solucionario, color=color)
             print(f"[{orden_id}] Solucionario generado: {path_pdf_solucionario}")
         
         # Update DB with files
         import os
         base_url_path = "/static/generated"
         files_list = [
-            {"name": "Prueba PDF", "url": f"{base_url_path}/Prueba-{orden_id}.pdf", "type": "pdf"},
-            {"name": "Prueba Editable", "url": f"{base_url_path}/Prueba-{orden_id}.docx", "type": "docx"},
-            {"name": "Solucionario PDF", "url": f"{base_url_path}/Solucionario-{orden_id}.pdf", "type": "pdf"},
-            {"name": "Solucionario Editable", "url": f"{base_url_path}/Solucionario-{orden_id}.docx", "type": "docx"}
+            {"name": f"{nombre_prueba} - PDF", "url": f"{base_url_path}/{nombre_archivo}-{orden_id}.pdf", "type": "pdf"},
+            {"name": f"{nombre_prueba} - Editable", "url": f"{base_url_path}/{nombre_archivo}-{orden_id}.docx", "type": "docx"},
+            {"name": "Solucionario - PDF", "url": f"{base_url_path}/Solucionario-{nombre_archivo}-{orden_id}.pdf", "type": "pdf"},
+            {"name": "Solucionario - Editable", "url": f"{base_url_path}/Solucionario-{nombre_archivo}-{orden_id}.docx", "type": "docx"}
         ]
         database.update_order_files(orden_id, files_list)
         database.update_order_status(orden_id, "completed")
@@ -369,6 +375,8 @@ async def crear_prueba(
     preguntas_alternativa: int = Form(...),
     preguntas_desarrollo: int = Form(...),
     dificultad: int = Form(7),
+    color: str = Form("azul elegante"),
+    eunacom: bool = Form(False),
     gateway: str = Form("flow")  # User's payment gateway choice
 ):
     """Create a test/exam order and generate payment."""
@@ -381,7 +389,9 @@ async def crear_prueba(
         "nivel": nivel,
         "preguntas_alternativa": preguntas_alternativa,
         "preguntas_desarrollo": preguntas_desarrollo,
-        "dificultad": dificultad
+        "dificultad": dificultad,
+        "color": color,
+        "eunacom": eunacom
     }
     
     order_data = {
@@ -860,7 +870,9 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                             metadata.get("preguntas_desarrollo"), 
                             metadata.get("dificultad"), 
                             order["email"], 
-                            order["client"]
+                            order["client"],
+                            metadata.get("color", "azul elegante"),
+                            metadata.get("eunacom", False)
                         )
                         print(f"✅ Pago confirmado y examen en generación: {commerce_order}")
                     else:
@@ -952,7 +964,9 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
                     metadata.get("preguntas_desarrollo"),
                     metadata.get("dificultad"),
                     order["email"],
-                    order["client"]
+                    order["client"],
+                    metadata.get("color", "azul elegante"),
+                    metadata.get("eunacom", False)
                 )
                 print(f"🚀 [PRODUCTION] Exam generation started for order {orden_id}")
                 

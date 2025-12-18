@@ -20,7 +20,9 @@ from services.formatting import (
     insertar_logo_encabezado_derecha,
     preparar_logo,
     fallback_pdf_conversion,
-    convert_to_pdf
+    convert_to_pdf,
+    obtener_rgb,
+    aplicar_estilo
 )
 from services.formula_utils import latex_to_text
 
@@ -58,13 +60,14 @@ def agregar_texto_con_negrita(parrafo, texto):
         _set_run_calibri(r2)
 
 
-def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.docx") -> str:
+def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.docx", color: str = "azul elegante") -> str:
     """
     Save exam content to a formal DOCX document.
     
     Args:
         contenido: Markdown-like text from ChatGPT with ## headers and **bold**
         path_salida: Output path for the DOCX file
+        color: Color scheme for document styling
         
     Returns:
         Path to the saved DOCX file
@@ -176,7 +179,7 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
     return path_salida
 
 
-def guardar_examen_como_pdf(contenido: str, path_pdf: str = "/tmp/examen.pdf") -> str:
+def guardar_examen_como_pdf(contenido: str, path_pdf: str = "/tmp/examen.pdf", color: str = "azul elegante") -> str:
     """
     Save exam content to a formal PDF document.
     First creates DOCX, then converts to PDF.
@@ -184,16 +187,17 @@ def guardar_examen_como_pdf(contenido: str, path_pdf: str = "/tmp/examen.pdf") -
     Args:
         contenido: Markdown-like text from ChatGPT
         path_pdf: Output path for the PDF file
+        color: Color scheme for document styling
         
     Returns:
         Path to the saved PDF file
     """
-    # First create DOCX
+    # First create DOCX with color
     path_docx = path_pdf.replace('.pdf', '.docx')
-    guardar_examen_como_docx(contenido, path_docx)
+    guardar_examen_como_docx(contenido, path_docx, color=color)
     
     # Convert to PDF
-    result_pdf = convert_to_pdf(path_docx, color="azul elegante")
+    result_pdf = convert_to_pdf(path_docx, color=color)
     
     if result_pdf and os.path.exists(result_pdf):
         print(f"✅ Examen PDF guardado: {result_pdf}")
@@ -201,4 +205,4 @@ def guardar_examen_como_pdf(contenido: str, path_pdf: str = "/tmp/examen.pdf") -
     
     # Fallback: use direct PDF generation
     print("⚠️ Usando fallback para PDF de examen")
-    return fallback_pdf_conversion(path_docx, path_pdf, color="azul elegante")
+    return fallback_pdf_conversion(path_docx, path_pdf, color=color)
