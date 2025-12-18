@@ -680,6 +680,8 @@ async def consulta_soluciones(
     
     resend_api_key = os.getenv("RESEND_API_KEY")
     admin_email = os.getenv("ADMIN_EMAIL", "contacto@redaxion.cl")
+    # Use onboarding@resend.dev as default to avoid "domain not verified" errors
+    sender_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
     
     if resend_api_key:
         try:
@@ -691,7 +693,7 @@ async def consulta_soluciones(
                         "Content-Type": "application/json"
                     },
                     json={
-                        "from": "RedaXion <notificaciones@redaxion.cl>",
+                        "from": f"RedaXion <{sender_email}>",
                         "to": [admin_email],
                         "subject": f"🤖 Nueva Consulta Soluciones IA - {nombre}",
                         "html": email_html,
