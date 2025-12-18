@@ -260,7 +260,7 @@ SEGUNDA PARTE (SOLUCIONARIO PARA EL PROFESOR):
 5. CONTEO OBLIGATORIO:
    - Alternativas: Numerar del 1 al {preguntas_alternativa}
    - Desarrollo: Numerar del 1 al {preguntas_desarrollo}
-   - VERIFICA que hayas generado TODAS las preguntas antes de terminar\"\"\""
+   - VERIFICA que hayas generado TODAS las preguntas antes de terminar"""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,
