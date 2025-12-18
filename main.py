@@ -905,15 +905,27 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
 async def flow_return(request: Request):
     """
     Handle Flow return URL (User redirection after payment).
-    Flow sends parameters via POST, so we need to catch them and redirect to GET dashboard.
+    Flow sends parameters via POST. Usually 'token'.
+    We must recover 'commerceOrder' to redirect to dashboard properly.
     """
     try:
         form_data = await request.form()
-        # Flow sends 'commerceOrder' which matches our 'orden_id'
+        # Try to get commerceOrder directly
         orden_id = form_data.get("commerceOrder")
+        token = form_data.get("token")
+        
+        # If commerceOrder is missing but we have a token, ask Flow
+        if not orden_id and token:
+            print(f"🔄 Flow return: Recuperando ID de orden desde token...")
+            status = obtener_estado_pago(token)
+            if "commerceOrder" in status:
+                orden_id = status["commerceOrder"]
+                print(f"✅ ID recuperado: {orden_id}")
+            else:
+                print(f"⚠️ No se pudo recuperar ID desde token: {status}")
         
         if not orden_id:
-            # Fallback if something weird happens
+            print("⚠️ Flow return: No se encontró orden_id, redirigiendo a dashboard genérico")
             return RedirectResponse(url="/dashboard", status_code=303)
             
         print(f"🔄 Flow return redirect for order: {orden_id}")
@@ -921,6 +933,7 @@ async def flow_return(request: Request):
         
     except Exception as e:
         print(f"❌ Error en redirect de Flow: {e}")
+        traceback.print_exc()
         return RedirectResponse(url="/dashboard", status_code=303)
 
 
