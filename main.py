@@ -407,7 +407,7 @@ async def crear_prueba(
                 monto=SPECIAL_SERVICES_PRICE,
                 email=correo,
                 descripcion=f"Generador de Pruebas - {asignatura}",
-                url_retorno=f"{BASE_URL}/dashboard?external_reference={orden_id}",
+                url_retorno=f"{BASE_URL}/api/flow-return",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
                 optional_data=exam_metadata
             )
@@ -586,7 +586,7 @@ async def crear_orden_reunion(
                 monto=SPECIAL_SERVICES_PRICE,
                 email=correo,
                 descripcion="Transcripción de Reunión - RedaXion",
-                url_retorno=f"{BASE_URL}/dashboard?external_reference={orden_id}",
+                url_retorno=f"{BASE_URL}/api/flow-return",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
                 optional_data=meeting_metadata
             )
@@ -855,12 +855,34 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
             database.update_order_status(commerce_order, "cancelled")
             print(f"⚠️ Pago anulado para orden: {commerce_order}")
         
-        return JSONResponse({"status": "ok"})
+        return "OK"
         
     except Exception as e:
-        print(f"❌ Error en Flow webhook: {e}")
-        traceback.print_exc()
+        print(f"❌ Error en webhook de Flow: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/flow-return")
+async def flow_return(request: Request):
+    """
+    Handle Flow return URL (User redirection after payment).
+    Flow sends parameters via POST, so we need to catch them and redirect to GET dashboard.
+    """
+    try:
+        form_data = await request.form()
+        # Flow sends 'commerceOrder' which matches our 'orden_id'
+        orden_id = form_data.get("commerceOrder")
+        
+        if not orden_id:
+            # Fallback if something weird happens
+            return RedirectResponse(url="/dashboard", status_code=303)
+            
+        print(f"🔄 Flow return redirect for order: {orden_id}")
+        return RedirectResponse(url=f"/dashboard?external_reference={orden_id}", status_code=303)
+        
+    except Exception as e:
+        print(f"❌ Error en redirect de Flow: {e}")
+        return RedirectResponse(url="/dashboard", status_code=303)
 
 
 @app.post("/api/get-upload-url")
