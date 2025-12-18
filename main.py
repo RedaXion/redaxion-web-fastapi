@@ -902,27 +902,72 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
 
 
 @app.post("/api/flow-return")
-async def flow_return(request: Request):
+async def flow_return(request: Request, background_tasks: BackgroundTasks):
     """
     Handle Flow return URL (User redirection after payment).
-    Flow sends parameters via POST. Usually 'token'.
-    We must recover 'commerceOrder' to redirect to dashboard properly.
+    Flow sends parameters via POST including status.
+    We process payment here to bypass potential webhook/signature issues.
     """
     try:
         form_data = await request.form()
-        # Try to get commerceOrder directly
         orden_id = form_data.get("commerceOrder")
         token = form_data.get("token")
+        status = form_data.get("status") # "1": pending, "2": paid, "3": rejected, "4": cancelled
         
-        # If commerceOrder is missing but we have a token, ask Flow
+        print(f"🔄 Flow return received: Order={orden_id}, Status={status}")
+        
+        # If we have Order ID and Status=2 (Paid), process immediately!
+        if orden_id and status == "2":
+            print(f"✅ Flow return: Orden {orden_id} PAGADA. Procesando...")
+            
+            # Get order to check current status
+            order = database.get_order(orden_id)
+            if order and order.get("status") != "paid":
+                # Mark as paid
+                database.update_order_status(orden_id, "paid")
+                
+                # Retrieve metadata and launch task
+                metadata = order.get("metadata", {})
+                service_type = order.get("service_type", "")
+                
+                if service_type == "exam" and metadata:
+                    background_tasks.add_task(
+                        procesar_y_enviar_prueba, 
+                        orden_id, 
+                        metadata.get("tema"), 
+                        metadata.get("asignatura"), 
+                        metadata.get("nivel"),
+                        metadata.get("preguntas_alternativa"), 
+                        metadata.get("preguntas_desarrollo"), 
+                        metadata.get("dificultad"), 
+                        order["email"], 
+                        order["client"]
+                    )
+                    print(f"🚀 Generación de examen iniciada desde Return Handler")
+                    
+                elif service_type == "meeting":
+                    background_tasks.add_task(
+                        procesar_y_enviar_reunion, 
+                        orden_id, 
+                        order.get("audio_url"), 
+                        metadata.get("titulo_reunion", ""), 
+                        metadata.get("asistentes", ""), 
+                        metadata.get("agenda", ""), 
+                        order["email"], 
+                        order["client"]
+                    )
+                    print(f"🚀 Procesamiento de reunión iniciado desde Return Handler")
+
+        # Fallback: If commerceOrder is missing but we have a token, ask Flow (prone to signature error)
         if not orden_id and token:
             print(f"🔄 Flow return: Recuperando ID de orden desde token...")
-            status = obtener_estado_pago(token)
-            if "commerceOrder" in status:
-                orden_id = status["commerceOrder"]
-                print(f"✅ ID recuperado: {orden_id}")
-            else:
-                print(f"⚠️ No se pudo recuperar ID desde token: {status}")
+            try:
+                status_data = obtener_estado_pago(token)
+                if "commerceOrder" in status_data:
+                    orden_id = status_data["commerceOrder"]
+                    print(f"✅ ID recuperado: {orden_id}")
+            except Exception as e:
+                print(f"⚠️ Fallo recuperando ID desde token: {e}")
         
         if not orden_id:
             print("⚠️ Flow return: No se encontró orden_id, redirigiendo a dashboard genérico")
