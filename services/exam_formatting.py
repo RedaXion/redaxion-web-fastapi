@@ -111,9 +111,8 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
         linea_original = linea
         linea = linea.rstrip()
         
-        # Skip empty lines but add spacing
+        # Skip empty lines - don't add extra spacing
         if not linea.strip():
-            doc.add_paragraph("")
             continue
         
         linea_normalizada = linea.lstrip()
@@ -127,38 +126,32 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
                 doc.add_paragraph("")
             continue
         
-        # Handle --- separator lines
+        # Handle --- separator lines - SKIP them, don't add visual separators
         if linea_normalizada.startswith('---'):
-            # Add a horizontal line effect with spacing
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(6)
-            p.paragraph_format.space_after = Pt(6)
-            run = p.add_run("─" * 60)
-            run.font.color.rgb = RGBColor(180, 180, 180)
-            _set_run_calibri(run)
             continue
         
-        # Main headers (## TITLE) - Apply selected color
+        # Main headers (## TITLE) - Apply selected color, minimal spacing
         if linea_normalizada.startswith('## '):
             texto = linea_normalizada.replace('## ', '')
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(12)
-            p.paragraph_format.space_after = Pt(6)
+            p.paragraph_format.space_before = Pt(8)
+            p.paragraph_format.space_after = Pt(4)
             run = p.add_run(texto.upper())
             run.bold = True
-            run.font.size = Pt(14)
+            run.font.size = Pt(13)
             run.font.color.rgb = obtener_color_titulo(color)
             _set_run_calibri(run)
             continue
         
-        # Sub headers (### subtitle) - Apply selected color
+        # Sub headers (### subtitle) - Apply selected color, minimal spacing
         if linea_normalizada.startswith('### '):
             texto = linea_normalizada.replace('### ', '')
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(8)
+            p.paragraph_format.space_before = Pt(4)
+            p.paragraph_format.space_after = Pt(2)
             run = p.add_run(texto)
             run.bold = True
-            run.font.size = Pt(12)
+            run.font.size = Pt(11)
             run.font.color.rgb = obtener_color_titulo(color)
             _set_run_calibri(run)
             continue
@@ -179,14 +172,16 @@ def guardar_examen_como_docx(contenido: str, path_salida: str = "/tmp/examen.doc
         
         # Regular paragraph - handle bold with **text**
         p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
         
-        # Check if it's a question number (starts with number and period)
+        # Check if it's a question number (starts with number and period) - add small space before
         if re.match(r'^\d+\.', linea_normalizada):
             p.paragraph_format.space_before = Pt(6)
         
-        # Check if it's an answer option (starts with a), b), c), d))
+        # Check if it's an answer option (starts with a), b), c), d)) - indent slightly
         if re.match(r'^[a-d]\)', linea_normalizada):
-            p.paragraph_format.left_indent = Inches(0.5)
+            p.paragraph_format.left_indent = Inches(0.3)
         
         agregar_texto_con_negrita(p, linea_normalizada)
     

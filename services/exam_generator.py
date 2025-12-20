@@ -154,113 +154,84 @@ def get_exam_generation_prompt(tema: str, asignatura: str, nivel: str,
     
     return f"""Eres un profesor experto en {asignatura} creando una prueba formal para nivel {nivel}.
 
-INSTRUCCIONES ESTRICTAS:
+⚠️ CANTIDAD OBLIGATORIA DE PREGUNTAS:
+- DEBES generar EXACTAMENTE {preguntas_alternativa} preguntas de alternativa (numeradas del 1 al {preguntas_alternativa})
+- DEBES generar EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo (numeradas del 1 al {preguntas_desarrollo})
+- NO generes menos preguntas. El usuario pagó por esta cantidad específica.
 
-1. FORMATO DE SALIDA:
-   - Usa SOLO texto plano con encabezados marcados con ##
-   - Usa **texto** para negritas en palabras clave
-   - NO uses tablas, NO uses formato Markdown complejo
-   - El formato debe ser limpio y formal, como una prueba impresa
+FORMATO COMPACTO Y EFICIENTE:
+- NO uses líneas horizontales (---)
+- NO dejes espacios excesivos entre preguntas
+- Formato limpio y denso, optimizado para impresión
+- Cada pregunta de alternativa ocupa máximo 5-6 líneas
+- Las opciones a), b), c), d) van en líneas separadas pero sin espaciado extra
 
-2. CONTENIDO:
-   - Tema: {tema}
-   - Asignatura: {asignatura}
-   - Nivel: {nivel}
-   - Dificultad: {dificultad}/10 ({nivel_dificultad})
+CONTENIDO:
+- Tema: {tema}
+- Asignatura: {asignatura}
+- Nivel: {nivel}
+- Dificultad: {dificultad}/10 ({nivel_dificultad})
 
-3. ESTRUCTURA - DEBES GENERAR DOS SECCIONES SEPARADAS CON EL MARCADOR ===SOLUCIONARIO===:
-
-PRIMERA PARTE (PRUEBA PARA EL ESTUDIANTE):
+ESTRUCTURA EXACTA:
 
 ## PRUEBA DE {asignatura.upper()}
 
 **Tema:** {tema}
-**Nombre del estudiante:** _______________________
-**Fecha:** _______________________
-**Puntaje:** _____ / [puntaje total]
+**Nombre:** _______________________  **Fecha:** _______________
+**Puntaje:** _____ / [total]
 
----
-
-## SECCIÓN I: PREGUNTAS DE ALTERNATIVA ({preguntas_alternativa} preguntas)
+## SECCIÓN I: ALTERNATIVAS ({preguntas_alternativa} preguntas, 1 punto c/u)
 
 Instrucciones: Encierra en un círculo la alternativa correcta.
 
-1. [Pregunta clara y precisa]
-   a) [Opción]
-   b) [Opción]
-   c) [Opción]
-   d) [Opción]
+1. [Pregunta concisa]
+a) [Opción]
+b) [Opción]
+c) [Opción]
+d) [Opción]
 
-[Continuar numerando...]
+2. [Siguiente pregunta]
+a) [Opción]
+b) [Opción]
+c) [Opción]
+d) [Opción]
 
----
+[CONTINÚA HASTA LA PREGUNTA {preguntas_alternativa}]
 
-## SECCIÓN II: PREGUNTAS DE DESARROLLO ({preguntas_desarrollo} preguntas)
+## SECCIÓN II: DESARROLLO ({preguntas_desarrollo} preguntas)
 
-Instrucciones: Responde de forma completa y fundamentada.
+Instrucciones: Responde de forma completa.
 
-1. [Pregunta que requiere análisis o explicación] (X puntos)
+1. [Pregunta] (X puntos)
 
+2. [Pregunta] (X puntos)
 
-
-
-
-
-
-[Continuar numerando con espacio vacío entre preguntas para respuestas...]
+[CONTINÚA HASTA LA PREGUNTA {preguntas_desarrollo}]
 
 ===SOLUCIONARIO===
 
-SEGUNDA PARTE (SOLUCIONARIO PARA EL PROFESOR):
-
 ## SOLUCIONARIO - {asignatura.upper()}
 
-**Tema:** {tema}
+## RESPUESTAS ALTERNATIVAS
 
----
+1. **[LETRA])** [Justificación breve en 1-2 líneas]
+2. **[LETRA])** [Justificación breve]
+[hasta {preguntas_alternativa}]
 
-## SECCIÓN I: RESPUESTAS DE ALTERNATIVA
+## RESPUESTAS DESARROLLO
 
-1. **Respuesta correcta: [LETRA])**
-   **Justificación:** [Explicación detallada de por qué esta es la respuesta correcta y por qué las otras opciones son incorrectas. Mínimo 2-3 líneas.]
+1. **Respuesta modelo:** [Respuesta concisa]
+   **Criterios:** [Lista de criterios con puntaje]
 
-2. **Respuesta correcta: [LETRA])**
-   **Justificación:** [Explicación detallada...]
+[hasta {preguntas_desarrollo}]
 
-[Continuar con todas las preguntas...]
-
----
-
-## SECCIÓN II: RESPUESTAS DE DESARROLLO
-
-1. **Respuesta modelo:**
-   [Respuesta completa y detallada que serviría como ejemplo de respuesta perfecta]
-   
-   **Criterios de evaluación:**
-   - [Criterio 1]: [X puntos]
-   - [Criterio 2]: [X puntos]
-   - [Criterio 3]: [X puntos]
-
-[Continuar con todas las preguntas...]
-
-4. REGLAS IMPORTANTES:
-   - ⚠️ CRÍTICO: Debes generar EXACTAMENTE {preguntas_alternativa} preguntas de alternativa y EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo. Ni una más, ni una menos.
-   - Las preguntas de alternativa deben tener UNA sola respuesta correcta
-   - Los distractores (opciones incorrectas) deben ser plausibles
-   - CADA respuesta de alternativa DEBE tener una justificación detallada
-   - La dificultad {dificultad}/10 debe reflejarse en las preguntas
-   - El marcador ===SOLUCIONARIO=== es OBLIGATORIO para separar las dos partes
-   - IMPORTANTE: NO uses notación LaTeX como \\frac, \\times, \\( \\), etc.
-   - Para fórmulas matemáticas, usa texto plano legible, por ejemplo:
-     - En vez de \\frac{{a}}{{b}}, escribe (a/b)
-     - En vez de x^2, escribe x²
-     - En vez de H_2O, escribe H₂O
-     - Usa símbolos Unicode: × ÷ ± ≤ ≥ ≠ ² ³ ₂ etc.
-
-5. CONTEO OBLIGATORIO:
-   - Alternativas: Numerar del 1 al {preguntas_alternativa}
-   - Desarrollo: Numerar del 1 al {preguntas_desarrollo}
-   - VERIFICA que hayas generado TODAS las preguntas antes de terminar"""
+REGLAS CRÍTICAS:
+- ⚠️ GENERA LAS {preguntas_alternativa} PREGUNTAS DE ALTERNATIVA COMPLETAS - CUENTA CADA UNA
+- ⚠️ GENERA LAS {preguntas_desarrollo} PREGUNTAS DE DESARROLLO COMPLETAS
+- NO uses notación LaTeX. Usa símbolos Unicode: × ÷ ± ≤ ≥ ≠ ² ³ ₂
+- El marcador ===SOLUCIONARIO=== es OBLIGATORIO
+- Preguntas variadas que cubran diferentes aspectos del tema
+- Cada pregunta numerada secuencialmente sin saltar números"""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,
@@ -345,14 +316,28 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
             )
             print(f"🧠 Generando prueba: {asignatura} - {tema} (Dificultad: {dificultad}/10)")
         
+        # Calculate tokens based on question count - more questions need more tokens
+        # Estimate: ~150 tokens per alternativa question + answer, ~300 per desarrollo
+        estimated_tokens = (preguntas_alternativa * 180) + (preguntas_desarrollo * 350) + 1000
+        max_tokens_needed = min(max(estimated_tokens, 8000), 16000)  # Between 8k and 16k
+        
+        print(f"📊 Generando {preguntas_alternativa} alternativas + {preguntas_desarrollo} desarrollo (max_tokens: {max_tokens_needed})")
+        
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Genera una prueba completa sobre: {tema}. Recuerda usar el marcador ===SOLUCIONARIO=== para separar la prueba del solucionario."}
+                {"role": "user", "content": f"""Genera una prueba COMPLETA sobre: {tema}
+
+RECUERDA:
+- EXACTAMENTE {preguntas_alternativa} preguntas de alternativa numeradas del 1 al {preguntas_alternativa}
+- EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo numeradas del 1 al {preguntas_desarrollo}
+- Usa el marcador ===SOLUCIONARIO=== para separar la prueba del solucionario
+- NO uses líneas horizontales (---)
+- Formato compacto sin espacios innecesarios"""}
             ],
-            temperature=0.4,
-            max_tokens=6000
+            temperature=0.3,  # Lower temperature for more consistent output
+            max_tokens=max_tokens_needed
         )
         
         contenido_completo = response.choices[0].message.content.strip()
