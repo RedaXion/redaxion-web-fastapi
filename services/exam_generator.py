@@ -158,84 +158,59 @@ def get_exam_generation_prompt(tema: str, asignatura: str, nivel: str,
     
     return f"""Eres un profesor experto en {asignatura} creando una prueba formal para nivel {nivel}.
 
-⚠️ CANTIDAD OBLIGATORIA DE PREGUNTAS:
-- DEBES generar EXACTAMENTE {preguntas_alternativa} preguntas de alternativa (numeradas del 1 al {preguntas_alternativa})
-- DEBES generar EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo (numeradas del 1 al {preguntas_desarrollo})
-- NO generes menos preguntas. El usuario pagó por esta cantidad específica.
+⚠️ CANTIDAD OBLIGATORIA:
+- {preguntas_alternativa} preguntas de alternativa (numeradas 1 a {preguntas_alternativa})
+- {preguntas_desarrollo} preguntas de desarrollo (numeradas 1 a {preguntas_desarrollo})
+- El solucionario DEBE tener las {preguntas_alternativa} respuestas de alternativa
 
-FORMATO COMPACTO Y EFICIENTE:
-- NO uses líneas horizontales (---)
-- NO dejes espacios excesivos entre preguntas
-- Formato limpio y denso, optimizado para impresión
-- Cada pregunta de alternativa ocupa máximo 5-6 líneas
-- Las opciones a), b), c), d) van en líneas separadas pero sin espaciado extra
+FORMATO COMPACTO:
+- NO usar líneas horizontales (---)
+- NO espacios excesivos
+- Preguntas concisas de 2-3 líneas máximo
 
-CONTENIDO:
-- Tema: {tema}
-- Asignatura: {asignatura}
-- Nivel: {nivel}
-- Dificultad: {dificultad}/10 ({nivel_dificultad})
+CONTENIDO: {tema} | {asignatura} | {nivel} | Dificultad {dificultad}/10
 
-ESTRUCTURA EXACTA:
+ESTRUCTURA:
 
 ## PRUEBA DE {asignatura.upper()}
 
 **Tema:** {tema}
-**Nombre:** _______________________  **Fecha:** _______________
-**Puntaje:** _____ / [total]
+**Nombre:** _______  **Fecha:** _______  **Puntaje:** ___ / {preguntas_alternativa + preguntas_desarrollo * 5}
 
-## SECCIÓN I: ALTERNATIVAS ({preguntas_alternativa} preguntas, 1 punto c/u)
+## I. ALTERNATIVAS ({preguntas_alternativa} pts)
 
-Instrucciones: Encierra en un círculo la alternativa correcta.
+1. [Pregunta breve]
+a) [Opción] b) [Opción] c) [Opción] d) [Opción]
 
-1. [Pregunta concisa]
-a) [Opción]
-b) [Opción]
-c) [Opción]
-d) [Opción]
+2. [Pregunta]
+a) [Opción] b) [Opción] c) [Opción] d) [Opción]
 
-2. [Siguiente pregunta]
-a) [Opción]
-b) [Opción]
-c) [Opción]
-d) [Opción]
+[...hasta {preguntas_alternativa}]
 
-[CONTINÚA HASTA LA PREGUNTA {preguntas_alternativa}]
+## II. DESARROLLO ({preguntas_desarrollo} preguntas)
 
-## SECCIÓN II: DESARROLLO ({preguntas_desarrollo} preguntas)
-
-Instrucciones: Responde de forma completa.
-
-1. [Pregunta] (X puntos)
-
-2. [Pregunta] (X puntos)
-
-[CONTINÚA HASTA LA PREGUNTA {preguntas_desarrollo}]
+1. [Pregunta] ({5} pts)
+2. [Pregunta] ({5} pts)
+[...hasta {preguntas_desarrollo}]
 
 ===SOLUCIONARIO===
 
-## SOLUCIONARIO - {asignatura.upper()}
+## SOLUCIONARIO
 
-## RESPUESTAS ALTERNATIVAS
+**ALTERNATIVAS (respuesta correcta):**
+1-C, 2-A, 3-B, 4-D, 5-A, 6-C, 7-B, 8-D, 9-A, 10-C, 11-B, 12-D...
+[LISTA COMPLETA de las {preguntas_alternativa} respuestas en formato "N-LETRA"]
 
-1. **[LETRA])** [Justificación breve en 1-2 líneas]
-2. **[LETRA])** [Justificación breve]
-[hasta {preguntas_alternativa}]
+**DESARROLLO:**
+1. [Respuesta breve 2-3 líneas]
+2. [Respuesta breve 2-3 líneas]
+[...hasta {preguntas_desarrollo}]
 
-## RESPUESTAS DESARROLLO
-
-1. **Respuesta modelo:** [Respuesta concisa]
-   **Criterios:** [Lista de criterios con puntaje]
-
-[hasta {preguntas_desarrollo}]
-
-REGLAS CRÍTICAS:
-- ⚠️ GENERA LAS {preguntas_alternativa} PREGUNTAS DE ALTERNATIVA COMPLETAS - CUENTA CADA UNA
-- ⚠️ GENERA LAS {preguntas_desarrollo} PREGUNTAS DE DESARROLLO COMPLETAS
-- NO uses notación LaTeX. Usa símbolos Unicode: × ÷ ± ≤ ≥ ≠ ² ³ ₂
-- El marcador ===SOLUCIONARIO=== es OBLIGATORIO
-- Preguntas variadas que cubran diferentes aspectos del tema
-- Cada pregunta numerada secuencialmente sin saltar números"""
+⚠️ CRÍTICO:
+- Las {preguntas_alternativa} preguntas de alternativa DEBEN estar numeradas del 1 al {preguntas_alternativa}
+- El solucionario DEBE listar las {preguntas_alternativa} respuestas en formato compacto: "1-C, 2-A, 3-B..."
+- NO omitir ninguna respuesta
+- NO usar LaTeX. Usar: × ÷ ± ≤ ≥ ≠ ² ³ ₂"""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,
@@ -321,10 +296,10 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
             print(f"🧠 Generando prueba: {asignatura} - {tema} (Dificultad: {dificultad}/10)")
             print(f"📋 PARÁMETROS RECIBIDOS: alternativas={preguntas_alternativa}, desarrollo={preguntas_desarrollo}")
         
-        # Calculate tokens based on question count - more questions need more tokens
-        # Estimate: ~150 tokens per alternativa question + answer, ~300 per desarrollo
-        estimated_tokens = (preguntas_alternativa * 180) + (preguntas_desarrollo * 350) + 1000
-        max_tokens_needed = min(max(estimated_tokens, 8000), 16000)  # Between 8k and 16k
+        # Calculate tokens - need enough for all questions AND complete solucionario
+        # 50 questions = ~100 tokens each for question + ~20 for answer in solucionario
+        estimated_tokens = (preguntas_alternativa * 130) + (preguntas_desarrollo * 400) + 2000
+        max_tokens_needed = min(max(estimated_tokens, 10000), 16000)  # Between 10k and 16k
         
         print(f"📊 Generando {preguntas_alternativa} alternativas + {preguntas_desarrollo} desarrollo (max_tokens: {max_tokens_needed})")
         
@@ -332,16 +307,16 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"""Genera una prueba COMPLETA sobre: {tema}
+                {"role": "user", "content": f"""Genera una prueba sobre: {tema}
 
-RECUERDA:
-- EXACTAMENTE {preguntas_alternativa} preguntas de alternativa numeradas del 1 al {preguntas_alternativa}
-- EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo numeradas del 1 al {preguntas_desarrollo}
-- Usa el marcador ===SOLUCIONARIO=== para separar la prueba del solucionario
-- NO uses líneas horizontales (---)
-- Formato compacto sin espacios innecesarios"""}
+OBLIGATORIO:
+- {preguntas_alternativa} preguntas de alternativa (1 a {preguntas_alternativa})
+- {preguntas_desarrollo} preguntas de desarrollo
+- El solucionario DEBE tener las {preguntas_alternativa} respuestas en formato: 1-C, 2-A, 3-B, 4-D...
+- ===SOLUCIONARIO=== como separador
+- Formato compacto, sin líneas horizontales"""}
             ],
-            temperature=0.3,  # Lower temperature for more consistent output
+            temperature=0.3,
             max_tokens=max_tokens_needed
         )
         
