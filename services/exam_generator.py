@@ -46,7 +46,7 @@ def generar_nombre_prueba(asignatura: str, tema: str, nivel: str) -> str:
         return f"Prueba {asignatura}"
 
 
-def get_eunacom_prompt(tema: str, asignatura: str) -> str:
+def get_eunacom_prompt(tema: str, asignatura: str, preguntas_alternativa: int = 10, preguntas_desarrollo: int = 0) -> str:
     """Get the EUNACOM-style exam generation prompt."""
     
     return f"""Eres un generador de preguntas para el examen EUNACOM, orientado a evaluar competencias clínicas de un médico general en Chile.
@@ -55,21 +55,22 @@ https://www.eunacom.cl/contenidos/muestra.html
 
 Debes respetar el Perfil de Conocimientos EUNACOM, especialmente el área de {asignatura}.
 
-INSTRUCCIONES GENERALES
+⚠️ CANTIDAD OBLIGATORIA:
+- DEBES generar EXACTAMENTE {preguntas_alternativa} preguntas de alternativa (casos clínicos)
+- DEBES generar EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo (si aplica)
+- NO generes menos preguntas. Numera cada pregunta del 1 al {preguntas_alternativa}.
 
-Genera 10 preguntas, todas basadas en casos clínicos.
+INSTRUCCIONES GENERALES
 
 Cada pregunta debe tener su propio caso clínico, de 4 a 6 líneas, clínicamente realista.
 
-No usar títulos, encabezados ni separar por temas.
-
-Mostrar solo el caso clínico y las alternativas (formato ensayo).
+Formato compacto sin espacios excesivos entre preguntas.
 
 El nivel de dificultad debe oscilar entre 6/10 y 7/10.
 
 Usar lenguaje médico habitual en atención primaria chilena.
 
-No incluir respuestas ni explicaciones inicialmente.
+No incluir respuestas ni explicaciones en el examen.
 
 CONTENIDO CLÍNICO
 
@@ -100,36 +101,39 @@ FORMATO DE RESPUESTA
 ## EXAMEN EUNACOM - {asignatura.upper()}
 
 **Tema:** {tema}
-**Nombre del estudiante:** _______________________
-**Fecha:** _______________________
+**Nombre:** _______________________  **Fecha:** _______________
 
----
+1. [Caso clínico 4-6 líneas]
+   ¿Cuál es el diagnóstico/tratamiento/examen más probable?
+a) [Opción]
+b) [Opción]
+c) [Opción]
+d) [Opción]
 
-Después del caso clínico, incluir una sola pregunta con 4 alternativas:
+2. [Siguiente caso clínico...]
+a) [Opción]
+b) [Opción]
+c) [Opción]
+d) [Opción]
 
-A)
-B)
-C)
-D)
-
-Todas las alternativas deben ser plausibles para un médico general.
+[CONTINÚA HASTA LA PREGUNTA {preguntas_alternativa}]
 
 ===SOLUCIONARIO===
 
 ## SOLUCIONARIO EUNACOM
 
-Después de las 10 preguntas, incluye con el marcador ===SOLUCIONARIO=== las respuestas con esta estructura:
+1. **Respuesta: [LETRA])** 
+   **Diagnóstico:** [Nombre]
+   **Justificación:** [Por qué es correcta, 2-3 líneas]
 
-1. **Respuesta correcta: [LETRA])**
-   **Diagnóstico:** [Nombre de la patología]
-   **Justificación:** [Por qué es correcta y por qué las otras están mal. 3-5 líneas.]
+[CONTINÚA HASTA LA PREGUNTA {preguntas_alternativa}]
 
 RESTRICCIONES IMPORTANTES
 
-❌ No incluir preguntas teóricas sin caso clínico
-❌ No usar tablas ni viñetas fuera del formato A–D)
+❌ No usar líneas horizontales (---)
+❌ No usar espacios excesivos entre preguntas
 ❌ No usar notación LaTeX
-❌ Usar símbolos Unicode para subíndices/superíndices: ² ³ ₂ etc."""
+❌ Usar símbolos Unicode: ² ³ ₂ etc."""
 
 
 def get_exam_generation_prompt(tema: str, asignatura: str, nivel: str, 
@@ -307,14 +311,15 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
     try:
         # Select prompt based on EUNACOM mode
         if eunacom:
-            system_prompt = get_eunacom_prompt(tema, asignatura)
-            print(f"🏥 Generando prueba EUNACOM: {asignatura} - {tema}")
+            system_prompt = get_eunacom_prompt(tema, asignatura, preguntas_alternativa, preguntas_desarrollo)
+            print(f"🏥 Generando prueba EUNACOM: {asignatura} - {tema} ({preguntas_alternativa} preguntas)")
         else:
             system_prompt = get_exam_generation_prompt(
                 tema, asignatura, nivel,
                 preguntas_alternativa, preguntas_desarrollo, dificultad
             )
             print(f"🧠 Generando prueba: {asignatura} - {tema} (Dificultad: {dificultad}/10)")
+            print(f"📋 PARÁMETROS RECIBIDOS: alternativas={preguntas_alternativa}, desarrollo={preguntas_desarrollo}")
         
         # Calculate tokens based on question count - more questions need more tokens
         # Estimate: ~150 tokens per alternativa question + answer, ~300 per desarrollo
