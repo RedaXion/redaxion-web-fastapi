@@ -49,6 +49,27 @@ def generar_nombre_prueba(asignatura: str, tema: str, nivel: str) -> str:
 def get_eunacom_prompt(tema: str, asignatura: str, preguntas_alternativa: int = 10, preguntas_desarrollo: int = 0) -> str:
     """Get the EUNACOM-style exam generation prompt."""
     
+    # Build desarrollo section if needed
+    desarrollo_section = ""
+    desarrollo_solucionario = ""
+    if preguntas_desarrollo > 0:
+        desarrollo_section = f"""
+
+## SECCIÓN II: DESARROLLO ({preguntas_desarrollo} preguntas)
+
+Instrucciones: Responde de forma completa y fundamentada.
+
+1. [Pregunta de análisis clínico que requiera razonamiento] (10 pts)
+2. [Pregunta sobre diagnóstico diferencial o manejo] (10 pts)
+[...hasta la pregunta {preguntas_desarrollo}]
+"""
+        desarrollo_solucionario = f"""
+
+**DESARROLLO:**
+1. [Respuesta modelo completa con criterios de evaluación]
+2. [Respuesta modelo]
+[...hasta la pregunta {preguntas_desarrollo}]"""
+    
     return f"""Eres un generador de preguntas para el examen EUNACOM, orientado a evaluar competencias clínicas de un médico general en Chile.
 Debes basarte exclusivamente en casos clínicos, siguiendo el formato, nivel de dificultad y estilo de las preguntas oficiales disponibles en:
 https://www.eunacom.cl/contenidos/muestra.html
@@ -57,12 +78,12 @@ Debes respetar el Perfil de Conocimientos EUNACOM, especialmente el área de {as
 
 ⚠️ CANTIDAD OBLIGATORIA:
 - DEBES generar EXACTAMENTE {preguntas_alternativa} preguntas de alternativa (casos clínicos)
-- DEBES generar EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo (si aplica)
-- NO generes menos preguntas. Numera cada pregunta del 1 al {preguntas_alternativa}.
+- DEBES generar EXACTAMENTE {preguntas_desarrollo} preguntas de desarrollo
+- NO generes menos preguntas. Numera cada sección por separado.
 
 INSTRUCCIONES GENERALES
 
-Cada pregunta debe tener su propio caso clínico, de 4 a 6 líneas, clínicamente realista.
+Cada pregunta de alternativa debe tener su propio caso clínico, de 4 a 6 líneas, clínicamente realista.
 
 Formato compacto sin espacios excesivos entre preguntas.
 
@@ -103,6 +124,8 @@ FORMATO DE RESPUESTA
 **Tema:** {tema}
 **Nombre:** _______________________  **Fecha:** _______________
 
+## SECCIÓN I: ALTERNATIVAS ({preguntas_alternativa} preguntas)
+
 1. [Caso clínico 4-6 líneas]
    ¿Cuál es el diagnóstico/tratamiento/examen más probable?
 a) [Opción]
@@ -117,16 +140,15 @@ c) [Opción]
 d) [Opción]
 
 [CONTINÚA HASTA LA PREGUNTA {preguntas_alternativa}]
-
+{desarrollo_section}
 ===SOLUCIONARIO===
 
 ## SOLUCIONARIO EUNACOM
 
-1. **Respuesta: [LETRA])** 
-   **Diagnóstico:** [Nombre]
-   **Justificación:** [Por qué es correcta, 2-3 líneas]
-
-[CONTINÚA HASTA LA PREGUNTA {preguntas_alternativa}]
+**ALTERNATIVAS:**
+1. **[LETRA])** [Diagnóstico + justificación breve]
+2. **[LETRA])** [Justificación]
+[...hasta la pregunta {preguntas_alternativa}]{desarrollo_solucionario}
 
 RESTRICCIONES IMPORTANTES
 
