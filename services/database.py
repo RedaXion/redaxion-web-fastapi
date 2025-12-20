@@ -25,6 +25,19 @@ def init_db():
         )
     ''')
     
+    # Discount codes table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS discount_codes (
+            code TEXT PRIMARY KEY,
+            discount_percent INTEGER,
+            active INTEGER DEFAULT 1,
+            max_uses INTEGER,
+            uses_count INTEGER DEFAULT 0,
+            expiry_date TIMESTAMP,
+            created_at TIMESTAMP
+        )
+    ''')
+    
     # Migration: Add columns if they don't exist (for existing DBs)
     try:
         c.execute('ALTER TABLE orders ADD COLUMN service_type TEXT')
@@ -169,3 +182,96 @@ def get_latest_pending_exam_order():
         return r
     return None
 
+
+# --- Discount Codes ---
+
+def create_discount_code(code: str, discount_percent: int, max_uses: int = None, expiry_date: str = None):
+    """Create a new discount code."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        c.execute('''
+            INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count, expiry_date, created_at)
+            VALUES (?, ?, 1, ?, 0, ?, ?)
+        ''', (code.upper(), discount_percent, max_uses, expiry_date, datetime.now()))
+        conn.commit()
+        print(f"✅ Código de descuento creado: {code.upper()} ({discount_percent}%)")
+        return True
+    except sqlite3.IntegrityError:
+        print(f"⚠️ Código {code} ya existe")
+        return False
+    finally:
+        conn.close()
+
+
+def validate_discount_code(code: str) -> dict:
+    """
+    Validate a discount code and return discount info.
+    Returns: {"valid": True, "discount_percent": X} or {"valid": False, "reason": "..."}
+    """
+    if not code:
+        return {"valid": False, "reason": "Código vacío"}
+    
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute('SELECT * FROM discount_codes WHERE code = ?', (code.upper(),))
+    row = c.fetchone()
+    conn.close()
+    
+    if not row:
+        return {"valid": False, "reason": "Código no encontrado"}
+    
+    row = dict(row)
+    
+    # Check if active
+    if not row.get("active"):
+        return {"valid": False, "reason": "Código inactivo"}
+    
+    # Check max uses
+    if row.get("max_uses") is not None:
+        if row.get("uses_count", 0) >= row.get("max_uses"):
+            return {"valid": False, "reason": "Código agotado"}
+    
+    # Check expiry
+    if row.get("expiry_date"):
+        try:
+            expiry = datetime.fromisoformat(str(row["expiry_date"]))
+            if datetime.now() > expiry:
+                return {"valid": False, "reason": "Código expirado"}
+        except:
+            pass
+    
+    return {
+        "valid": True,
+        "discount_percent": row.get("discount_percent", 0)
+    }
+
+
+def increment_code_usage(code: str):
+    """Increment the usage count for a discount code."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('UPDATE discount_codes SET uses_count = uses_count + 1 WHERE code = ?', (code.upper(),))
+    conn.commit()
+    conn.close()
+
+
+def get_all_discount_codes():
+    """Get all discount codes for admin view."""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute('SELECT * FROM discount_codes ORDER BY created_at DESC')
+    rows = c.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def deactivate_discount_code(code: str):
+    """Deactivate a discount code."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('UPDATE discount_codes SET active = 0 WHERE code = ?', (code.upper(),))
+    conn.commit()
+    conn.close()

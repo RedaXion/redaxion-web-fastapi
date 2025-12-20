@@ -273,8 +273,30 @@ async def transcribe_reunion(request: Request):
 async def soluciones_ia(request: Request):
     return templates.TemplateResponse("soluciones_ia.html", {"request": request})
 
-
 # --- Special Services API Endpoints ---
+
+# --- Discount Codes API ---
+@app.post("/api/validate-discount")
+async def validate_discount(code: str = Form(...)):
+    """Validate a discount code and return discount info."""
+    result = database.validate_discount_code(code)
+    return result
+
+@app.post("/api/create-discount-code")
+async def create_discount_code_endpoint(
+    code: str = Form(...),
+    discount_percent: int = Form(...),
+    max_uses: int = Form(None),
+    expiry_date: str = Form(None)
+):
+    """Create a new discount code (admin only)."""
+    # TODO: Add authentication for admin access
+    success = database.create_discount_code(code, discount_percent, max_uses, expiry_date)
+    if success:
+        return {"success": True, "message": f"Código {code.upper()} creado con {discount_percent}% descuento"}
+    else:
+        raise HTTPException(status_code=400, detail="Código ya existe")
+
 
 async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, nivel: str,
                                     preguntas_alternativa: int, preguntas_desarrollo: int,
@@ -384,10 +406,27 @@ async def crear_prueba(
     eunacom: bool = Form(False),
     gateway: str = Form("flow"),  # User's payment gateway choice
     action: str = Form("pay"),    # "pay" or "skip" for testing
-    context_files: list[UploadFile] = []  # Optional context files
+    context_files: list[UploadFile] = [],  # Optional context files
+    discount_code: str = Form(None)  # Optional discount code
 ):
     """Create a test/exam order and generate payment."""
     orden_id = str(uuid.uuid4())
+    
+    # Calculate price with discount
+    base_price = SPECIAL_SERVICES_PRICE
+    discount_percent = 0
+    final_price = base_price
+    
+    if discount_code:
+        discount_result = database.validate_discount_code(discount_code)
+        if discount_result.get("valid"):
+            discount_percent = discount_result.get("discount_percent", 0)
+            final_price = int(base_price * (1 - discount_percent / 100))
+            print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
+            # Increment usage count
+            database.increment_code_usage(discount_code)
+        else:
+            print(f"⚠️ Código inválido: {discount_code} - {discount_result.get('reason')}")
     
     # Extract text from uploaded context files
     context_material = None
@@ -419,7 +458,10 @@ async def crear_prueba(
         "dificultad": dificultad,
         "color": color,
         "eunacom": eunacom,
-        "has_context": bool(context_material)
+        "has_context": bool(context_material),
+        "discount_code": discount_code.upper() if discount_code else None,
+        "discount_percent": discount_percent,
+        "final_price": final_price
     }
     
     # Handle Skip Payment (Test Mode)
@@ -468,16 +510,16 @@ async def crear_prueba(
     }
     database.create_order(order_data)
     
-    print(f"Nueva orden de prueba: {orden_id} - {asignatura} (Gateway: {gateway})")
+    print(f"Nueva orden de prueba: {orden_id} - {asignatura} (Gateway: {gateway}, Precio: ${final_price})")
     
     try:
         # Use Flow or MercadoPago based on user selection
         if gateway == "flow":
             resultado_pago = crear_pago_flow(
                 orden_id=orden_id,
-                monto=SPECIAL_SERVICES_PRICE,
+                monto=final_price,  # Use discounted price
                 email=correo,
-                descripcion=f"Generador de Pruebas - {asignatura}",
+                descripcion=f"Generador de Pruebas - {asignatura}" + (f" ({discount_percent}% desc.)" if discount_percent else ""),
                 url_retorno=f"{BASE_URL}/api/flow-return?orden_id={orden_id}",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
                 # No sending optional_data to Flow to avoid Error 2002 (Too long)

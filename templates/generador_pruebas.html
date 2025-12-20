@@ -416,9 +416,27 @@
                         </div>
                     </div>
 
+                    <!-- Discount Code Section -->
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label>🏷️ Código de Descuento (Opcional)</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" name="discount_code" id="discountCodeInput"
+                                placeholder="Ingresa tu código" style="flex: 1; text-transform: uppercase;">
+                            <button type="button" id="applyDiscountBtn" style="padding: 0.8rem 1.2rem; background: var(--accent-blue); border: none; 
+                                border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600;">
+                                Aplicar
+                            </button>
+                        </div>
+                        <div id="discountMessage" style="margin-top: 0.5rem; font-size: 0.85rem; display: none;"></div>
+                    </div>
+
                     <div class="price-tag">
                         <div class="label">Precio del servicio</div>
-                        <div class="price">$1.500 CLP</div>
+                        <div class="price" id="priceDisplay">
+                            <span id="originalPrice">$1.500 CLP</span>
+                            <span id="discountedPrice"
+                                style="display: none; color: #2ecc71; margin-left: 0.5rem;"></span>
+                        </div>
                     </div>
 
                     <button type="button" id="showPaymentModal" class="btn btn-primary"
@@ -676,6 +694,80 @@
                 }
                 fileInput.files = dt.files;
                 updateFileDisplay();
+            }
+        });
+
+        // === Discount Code Handling ===
+        const discountCodeInput = document.getElementById('discountCodeInput');
+        const applyDiscountBtn = document.getElementById('applyDiscountBtn');
+        const discountMessage = document.getElementById('discountMessage');
+        const originalPriceSpan = document.getElementById('originalPrice');
+        const discountedPriceSpan = document.getElementById('discountedPrice');
+
+        const BASE_PRICE = 1500;
+        let appliedDiscount = 0;
+
+        applyDiscountBtn.addEventListener('click', async () => {
+            const code = discountCodeInput.value.trim();
+            if (!code) {
+                discountMessage.style.display = 'block';
+                discountMessage.style.color = '#f39c12';
+                discountMessage.textContent = 'Ingresa un código de descuento';
+                return;
+            }
+
+            applyDiscountBtn.disabled = true;
+            applyDiscountBtn.textContent = '...';
+
+            try {
+                const formData = new FormData();
+                formData.append('code', code);
+
+                const response = await fetch('/api/validate-discount', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.valid) {
+                    appliedDiscount = result.discount_percent;
+                    const discountedPrice = Math.round(BASE_PRICE * (1 - appliedDiscount / 100));
+
+                    // Update UI
+                    originalPriceSpan.style.textDecoration = 'line-through';
+                    originalPriceSpan.style.color = 'var(--text-gray)';
+                    discountedPriceSpan.style.display = 'inline';
+                    discountedPriceSpan.textContent = `→ $${discountedPrice.toLocaleString()} CLP`;
+
+                    discountMessage.style.display = 'block';
+                    discountMessage.style.color = '#2ecc71';
+                    discountMessage.textContent = `✅ ¡${appliedDiscount}% de descuento aplicado!`;
+
+                    discountCodeInput.disabled = true;
+                    applyDiscountBtn.textContent = '✓';
+                    applyDiscountBtn.style.background = '#2ecc71';
+                } else {
+                    discountMessage.style.display = 'block';
+                    discountMessage.style.color = '#e74c3c';
+                    discountMessage.textContent = `❌ ${result.reason || 'Código inválido'}`;
+                    applyDiscountBtn.disabled = false;
+                    applyDiscountBtn.textContent = 'Aplicar';
+                }
+            } catch (error) {
+                discountMessage.style.display = 'block';
+                discountMessage.style.color = '#e74c3c';
+                discountMessage.textContent = 'Error validando código';
+                applyDiscountBtn.disabled = false;
+                applyDiscountBtn.textContent = 'Aplicar';
+            }
+        });
+
+        // Allow Enter key to apply discount
+        discountCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyDiscountBtn.click();
             }
         });
 
