@@ -377,7 +377,8 @@ async def crear_prueba(
     dificultad: int = Form(7),
     color: str = Form("azul elegante"),
     eunacom: bool = Form(False),
-    gateway: str = Form("flow")  # User's payment gateway choice
+    gateway: str = Form("flow"),  # User's payment gateway choice
+    action: str = Form("pay")     # "pay" or "skip" for testing
 ):
     """Create a test/exam order and generate payment."""
     orden_id = str(uuid.uuid4())
@@ -394,6 +395,40 @@ async def crear_prueba(
         "eunacom": eunacom
     }
     
+    # Handle Skip Payment (Test Mode)
+    if action == "skip":
+        print(f"⏩ SKIP PAYMENT: Creating paid order {orden_id}")
+        order_data = {
+            "id": orden_id,
+            "status": "paid",  # Direct to paid
+            "client": nombre,
+            "email": correo,
+            "files": [],
+            "audio_url": "",
+            "service_type": "exam",
+            "metadata": exam_metadata
+        }
+        database.create_order(order_data)
+        
+        # Determine strictness prompt based on EUNACOM mode
+        if eunacom:
+            # EUNACOM implies strict medical format
+            pass
+            
+        # Start background processing immediately
+        background_tasks.add_task(
+            procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
+            preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre,
+            color, eunacom
+        )
+        
+        # Redirect to dashboard
+        # Redirect to dashboard via JSON
+        return {
+            "orden_id": orden_id,
+            "checkout_url": f"/dashboard?external_reference={orden_id}"
+        }
+
     order_data = {
         "id": orden_id,
         "status": "pending",
@@ -427,10 +462,10 @@ async def crear_prueba(
                 # Mock payment - start processing immediately
                 background_tasks.add_task(
                     procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
-                    preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+                    preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre,
+                    color, eunacom
                 )
             
-            checkout_url = resultado_pago.get("checkout_url")
             checkout_url = resultado_pago.get("checkout_url")
             if not checkout_url:
                 # Return 400 so frontend shows alert with message, avoiding 500 HTML
@@ -473,7 +508,8 @@ async def crear_prueba(
                 # Mock payment for testing
                 background_tasks.add_task(
                     procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
-                    preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre
+                    preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre,
+                    color, eunacom
                 )
                 return {"orden_id": orden_id, "checkout_url": f"/dashboard?external_reference={orden_id}"}
             
@@ -567,7 +603,8 @@ async def crear_orden_reunion(
     agenda: str = Form(""),
     audio_url: str = Form(...),
     orden_id: str = Form(...),
-    gateway: str = Form("flow")  # User's payment gateway choice
+    gateway: str = Form("flow"),  # User's payment gateway choice
+    action: str = Form("pay")     # "pay" or "skip" for testing
 ):
     """Create a meeting transcription order."""
     meeting_metadata = {
@@ -575,6 +612,38 @@ async def crear_orden_reunion(
         "asistentes": asistentes,
         "agenda": agenda
     }
+    
+    # Handle Skip Payment (Test Mode)
+    if action == "skip":
+        print(f"⏩ SKIP PAYMENT: Creating paid meeting order {orden_id}")
+        order_data = {
+            "id": orden_id,
+            "status": "paid",  # Direct to paid
+            "client": nombre,
+            "email": correo,
+            "color": "azul elegante",
+            "columnas": "una",
+            "files": [],
+            "audio_url": audio_url,
+            "service_type": "meeting",
+            "metadata": meeting_metadata
+        }
+        database.create_order(order_data)
+        
+        # Start background processing immediately
+        background_tasks.add_task(
+            procesar_y_enviar_reunion, orden_id, audio_url, titulo_reunion,
+            asistentes, agenda, correo, nombre
+        )
+        
+        # Redirect to dashboard
+        # Redirect to dashboard via JSON
+        return {
+            "orden_id": orden_id,
+            "checkout_url": f"/dashboard?external_reference={orden_id}"
+        }
+
+
     
     # Save to DB
     order_data = {
@@ -1243,17 +1312,53 @@ async def crear_orden(
 # --- New endpoint for direct GCS upload orders ---
 @app.post("/api/orden-gcs")
 async def crear_orden_gcs(
+    background_tasks: BackgroundTasks,
     nombre: str = Form(...),
     correo: str = Form(...),
     color: str = Form(...),
     columnas: str = Form(...),
     audio_url: str = Form(...),  # Pre-uploaded GCS URL
-    orden_id: str = Form(...)    # Order ID from get-upload-url
+    orden_id: str = Form(...),   # Order ID from get-upload-url
+    action: str = Form("pay")    # "pay" or "skip" for testing
 ):
     """
     Create order with pre-uploaded audio from GCS.
     Used for large files that bypass Railway's upload limits.
     """
+    
+    # Handle Skip Payment (Test Mode)
+    if action == "skip":
+        print(f"⏩ SKIP PAYMENT: Creating paid order {orden_id}")
+        order_data = {
+            "id": orden_id,
+            "status": "paid",  # Direct to paid
+            "client": nombre,
+            "email": correo,
+            "color": color,
+            "columnas": columnas,
+            "files": [],
+            "audio_url": audio_url,
+            "service_type": "transcription"
+        }
+        database.create_order(order_data)
+        
+        # Start background processing immediately
+        user_metadata = {
+            "email": correo,
+            "client": nombre,
+            "color": color,
+            "columnas": columnas
+        }
+        background_tasks.add_task(
+            procesar_audio_y_documentos, orden_id, audio_url, user_metadata
+        )
+        
+        return {
+            "orden_id": orden_id,
+            "checkout_url": f"/dashboard?external_reference={orden_id}"
+        }
+    
+    # Normal payment flow
     # 1. Save metadata to DB
     order_data = {
         "id": orden_id,
