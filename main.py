@@ -673,13 +673,33 @@ async def crear_orden_reunion(
     audio_url: str = Form(...),
     orden_id: str = Form(...),
     gateway: str = Form("flow"),  # User's payment gateway choice
-    action: str = Form("pay")     # "pay" or "skip" for testing
+    action: str = Form("pay"),    # "pay" or "skip" for testing
+    discount_code: str = Form(None)  # Optional discount code
 ):
     """Create a meeting transcription order."""
+    
+    # Calculate price with discount
+    base_price = SPECIAL_SERVICES_PRICE
+    discount_percent = 0
+    final_price = base_price
+    
+    if discount_code:
+        discount_result = database.validate_discount_code(discount_code)
+        if discount_result.get("valid"):
+            discount_percent = discount_result.get("discount_percent", 0)
+            final_price = int(base_price * (1 - discount_percent / 100))
+            print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
+            database.increment_code_usage(discount_code)
+        else:
+            print(f"⚠️ Código inválido: {discount_code} - {discount_result.get('reason')}")
+    
     meeting_metadata = {
         "titulo_reunion": titulo_reunion,
         "asistentes": asistentes,
-        "agenda": agenda
+        "agenda": agenda,
+        "discount_code": discount_code.upper() if discount_code else None,
+        "discount_percent": discount_percent,
+        "final_price": final_price
     }
     
     # Handle Skip Payment (Test Mode)
@@ -729,16 +749,16 @@ async def crear_orden_reunion(
     }
     database.create_order(order_data)
     
-    print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'} (Gateway: {gateway})")
+    print(f"Nueva orden de reunión: {orden_id} - {titulo_reunion or 'Sin título'} (Gateway: {gateway}, Precio: ${final_price})")
     
     try:
         # Use Flow or MercadoPago based on user selection
         if gateway == "flow":
             resultado_pago = crear_pago_flow(
                 orden_id=orden_id,
-                monto=SPECIAL_SERVICES_PRICE,
+                monto=final_price,  # Use discounted price
                 email=correo,
-                descripcion="Transcripción de Reunión - RedaXion",
+                descripcion="Transcripción de Reunión - RedaXion" + (f" ({discount_percent}% desc.)" if discount_percent else ""),
                 url_retorno=f"{BASE_URL}/api/flow-return?orden_id={orden_id}",
                 url_confirmacion=f"{BASE_URL}/api/flow-webhook",
                 # No sending optional_data to Flow to avoid Error 2002 (Too long)
