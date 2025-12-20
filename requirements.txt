@@ -13,3 +13,5 @@ pillow==10.1.0
 google-genai>=1.0.0
 pyflowcl
 httpx
+PyPDF2>=3.0.0
+python-pptx>=0.6.21

@@ -113,6 +113,7 @@ from services.exam_generator import generar_prueba
 from services.exam_formatting import guardar_examen_como_docx, guardar_examen_como_pdf
 from services.meeting_processing import procesar_reunion
 from services.meeting_formatting import guardar_acta_reunion_como_docx, guardar_acta_reunion_como_pdf
+from services.document_extraction import extract_context_from_files
 
 # Payment Gateway - "flow" or "mercadopago"
 from services.flow_payment import crear_pago_flow, obtener_estado_pago, status_code_to_string
@@ -278,15 +279,19 @@ async def soluciones_ia(request: Request):
 async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, nivel: str,
                                     preguntas_alternativa: int, preguntas_desarrollo: int,
                                     dificultad: int, correo: str, nombre: str,
-                                    color: str = "azul elegante", eunacom: bool = False):
+                                    color: str = "azul elegante", eunacom: bool = False,
+                                    context_material: str = None):
     """Background task to generate exam and send to client."""
     print(f"[{orden_id}] Generando prueba: {asignatura} - {tema} (EUNACOM: {eunacom}, Color: {color})")
+    if context_material:
+        print(f"[{orden_id}] Con material de contexto: {len(context_material)} caracteres")
     database.update_order_status(orden_id, "processing")
     
     try:
         # Generate exam with ChatGPT
         resultado = generar_prueba(tema, asignatura, nivel, preguntas_alternativa, 
-                                   preguntas_desarrollo, dificultad, eunacom=eunacom)
+                                   preguntas_desarrollo, dificultad, eunacom=eunacom,
+                                   context_material=context_material)
         
         if not resultado["success"]:
             raise Exception(resultado.get("error", "Error generando prueba"))
@@ -378,10 +383,31 @@ async def crear_prueba(
     color: str = Form("azul elegante"),
     eunacom: bool = Form(False),
     gateway: str = Form("flow"),  # User's payment gateway choice
-    action: str = Form("pay")     # "pay" or "skip" for testing
+    action: str = Form("pay"),    # "pay" or "skip" for testing
+    context_files: list[UploadFile] = []  # Optional context files
 ):
     """Create a test/exam order and generate payment."""
     orden_id = str(uuid.uuid4())
+    
+    # Extract text from uploaded context files
+    context_material = None
+    if context_files:
+        print(f"📎 Procesando {len(context_files)} archivos de contexto...")
+        files_data = []
+        total_size = 0
+        for file in context_files:
+            if file.filename:  # Skip empty file inputs
+                file_bytes = await file.read()
+                total_size += len(file_bytes)
+                files_data.append((file.filename, file_bytes))
+        
+        # Check total size (150MB limit)
+        if total_size > 150 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Total de archivos excede 150MB")
+        
+        if files_data:
+            context_material = extract_context_from_files(files_data)
+            print(f"✅ Contexto extraído: {len(context_material)} caracteres de {len(files_data)} archivo(s)")
     
     # Store exam params in metadata field for DB persisting
     exam_metadata = {
@@ -392,7 +418,8 @@ async def crear_prueba(
         "preguntas_desarrollo": preguntas_desarrollo,
         "dificultad": dificultad,
         "color": color,
-        "eunacom": eunacom
+        "eunacom": eunacom,
+        "has_context": bool(context_material)
     }
     
     # Handle Skip Payment (Test Mode)
@@ -419,7 +446,7 @@ async def crear_prueba(
         background_tasks.add_task(
             procesar_y_enviar_prueba, orden_id, tema, asignatura, nivel,
             preguntas_alternativa, preguntas_desarrollo, dificultad, correo, nombre,
-            color, eunacom
+            color, eunacom, context_material
         )
         
         # Redirect to dashboard

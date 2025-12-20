@@ -219,12 +219,14 @@ a) [Opción] b) [Opción] c) [Opción] d) [Opción]
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,
                    preguntas_alternativa: int, preguntas_desarrollo: int, 
-                   dificultad: int = 7, eunacom: bool = False) -> dict:
+                   dificultad: int = 7, eunacom: bool = False,
+                   context_material: str = None) -> dict:
     """
     Generate a formal test/exam using ChatGPT.
     
     Args:
         eunacom: If True, use EUNACOM medical exam format
+        context_material: Optional extracted text from uploaded documents
     
     Returns:
         dict with 'examen', 'solucionario', 'nombre_prueba', and 'success' status
@@ -307,11 +309,20 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
         
         print(f"📊 Generando {preguntas_alternativa} alternativas + {preguntas_desarrollo} desarrollo (max_tokens: {max_tokens_needed})")
         
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"""Genera una prueba sobre: {tema}
+        # Build context message if provided
+        context_section = ""
+        if context_material and len(context_material) > 100:
+            # Truncate if too long for context window
+            max_context = 40000
+            if len(context_material) > max_context:
+                context_material = context_material[:max_context] + "\n[... contenido truncado ...]"
+            context_section = f"""\n\nMATERIAL DE REFERENCIA (usa esto como base para las preguntas):
+{context_material}
+\n¡IMPORTANTE! Basa las preguntas ESPECÍFICAMENTE en el material proporcionado arriba."""
+            print(f"📚 Usando {len(context_material)} caracteres de material de contexto")
+        
+        # Build user message
+        user_message = f"""Genera una prueba sobre: {tema}
 
 OBLIGATORIO:
 - {preguntas_alternativa} preguntas de alternativa (numeradas 1 a {preguntas_alternativa})
@@ -320,7 +331,13 @@ OBLIGATORIO:
 - Formato: "1. **C)** Porque [razón concreta]"
 - ===SOLUCIONARIO=== como separador
 - NO justificaciones tautológicas como "es C porque es correcta"
-- Formato compacto, sin líneas horizontales"""}
+- Formato compacto, sin líneas horizontales{context_section}"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
             ],
             temperature=0.3,
             max_tokens=max_tokens_needed

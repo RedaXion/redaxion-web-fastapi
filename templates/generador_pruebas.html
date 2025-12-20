@@ -382,6 +382,40 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Context Files Upload Section -->
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label>📎 Material de Referencia (Opcional)</label>
+                        <p style="color: var(--text-gray); font-size: 0.85rem; margin-bottom: 0.8rem;">
+                            Sube documentos (PDF, DOCX, PPT) para que la IA genere preguntas basadas en tu contenido.
+                        </p>
+                        <div id="fileDropZone" style="border: 2px dashed rgba(255,255,255,0.3); border-radius: 12px; 
+                            padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s;
+                            background: rgba(0,0,0,0.2);">
+                            <input type="file" name="context_files" id="contextFilesInput" multiple
+                                accept=".pdf,.docx,.doc,.pptx,.ppt,.txt" style="display: none;">
+                            <div id="dropZoneContent">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+                                <div style="color: #fff;">Arrastra archivos aquí o haz clic para seleccionar</div>
+                                <div style="color: var(--text-gray); font-size: 0.8rem; margin-top: 0.5rem;">
+                                    PDF, DOCX, PPT hasta 150MB total
+                                </div>
+                            </div>
+                            <div id="selectedFilesInfo" style="display: none; text-align: left;">
+                                <div style="color: #fff; font-weight: 600; margin-bottom: 0.5rem;">Archivos
+                                    seleccionados:</div>
+                                <ul id="filesList" style="list-style: none; padding: 0; margin: 0;"></ul>
+                                <div id="totalSize"
+                                    style="color: var(--text-gray); font-size: 0.8rem; margin-top: 0.5rem;"></div>
+                                <button type="button" id="clearFilesBtn" style="margin-top: 0.5rem; padding: 0.4rem 0.8rem;
+                                    background: rgba(255,0,0,0.2); border: 1px solid rgba(255,0,0,0.5); 
+                                    border-radius: 6px; color: #ff6b6b; cursor: pointer; font-size: 0.8rem;">
+                                    ✕ Quitar archivos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="price-tag">
                         <div class="label">Precio del servicio</div>
                         <div class="price">$1.500 CLP</div>
@@ -552,6 +586,105 @@
         // Payment option click handlers
         payWithFlowBtn.addEventListener('click', () => processPayment('flow'));
         payWithMercadoPagoBtn.addEventListener('click', () => processPayment('mercadopago'));
+
+        // === File Upload Handling ===
+        const fileInput = document.getElementById('contextFilesInput');
+        const fileDropZone = document.getElementById('fileDropZone');
+        const dropZoneContent = document.getElementById('dropZoneContent');
+        const selectedFilesInfo = document.getElementById('selectedFilesInfo');
+        const filesList = document.getElementById('filesList');
+        const totalSizeDiv = document.getElementById('totalSize');
+        const clearFilesBtn = document.getElementById('clearFilesBtn');
+
+        const MAX_TOTAL_SIZE = 150 * 1024 * 1024; // 150MB
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Update file list display
+        function updateFileDisplay() {
+            const files = fileInput.files;
+            if (!files || files.length === 0) {
+                dropZoneContent.style.display = 'block';
+                selectedFilesInfo.style.display = 'none';
+                return;
+            }
+
+            dropZoneContent.style.display = 'none';
+            selectedFilesInfo.style.display = 'block';
+
+            let totalSize = 0;
+            filesList.innerHTML = '';
+
+            for (const file of files) {
+                totalSize += file.size;
+                const li = document.createElement('li');
+                li.style.cssText = 'padding: 0.3rem 0; color: var(--text-gray); font-size: 0.85rem;';
+                li.innerHTML = `📄 <strong style="color: #fff;">${file.name}</strong> (${formatFileSize(file.size)})`;
+                filesList.appendChild(li);
+            }
+
+            totalSizeDiv.textContent = `Total: ${formatFileSize(totalSize)} / 150 MB`;
+
+            if (totalSize > MAX_TOTAL_SIZE) {
+                totalSizeDiv.style.color = '#ff6b6b';
+                totalSizeDiv.textContent += ' ⚠️ Excede el límite';
+            } else {
+                totalSizeDiv.style.color = 'var(--text-gray)';
+            }
+        }
+
+        // Click to select files
+        fileDropZone.addEventListener('click', (e) => {
+            if (e.target !== clearFilesBtn && !clearFilesBtn.contains(e.target)) {
+                fileInput.click();
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', updateFileDisplay);
+
+        // Clear files button
+        clearFilesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.value = '';
+            updateFileDisplay();
+        });
+
+        // Drag and drop
+        fileDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDropZone.style.borderColor = 'var(--accent-blue)';
+            fileDropZone.style.background = 'rgba(0,119,255,0.1)';
+        });
+
+        fileDropZone.addEventListener('dragleave', () => {
+            fileDropZone.style.borderColor = 'rgba(255,255,255,0.3)';
+            fileDropZone.style.background = 'rgba(0,0,0,0.2)';
+        });
+
+        fileDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDropZone.style.borderColor = 'rgba(255,255,255,0.3)';
+            fileDropZone.style.background = 'rgba(0,0,0,0.2)';
+
+            if (e.dataTransfer.files.length > 0) {
+                // Create a new DataTransfer to set files
+                const dt = new DataTransfer();
+                for (const file of e.dataTransfer.files) {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (['pdf', 'docx', 'doc', 'pptx', 'ppt', 'txt'].includes(ext)) {
+                        dt.items.add(file);
+                    }
+                }
+                fileInput.files = dt.files;
+                updateFileDisplay();
+            }
+        });
 
 
     </script>
