@@ -197,19 +197,23 @@ a) [Opción] b) [Opción] c) [Opción] d) [Opción]
 
 ## SOLUCIONARIO
 
-**ALTERNATIVAS (respuesta correcta):**
-1-C, 2-A, 3-B, 4-D, 5-A, 6-C, 7-B, 8-D, 9-A, 10-C, 11-B, 12-D...
-[LISTA COMPLETA de las {preguntas_alternativa} respuestas en formato "N-LETRA"]
+**ALTERNATIVAS:**
+1. **C)** [Justificación breve y sustantiva, no tautológica, máximo 1 línea]
+2. **A)** [Por qué A es correcta - razón concreta]
+3. **B)** [Explicación breve del concepto clave]
+...
+{preguntas_alternativa}. **D)** [Justificación]
 
 **DESARROLLO:**
-1. [Respuesta breve 2-3 líneas]
-2. [Respuesta breve 2-3 líneas]
+1. [Respuesta modelo en 2-3 líneas]
+2. [Respuesta modelo en 2-3 líneas]
 [...hasta {preguntas_desarrollo}]
 
 ⚠️ CRÍTICO:
-- Las {preguntas_alternativa} preguntas de alternativa DEBEN estar numeradas del 1 al {preguntas_alternativa}
-- El solucionario DEBE listar las {preguntas_alternativa} respuestas en formato compacto: "1-C, 2-A, 3-B..."
-- NO omitir ninguna respuesta
+- Las {preguntas_alternativa} preguntas de alternativa DEBEN tener su respuesta en el solucionario
+- Cada respuesta tiene formato: "N. **LETRA)** [justificación de 1 línea]"
+- La justificación debe explicar POR QUÉ es correcta (no "es C porque C es la respuesta")
+- TODAS las {preguntas_alternativa} respuestas deben aparecer, sin omisiones
 - NO usar LaTeX. Usar: × ÷ ± ≤ ≥ ≠ ² ³ ₂"""
 
 
@@ -296,10 +300,10 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
             print(f"🧠 Generando prueba: {asignatura} - {tema} (Dificultad: {dificultad}/10)")
             print(f"📋 PARÁMETROS RECIBIDOS: alternativas={preguntas_alternativa}, desarrollo={preguntas_desarrollo}")
         
-        # Calculate tokens - need enough for all questions AND complete solucionario
-        # 50 questions = ~100 tokens each for question + ~20 for answer in solucionario
-        estimated_tokens = (preguntas_alternativa * 130) + (preguntas_desarrollo * 400) + 2000
-        max_tokens_needed = min(max(estimated_tokens, 10000), 16000)  # Between 10k and 16k
+        # Calculate tokens - need enough for questions + solucionario with brief justifications
+        # ~100 tokens per question, ~40 tokens per answer with justification
+        estimated_tokens = (preguntas_alternativa * 140) + (preguntas_desarrollo * 450) + 2500
+        max_tokens_needed = min(max(estimated_tokens, 12000), 16000)  # Between 12k and 16k
         
         print(f"📊 Generando {preguntas_alternativa} alternativas + {preguntas_desarrollo} desarrollo (max_tokens: {max_tokens_needed})")
         
@@ -310,10 +314,12 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
                 {"role": "user", "content": f"""Genera una prueba sobre: {tema}
 
 OBLIGATORIO:
-- {preguntas_alternativa} preguntas de alternativa (1 a {preguntas_alternativa})
+- {preguntas_alternativa} preguntas de alternativa (numeradas 1 a {preguntas_alternativa})
 - {preguntas_desarrollo} preguntas de desarrollo
-- El solucionario DEBE tener las {preguntas_alternativa} respuestas en formato: 1-C, 2-A, 3-B, 4-D...
+- Solucionario con las {preguntas_alternativa} respuestas, cada una con justificación breve (1 línea)
+- Formato: "1. **C)** Porque [razón concreta]"
 - ===SOLUCIONARIO=== como separador
+- NO justificaciones tautológicas como "es C porque es correcta"
 - Formato compacto, sin líneas horizontales"""}
             ],
             temperature=0.3,
