@@ -48,6 +48,16 @@ def init_db():
         c.execute('ALTER TABLE orders ADD COLUMN metadata TEXT')
     except sqlite3.OperationalError:
         pass
+    
+    # Create initial discount codes if they don't exist
+    try:
+        c.execute('''
+            INSERT OR IGNORE INTO discount_codes (code, discount_percent, active, max_uses, uses_count, created_at)
+            VALUES ('REDAXION10D', 10, 1, NULL, 0, datetime('now'))
+        ''')
+        print("🏷️ Código de descuento REDAXION10D (10%) inicializado")
+    except Exception as e:
+        print(f"⚠️ Error creando código inicial: {e}")
         
     conn.commit()
     conn.close()
