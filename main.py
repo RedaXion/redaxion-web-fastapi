@@ -324,6 +324,55 @@ async def create_discount_code_endpoint(
         raise HTTPException(status_code=400, detail="Código ya existe")
 
 
+@app.post("/api/reprocess-order")
+async def reprocess_order_endpoint(
+    background_tasks: BackgroundTasks,
+    admin_key: str = Form(...),
+    orden_id: str = Form(...),
+    audio_url: str = Form(...),
+    email: str = Form(...),
+    nombre: str = Form(...),
+    color: str = Form("azul elegante"),
+    columnas: str = Form("una")
+):
+    """Emergency endpoint to reprocess an order manually (admin only)."""
+    if admin_key != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+    
+    # Create order in DB
+    order_data = {
+        "id": orden_id,
+        "status": "processing",
+        "client": nombre,
+        "email": email,
+        "color": color,
+        "columnas": columnas,
+        "files": [],
+        "audio_url": audio_url,
+        "service_type": "transcription"
+    }
+    
+    try:
+        database.create_order(order_data)
+    except:
+        # Order might exist, update status instead
+        database.update_order_status(orden_id, "processing")
+    
+    # Start processing
+    user_metadata = {
+        "email": email,
+        "client": nombre,
+        "color": color,
+        "columnas": columnas
+    }
+    background_tasks.add_task(
+        procesar_audio_y_documentos, orden_id, audio_url, user_metadata
+    )
+    
+    print(f"🔧 [ADMIN] Reprocesando orden {orden_id} para {email}")
+    return {"success": True, "message": f"Orden {orden_id} en reprocesamiento"}
+
+
 async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, nivel: str,
                                     preguntas_alternativa: int, preguntas_desarrollo: int,
                                     dificultad: int, correo: str, nombre: str,
