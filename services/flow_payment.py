@@ -136,21 +136,33 @@ def obtener_estado_pago(token: str) -> dict:
     """
     print(f"🔵 [NEW CODE] obtener_estado_pago called with token={token[:20]}...")
     
-    # Try pyflowcl first, but immediately fallback to manual on ANY error
     client = get_flow_client()
     
     if not client:
         return {"status": 2, "statusStr": "PAGADA", "mock": True}
     
+    # Try pyflowcl first, but ALWAYS fallback to manual on ANY error
     try:
         print(f"🔍 Trying pyflowcl getStatus...")
         resultado = Payment.getStatus(client, {"token": token.strip()})
         print(f"✅ pyflowcl succeeded")
+        # Convert PaymentStatusResponse to dict if needed
+        if hasattr(resultado, '__dict__'):
+            return vars(resultado)
         return resultado
     except Exception as e:
-        print(f"⚠️ pyflowcl failed (expected): {str(e)[:100]}")
+        # Catch ALL exceptions including GenericError from pyflowcl
+        error_msg = str(e)[:100] if str(e) else type(e).__name__
+        print(f"⚠️ pyflowcl failed: {error_msg}")
         print(f"🔄 Switching to manual implementation...")
+    
+    # Always try manual method as fallback
+    try:
         return obtener_estado_pago_manual(token)
+    except Exception as e2:
+        print(f"❌ Manual method also failed: {e2}")
+        # Return a safe default that won't crash the webhook
+        return {"error": str(e2), "status": 0}
 
 def obtener_estado_pago_manual(token: str) -> dict:
     """Manual implementation of Flow getStatus to avoid library issues."""

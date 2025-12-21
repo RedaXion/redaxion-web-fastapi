@@ -1132,9 +1132,22 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                     print(f"✅ Pago confirmado y reunión en proceso: {commerce_order}")
                     
                 else:
-                    # Standard transcription order
+                    # Standard transcription order - START PROCESSING
                     database.update_order_status(commerce_order, "paid")
-                    print(f"✅ Pago confirmado para orden: {commerce_order}")
+                    
+                    user_metadata = {
+                        "email": order.get("email"),
+                        "client": order.get("client"),
+                        "color": order.get("color", "azul elegante"),
+                        "columnas": order.get("columnas", "una")
+                    }
+                    background_tasks.add_task(
+                        procesar_audio_y_documentos,
+                        commerce_order,
+                        order.get("audio_url"),
+                        user_metadata
+                    )
+                    print(f"✅ Pago confirmado y transcripción iniciada: {commerce_order}")
         
         elif flow_status == 3:  # RECHAZADA (Rejected)
             database.update_order_status(commerce_order, "failed")
@@ -1148,7 +1161,10 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
         
     except Exception as e:
         print(f"❌ Error en webhook de Flow: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+        import traceback
+        traceback.print_exc()
+        # ALWAYS return OK to Flow to prevent retries and avoid "Invalid Signature" loops
+        return "OK"
 
 
 @app.post("/api/flow-return")
