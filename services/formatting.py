@@ -10,9 +10,9 @@ import os
 from docx.enum.table import WD_ALIGN_VERTICAL
 
 # Visual generation configuration for Napkin AI
-# Base: 1 visual per ~800 words (~3 visuals per average document)
+# Base: 1 visual per ~500 words (~4-5 visuals per average document)
 # Extra: +1 visual if document exceeds 12 pages (~3600 words)
-VISUALS_PER_800_WORDS = 1
+WORDS_PER_VISUAL = 500
 EXTRA_VISUAL_PAGE_THRESHOLD = 12  # pages
 
 # Helper para logo
@@ -300,7 +300,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
         sections.append(current_section)
     
     # Calculate number of visuals
-    base_visuals = min(3, max(1, total_words // 800))  # 1 per 800 words, min 1, max 3
+    base_visuals = min(5, max(1, total_words // WORDS_PER_VISUAL))  # 1 per 500 words, min 1, max 5
     estimated_pages = total_words // 300  # Rough estimate: ~300 words per page
     extra_visual = 1 if estimated_pages > EXTRA_VISUAL_PAGE_THRESHOLD else 0
     num_visuals = base_visuals + extra_visual
