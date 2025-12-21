@@ -114,6 +114,7 @@ from services.exam_formatting import guardar_examen_como_docx, guardar_examen_co
 from services.meeting_processing import procesar_reunion
 from services.meeting_formatting import guardar_acta_reunion_como_docx, guardar_acta_reunion_como_pdf
 from services.document_extraction import extract_context_from_files
+from services.napkin_integration import generate_napkin_visual
 
 # Payment Gateway - "flow" or "mercadopago"
 from services.flow_payment import crear_pago_flow, obtener_estado_pago, status_code_to_string
@@ -157,6 +158,27 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
         texto_procesado = procesar_txt_con_chatgpt(path_txt)
         print(f"[{orden_id}] Texto procesado con IA.")
         
+        # 2.5 Generate visual diagram with Napkin AI
+        path_visual = None
+        try:
+            print(f"[{orden_id}] Generando esquema visual con Napkin AI...")
+            # Use a summary/key points from the processed text for the visual
+            # Extract first 1500 chars as summary for the diagram
+            visual_content = texto_procesado[:1500] if len(texto_procesado) > 1500 else texto_procesado
+            visual_data = generate_napkin_visual(visual_content, language="es")
+            
+            if visual_data:
+                # Save the visual as PNG
+                path_visual = f"static/generated/Esquema-{orden_id}.png"
+                with open(path_visual, "wb") as f:
+                    f.write(visual_data.read())
+                print(f"[{orden_id}] ✅ Esquema visual guardado: {path_visual}")
+            else:
+                print(f"[{orden_id}] ⚠️ No se pudo generar el esquema visual")
+        except Exception as napkin_error:
+            print(f"[{orden_id}] ⚠️ Error generando visual con Napkin: {napkin_error}")
+            path_visual = None
+        
         # 3. Generate Main DOCX
         nombre_tcp = f"RedaXion - Nº{orden_id}.docx"
         path_docx = f"static/generated/{nombre_tcp}"
@@ -184,6 +206,11 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
         if path_quiz_pdf:
              quiz_pdf_name = os.path.basename(path_quiz_pdf)
              files_list.append({"name": "Quiz PDF", "url": f"{base_url_path}/{quiz_pdf_name}", "type": "pdf"})
+
+        # Add Napkin visual if generated
+        if path_visual:
+            visual_name = os.path.basename(path_visual)
+            files_list.append({"name": "Esquema Visual", "url": f"{base_url_path}/{visual_name}", "type": "png"})
 
         # Also add DOCX for reference if needed, or just PDF. User asked for products.
         docx_name = os.path.basename(path_docx)
