@@ -87,6 +87,11 @@ def init_db():
                 VALUES ('DESCUENTO80', 80, 1, NULL, 0)
                 ON CONFLICT (code) DO NOTHING
             ''')
+            c.execute('''
+                INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count)
+                VALUES ('JAIMESOTO_RX15', 20, 1, NULL, 0)
+                ON CONFLICT (code) DO NOTHING
+            ''')
             print("🏷️ Códigos de descuento inicializados")
         except Exception as e:
             print(f"⚠️ Error creando códigos iniciales: {e}")
@@ -146,6 +151,10 @@ def init_db():
             c.execute('''
                 INSERT OR IGNORE INTO discount_codes (code, discount_percent, active, max_uses, uses_count, created_at)
                 VALUES ('DESCUENTO80', 80, 1, NULL, 0, datetime('now'))
+            ''')
+            c.execute('''
+                INSERT OR IGNORE INTO discount_codes (code, discount_percent, active, max_uses, uses_count, created_at)
+                VALUES ('JAIMESOTO_RX15', 20, 1, NULL, 0, datetime('now'))
             ''')
             print("🏷️ Códigos de descuento inicializados")
         except Exception as e:

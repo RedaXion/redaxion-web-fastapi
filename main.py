@@ -65,7 +65,7 @@ PRICE_AMOUNT = 3000
 PRICE_CURRENCY = "CLP"
 
 # Price for special services (Generador de Pruebas, Transcribe Tu Reunión)
-SPECIAL_SERVICES_PRICE = 1500
+SPECIAL_SERVICES_PRICE = 1000
 
 # Base URL for callbacks (use production URL in Railway)
 BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8002")
