@@ -22,13 +22,17 @@ load_dotenv()
 
 app = FastAPI(title="RedaXion API")
 
-# Add CORS middleware for local development
+# --- Security Configuration ---
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "change-me-in-production")  # For admin endpoints
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
+# Add CORS middleware - restricted to allowed origins in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],  # Configurar en Railway
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Mount Static Files
@@ -42,7 +46,15 @@ templates = Jinja2Templates(directory="templates")
 def startup_event():
     database.init_db()
 
-# ... (Middleware and Config remain same)
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 # --- Configuration ---
 MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
@@ -290,13 +302,21 @@ async def validate_discount(code: str = Form(...)):
 
 @app.post("/api/create-discount-code")
 async def create_discount_code_endpoint(
+    admin_key: str = Form(...),  # Required admin authentication
     code: str = Form(...),
     discount_percent: int = Form(...),
     max_uses: int = Form(None),
     expiry_date: str = Form(None)
 ):
-    """Create a new discount code (admin only)."""
-    # TODO: Add authentication for admin access
+    """Create a new discount code (admin only - requires ADMIN_SECRET)."""
+    # Validate admin authentication
+    if admin_key != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Acceso denegado - clave admin inválida")
+    
+    # Validate discount percent range
+    if discount_percent < 0 or discount_percent > 100:
+        raise HTTPException(status_code=400, detail="Porcentaje debe estar entre 0 y 100")
+    
     success = database.create_discount_code(code, discount_percent, max_uses, expiry_date)
     if success:
         return {"success": True, "message": f"Código {code.upper()} creado con {discount_percent}% descuento"}
