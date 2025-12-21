@@ -324,7 +324,22 @@
             try {
                 const response = await fetch(`/api/status/${ordenId}`);
                 if (!response.ok) {
-                    // Server returned error - continue polling
+                    if (response.status === 404) {
+                        // Order not found - show error message
+                        const text = document.getElementById('progress-text');
+                        const bar = document.getElementById('progress-bar');
+                        text.innerHTML = '❌ <strong>Orden no encontrada.</strong> Verifica el ID e intenta de nuevo.';
+                        text.style.color = '#e74c3c';
+                        bar.style.width = '0%';
+                        bar.style.background = '#e74c3c';
+
+                        // Hide all states and show error
+                        document.getElementById('pending-state').classList.add('hidden');
+                        document.getElementById('processing-state').classList.add('hidden');
+                        document.getElementById('results-area').classList.add('hidden');
+                        return; // Stop polling
+                    }
+                    // Other server errors - continue polling
                     console.log("Status API returned error, retrying...");
                     setTimeout(pollStatus, 3000);
                     return;
