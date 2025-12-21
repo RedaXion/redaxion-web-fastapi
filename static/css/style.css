@@ -551,31 +551,90 @@ footer {
 
 /* Small mobile (max 480px) */
 @media (max-width: 480px) {
+
+    /* Layout Adjustments */
+    .container {
+        padding: 0 0.8rem;
+        /* Reduce global horizontal padding */
+        width: 100%;
+        overflow-x: hidden;
+        /* Prevent horizontal scroll */
+    }
+
     h1 {
-        font-size: 1.6rem;
+        font-size: 1.8rem;
+        /* Slightly reduced */
+        word-wrap: break-word;
+        /* Prevent text overflow */
     }
 
     h2 {
         font-size: 1.4rem;
     }
 
-    .logo {
-        font-size: 1.2rem;
+    .logo img {
+        height: 40px !important;
+        /* Smaller logo */
     }
 
+    /* Compact Form Container */
     .form-container {
-        padding: 1rem !important;
-        margin: 0;
+        padding: 1rem 0.8rem !important;
+        /* Less padding */
+        margin: 0 !important;
         border-radius: 12px;
+        width: 100%;
+        box-sizing: border-box;
+        /* Ensure padding is included */
+    }
+
+    /* Compact Inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    textarea,
+    select {
+        padding: 0.6rem 0.8rem !important;
+        font-size: 14px !important;
+        /* Smaller font but readable */
+        min-height: 40px;
+        /* Reduced height */
+    }
+
+    /* Compact Buttons */
+    .btn,
+    button {
+        padding: 0.7rem 1rem !important;
+        font-size: 0.95rem !important;
+        min-height: 42px;
+        /* Reduced height */
+    }
+
+    /* Price Tag Compact */
+    .price-tag {
+        padding: 0.8rem;
     }
 
     .price-tag .price {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
 
-    /* Discount code section on small screens */
+    /* Discount Code Compact */
     #discountCodeInput {
         min-width: 0;
+        width: 60%;
+    }
+
+    #applyDiscountBtn {
+        padding: 0.6rem 0.8rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Modal Adjustments */
+    .payment-modal .modal-content {
+        width: 90% !important;
+        padding: 1rem !important;
+        margin: 5% auto;
     }
 }
 
