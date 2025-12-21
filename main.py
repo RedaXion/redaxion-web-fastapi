@@ -1436,7 +1436,8 @@ async def crear_orden_gcs(
     orden_id: str = Form(...),   # Order ID from get-upload-url
     gateway: str = Form("mercadopago"),  # "flow" or "mercadopago"
     action: str = Form("pay"),   # "pay" or "skip" for testing
-    discount_code: str = Form(None)  # Optional discount code
+    discount_code: str = Form(None),  # Optional discount code
+    estimated_minutes: int = Form(None)  # Optional estimated processing time
 ):
     """
     Create order with pre-uploaded audio from GCS.
@@ -1470,7 +1471,10 @@ async def crear_orden_gcs(
             "columnas": columnas,
             "files": [],
             "audio_url": audio_url,
-            "service_type": "transcription"
+            "service_type": "transcription",
+            "metadata": {
+                "estimated_minutes": estimated_minutes
+            } if estimated_minutes else {}
         }
         database.create_order(order_data)
         
@@ -1500,7 +1504,10 @@ async def crear_orden_gcs(
         "color": color,
         "columnas": columnas,
         "files": [],
-        "audio_url": audio_url
+        "audio_url": audio_url,
+        "metadata": {
+            "estimated_minutes": estimated_minutes
+        } if estimated_minutes else {}
     }
     database.create_order(order_data)
     
