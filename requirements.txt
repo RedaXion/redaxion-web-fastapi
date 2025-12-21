@@ -15,3 +15,4 @@ pyflowcl
 httpx
 PyPDF2>=3.0.0
 python-pptx>=0.6.21
+psycopg2-binary>=2.9.9
