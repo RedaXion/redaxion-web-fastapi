@@ -1166,6 +1166,22 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
                     order["client"]
                 )
                 print(f"🚀 [PRODUCTION] Meeting processing started for order {orden_id}")
+            
+            else:
+                # Default: Transcription order
+                user_metadata = {
+                    "email": order.get("email"),
+                    "client": order.get("client"),
+                    "color": order.get("color", "azul elegante"),
+                    "columnas": order.get("columnas", "una")
+                }
+                background_tasks.add_task(
+                    procesar_audio_y_documentos,
+                    orden_id,
+                    order.get("audio_url"),
+                    user_metadata
+                )
+                print(f"🚀 [PRODUCTION] Transcription processing started for order {orden_id}")
         else:
             print(f"ℹ️ Order {orden_id} already processed (status: {order.get('status')})")
         
