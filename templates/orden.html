@@ -181,6 +181,95 @@
             color: var(--accent-cyan);
             font-weight: 600;
         }
+
+        /* Payment Selection Modal */
+        .payment-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .payment-modal.active {
+            display: flex;
+        }
+
+        .payment-modal-content {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .payment-modal h3 {
+            color: #fff;
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+        }
+
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .payment-option {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 2px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .payment-option:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(28, 198, 194, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .payment-option .icon {
+            font-size: 2rem;
+        }
+
+        .payment-option .info {
+            text-align: left;
+        }
+
+        .payment-option .title {
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .payment-option .subtitle {
+            color: var(--text-gray);
+            font-size: 0.85rem;
+        }
+
+        .payment-modal-close {
+            margin-top: 1.5rem;
+            color: var(--text-gray);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .payment-modal-close:hover {
+            color: #fff;
+        }
     </style>
 </head>
 
@@ -264,7 +353,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary"
+                    <button type="button" id="showPaymentModal" class="btn btn-primary"
                         style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
                         Generar Orden y Pagar
                     </button>
@@ -280,6 +369,39 @@
             </div>
         </div>
     </main>
+
+    <!-- Payment Selection Modal -->
+    <div class="payment-modal" id="paymentModal">
+        <div class="payment-modal-content">
+            <h3>¿Cómo deseas pagar?</h3>
+            <div class="payment-options">
+                <div class="payment-option" id="payWithFlow">
+                    <span class="icon">💳</span>
+                    <div class="info">
+                        <div class="title">Flow (Tarjeta/Débito)</div>
+                        <div class="subtitle">Visa, Mastercard, Redcompra</div>
+                    </div>
+                </div>
+                <div class="payment-option" id="payWithMercadoPago">
+                    <span class="icon">🏦</span>
+                    <div class="info">
+                        <div class="title">MercadoPago</div>
+                        <div class="subtitle">Múltiples opciones de pago</div>
+                    </div>
+                </div>
+                <!-- TEST BUTTON -->
+                <div class="payment-option" id="skipPaymentBtn"
+                    style="border: 2px dashed #f39c12; background: #fffdf6;">
+                    <span class="icon">⏩</span>
+                    <div class="info">
+                        <div class="title">Saltar Pago (Test)</div>
+                        <div class="subtitle">Procesar sin pagar</div>
+                    </div>
+                </div>
+            </div>
+            <div class="payment-modal-close" id="closePaymentModal">Cancelar</div>
+        </div>
+    </div>
 
     {% include 'footer.html' %}
 
@@ -301,15 +423,24 @@
             }
         });
 
-        // Form Submission with Direct GCS Upload (bypasses server file limit)
-        document.getElementById('redaxionForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const statusDiv = document.getElementById('status');
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const progressContainer = document.getElementById('upload-progress-container');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const progressText = document.getElementById('upload-progress-text');
+        // ========== PAYMENT MODAL LOGIC ==========
+        const paymentModal = document.getElementById('paymentModal');
+        const showPaymentModalBtn = document.getElementById('showPaymentModal');
+        const closePaymentModalBtn = document.getElementById('closePaymentModal');
+        const payWithFlowBtn = document.getElementById('payWithFlow');
+        const payWithMercadoPagoBtn = document.getElementById('payWithMercadoPago');
+        const skipPaymentBtn = document.getElementById('skipPaymentBtn');
+        const form = document.getElementById('redaxionForm');
+
+        // Show payment modal on button click
+        showPaymentModalBtn.addEventListener('click', function () {
             const audioFile = document.querySelector('[name="audio_file"]').files[0];
+            const statusDiv = document.getElementById('status');
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
 
             if (!audioFile) {
                 statusDiv.style.display = 'block';
@@ -318,15 +449,45 @@
                 return;
             }
 
+            paymentModal.classList.add('active');
+        });
+
+        // Close payment modal
+        closePaymentModalBtn.addEventListener('click', function () {
+            paymentModal.classList.remove('active');
+        });
+
+        // Close modal on background click
+        paymentModal.addEventListener('click', function (e) {
+            if (e.target === paymentModal) {
+                paymentModal.classList.remove('active');
+            }
+        });
+
+        // Payment option click handlers
+        payWithFlowBtn.addEventListener('click', () => processOrderWithPayment('flow', 'pay'));
+        payWithMercadoPagoBtn.addEventListener('click', () => processOrderWithPayment('mercadopago', 'pay'));
+        skipPaymentBtn.addEventListener('click', () => processOrderWithPayment('flow', 'skip'));
+
+        // Main function to process the order with the selected payment gateway
+        async function processOrderWithPayment(gateway, action) {
+            const statusDiv = document.getElementById('status');
+            const progressContainer = document.getElementById('upload-progress-container');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
+            const audioFile = document.querySelector('[name="audio_file"]').files[0];
+
+            // Close modal
+            paymentModal.classList.remove('active');
+            showPaymentModalBtn.disabled = true;
+            showPaymentModalBtn.textContent = 'Subiendo...';
+
             // Show progress bar
             progressContainer.classList.add('active');
             progressText.style.display = 'block';
             progressBar.style.width = '0%';
             progressText.textContent = 'Preparando subida directa...';
-
             statusDiv.style.display = 'none';
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Subiendo...';
 
             try {
                 // Step 1: Get signed upload URL
@@ -380,7 +541,7 @@
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Subida completa. Creando orden...';
 
-                // Step 3: Create order with GCS audio URL
+                // Step 3: Create order with GCS audio URL and selected gateway
                 const orderFormData = new FormData();
                 orderFormData.append('nombre', document.querySelector('[name="nombre"]').value);
                 orderFormData.append('correo', document.querySelector('[name="correo"]').value);
@@ -388,6 +549,14 @@
                 orderFormData.append('columnas', document.querySelector('[name="columnas"]').value);
                 orderFormData.append('audio_url', public_url);
                 orderFormData.append('orden_id', orden_id);
+                orderFormData.append('gateway', gateway);  // SELECTED PAYMENT GATEWAY
+                orderFormData.append('action', action);    // "pay" or "skip"
+
+                // Include discount code if applied
+                const discountCode = document.querySelector('[name="discount_code"]')?.value;
+                if (discountCode) {
+                    orderFormData.append('discount_code', discountCode);
+                }
 
                 const orderResponse = await fetch('/api/orden-gcs', {
                     method: 'POST',
@@ -406,15 +575,23 @@
 
                 statusDiv.style.display = 'block';
                 statusDiv.className = 'success';
-                statusDiv.innerHTML = `
-                    <strong>¡Éxito!</strong> Orden creada.<br>
-                    Te estamos llevando a tu panel para finalizar...
-                `;
 
-                const dashboardUrl = `/dashboard?external_reference=${result.orden_id}&checkout_url=${encodeURIComponent(result.checkout_url)}`;
+                if (action === 'skip') {
+                    statusDiv.innerHTML = `
+                        <strong>¡Éxito!</strong> Orden creada (Modo Test).<br>
+                        Procesando sin pago...
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <strong>¡Éxito!</strong> Orden creada.<br>
+                        Redirigiendo al pago con ${gateway === 'flow' ? 'Flow' : 'MercadoPago'}...
+                    `;
+                }
+
+                // Redirect to checkout or dashboard
                 setTimeout(() => {
-                    window.location.href = dashboardUrl;
-                }, 1000);
+                    window.location.href = result.checkout_url;
+                }, 1500);
 
             } catch (error) {
                 console.error('Error:', error);
@@ -423,142 +600,9 @@
                 statusDiv.style.display = 'block';
                 statusDiv.className = 'error';
                 statusDiv.textContent = 'Error: ' + error.message;
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Generar Orden y Pagar';
+                showPaymentModalBtn.disabled = false;
+                showPaymentModalBtn.textContent = 'Generar Orden y Pagar';
             }
-        });
-
-        // Skip Payment Button (Test Mode)
-        const skipPaymentBtnVisible = document.getElementById('skipPaymentBtnVisible');
-        if (skipPaymentBtnVisible) {
-            skipPaymentBtnVisible.addEventListener('click', async function () {
-                const form = document.getElementById('redaxionForm');
-                const statusDiv = document.getElementById('status');
-                const progressContainer = document.getElementById('upload-progress-container');
-                const progressBar = document.getElementById('upload-progress-bar');
-                const progressText = document.getElementById('upload-progress-text');
-                const audioFile = document.querySelector('[name="audio_file"]').files[0];
-
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
-
-                if (!audioFile) {
-                    statusDiv.style.display = 'block';
-                    statusDiv.className = 'error';
-                    statusDiv.textContent = 'Por favor selecciona un archivo de audio.';
-                    return;
-                }
-
-                // Show progress bar
-                progressContainer.classList.add('active');
-                progressText.style.display = 'block';
-                progressBar.style.width = '0%';
-                progressText.textContent = 'Preparando subida (Modo Test)...';
-                statusDiv.style.display = 'none';
-                skipPaymentBtnVisible.disabled = true;
-                skipPaymentBtnVisible.textContent = 'Subiendo...';
-
-                try {
-                    // Step 1: Get signed upload URL
-                    progressText.textContent = 'Obteniendo URL de subida...';
-                    const urlFormData = new FormData();
-                    urlFormData.append('filename', audioFile.name);
-
-                    const urlResponse = await fetch('/api/get-upload-url', {
-                        method: 'POST',
-                        body: urlFormData
-                    });
-
-                    if (!urlResponse.ok) {
-                        throw new Error('Error obteniendo URL de subida');
-                    }
-
-                    const urlData = await urlResponse.json();
-                    const { upload_url, public_url, orden_id } = urlData;
-
-                    // Step 2: Upload directly to GCS using signed URL
-                    progressText.textContent = 'Subiendo audio a la nube... 0%';
-
-                    await new Promise((resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-
-                        xhr.upload.addEventListener('progress', function (event) {
-                            if (event.lengthComputable) {
-                                const percentComplete = Math.round((event.loaded / event.total) * 100);
-                                progressBar.style.width = percentComplete + '%';
-                                progressText.textContent = `Subiendo audio... ${percentComplete}%`;
-                            }
-                        });
-
-                        xhr.addEventListener('load', function () {
-                            if (xhr.status >= 200 && xhr.status < 300) {
-                                resolve();
-                            } else {
-                                reject(new Error('Error subiendo a GCS: ' + xhr.status));
-                            }
-                        });
-
-                        xhr.addEventListener('error', function () {
-                            reject(new Error('Error de red al subir a GCS'));
-                        });
-
-                        xhr.open('PUT', upload_url);
-                        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-                        xhr.send(audioFile);
-                    });
-
-                    progressBar.style.width = '100%';
-                    progressText.textContent = 'Subida completa. Creando orden (sin pago)...';
-
-                    // Step 3: Create order with GCS audio URL - SKIP PAYMENT
-                    const orderFormData = new FormData();
-                    orderFormData.append('nombre', document.querySelector('[name="nombre"]').value);
-                    orderFormData.append('correo', document.querySelector('[name="correo"]').value);
-                    orderFormData.append('color', document.querySelector('[name="color"]').value);
-                    orderFormData.append('columnas', document.querySelector('[name="columnas"]').value);
-                    orderFormData.append('audio_url', public_url);
-                    orderFormData.append('orden_id', orden_id);
-                    orderFormData.append('action', 'skip'); // SKIP PAYMENT
-
-                    const orderResponse = await fetch('/api/orden-gcs', {
-                        method: 'POST',
-                        body: orderFormData
-                    });
-
-                    if (!orderResponse.ok) {
-                        const errorData = await orderResponse.json();
-                        throw new Error(errorData.detail || 'Error creando orden');
-                    }
-
-                    const result = await orderResponse.json();
-
-                    progressContainer.classList.remove('active');
-                    progressText.style.display = 'none';
-
-                    statusDiv.style.display = 'block';
-                    statusDiv.className = 'success';
-                    statusDiv.innerHTML = `
-                        <strong>¡Éxito!</strong> Orden creada (Modo Test).<br>
-                        Procesando sin pago...
-                    `;
-
-                    setTimeout(() => {
-                        window.location.href = result.checkout_url;
-                    }, 1000);
-
-                } catch (error) {
-                    console.error('Error:', error);
-                    progressContainer.classList.remove('active');
-                    progressText.style.display = 'none';
-                    statusDiv.style.display = 'block';
-                    statusDiv.className = 'error';
-                    statusDiv.textContent = 'Error: ' + error.message;
-                    skipPaymentBtnVisible.disabled = false;
-                    skipPaymentBtnVisible.textContent = '⏩ Probar sin Pago (Modo Test)';
-                }
-            });
         }
 
         // === Discount Code Handling ===

@@ -1408,12 +1408,29 @@ async def crear_orden_gcs(
     columnas: str = Form(...),
     audio_url: str = Form(...),  # Pre-uploaded GCS URL
     orden_id: str = Form(...),   # Order ID from get-upload-url
-    action: str = Form("pay")    # "pay" or "skip" for testing
+    gateway: str = Form("mercadopago"),  # "flow" or "mercadopago"
+    action: str = Form("pay"),   # "pay" or "skip" for testing
+    discount_code: str = Form(None)  # Optional discount code
 ):
     """
     Create order with pre-uploaded audio from GCS.
     Used for large files that bypass Railway's upload limits.
     """
+    
+    # Calculate price with discount
+    base_price = PRICE_AMOUNT
+    discount_percent = 0
+    final_price = base_price
+    
+    if discount_code:
+        discount_result = database.validate_discount_code(discount_code)
+        if discount_result.get("valid"):
+            discount_percent = discount_result.get("discount_percent", 0)
+            final_price = int(base_price * (1 - discount_percent / 100))
+            print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
+            database.increment_code_usage(discount_code)
+        else:
+            print(f"⚠️ Código inválido: {discount_code} - {discount_result.get('reason')}")
     
     # Handle Skip Payment (Test Mode)
     if action == "skip":
@@ -1461,54 +1478,86 @@ async def crear_orden_gcs(
     }
     database.create_order(order_data)
     
-    print(f"Nueva orden GCS recibida (DB): {orden_id} - Cliente: {nombre}")
+    print(f"Nueva orden GCS recibida (DB): {orden_id} - Cliente: {nombre} (Gateway: {gateway}, Precio: ${final_price})")
 
-    # 2. Create Preference in Mercado Pago
     try:
-        preference_data = {
-            "items": [
-                {
-                    "title": "Transcripción RedaXion",
-                    "quantity": 1,
-                    "unit_price": float(PRICE_AMOUNT),
-                    "currency_id": PRICE_CURRENCY
+        # Use Flow or MercadoPago based on user selection
+        if gateway == "flow":
+            resultado_pago = crear_pago_flow(
+                orden_id=orden_id,
+                monto=final_price,
+                email=correo,
+                descripcion="Transcripción RedaXion" + (f" ({discount_percent}% desc.)" if discount_percent else ""),
+                url_retorno=f"{BASE_URL}/api/flow-return?orden_id={orden_id}",
+                url_confirmacion=f"{BASE_URL}/api/flow-webhook",
+                optional_data=None
+            )
+            
+            if resultado_pago.get("mock"):
+                # Mock payment - start processing immediately
+                user_metadata = {
+                    "email": correo,
+                    "client": nombre,
+                    "color": color,
+                    "columnas": columnas
                 }
-            ],
-            "payer": {
-                "email": correo
-            },
-            "back_urls": {
-                "success": f"{BASE_URL}/dashboard",
-                "failure": f"{BASE_URL}/dashboard",
-                "pending": f"{BASE_URL}/dashboard"
-            },
-            "external_reference": orden_id,
-            "metadata": {
-                "orden_id": orden_id,
-                "email": correo,
-                "color": color,
-                "columnas": columnas
+                background_tasks.add_task(
+                    procesar_audio_y_documentos, orden_id, audio_url, user_metadata
+                )
+            
+            checkout_url = resultado_pago.get("checkout_url")
+            if not checkout_url:
+                error_msg = resultado_pago.get("error", "Error creando pago Flow")
+                raise HTTPException(status_code=400, detail=error_msg)
+            
+            return {"orden_id": orden_id, "checkout_url": checkout_url}
+        
+        else:
+            # MercadoPago
+            preference_data = {
+                "items": [
+                    {
+                        "title": "Transcripción RedaXion",
+                        "quantity": 1,
+                        "unit_price": float(final_price),
+                        "currency_id": PRICE_CURRENCY
+                    }
+                ],
+                "payer": {
+                    "email": correo
+                },
+                "back_urls": {
+                    "success": f"{BASE_URL}/dashboard",
+                    "failure": f"{BASE_URL}/dashboard",
+                    "pending": f"{BASE_URL}/dashboard"
+                },
+                "external_reference": orden_id,
+                "metadata": {
+                    "orden_id": orden_id,
+                    "email": correo,
+                    "color": color,
+                    "columnas": columnas
+                }
             }
-        }
-        
-        # Only use auto_return in production
-        if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
-            preference_data["auto_return"] = "approved"
+            
+            # Only use auto_return in production
+            if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
+                preference_data["auto_return"] = "approved"
 
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response["response"]
-        
-        # Use production or sandbox URL
-        checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
-        
-        if not checkout_url:
-            print(f"Error: No checkout URL. Response: {preference}")
-            return {
-                "orden_id": orden_id,
-                "checkout_url": f"/dashboard?external_reference={orden_id}&mock_payment=true" 
-            }
+            preference_response = sdk.preference().create(preference_data)
+            preference = preference_response["response"]
+            
+            # Use production or sandbox URL
+            checkout_url = preference.get("init_point") or preference.get("sandbox_init_point")
+            
+            if not checkout_url:
+                print(f"Error: No checkout URL. Response: {preference}")
+                return {
+                    "orden_id": orden_id,
+                    "checkout_url": f"/dashboard?external_reference={orden_id}&mock_payment=true" 
+                }
 
-        return {"orden_id": orden_id, "checkout_url": checkout_url}
+            return {"orden_id": orden_id, "checkout_url": checkout_url}
         
     except Exception as e:
         print(f"ERROR IN CREAR_ORDEN_GCS: {e}")
