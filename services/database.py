@@ -58,6 +58,16 @@ def init_db():
         print("🏷️ Código de descuento REDAXION10D (10%) inicializado")
     except Exception as e:
         print(f"⚠️ Error creando código inicial: {e}")
+    
+    # Additional discount codes
+    try:
+        c.execute('''
+            INSERT OR IGNORE INTO discount_codes (code, discount_percent, active, max_uses, uses_count, created_at)
+            VALUES ('REDAXION_DRJR', 15, 1, NULL, 0, datetime('now'))
+        ''')
+        print("🏷️ Código de descuento REDAXION_DRJR (15%) inicializado")
+    except Exception as e:
+        print(f"⚠️ Error creando código REDAXION_DRJR: {e}")
         
     conn.commit()
     conn.close()
