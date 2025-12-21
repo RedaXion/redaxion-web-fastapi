@@ -8,11 +8,12 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies including LibreOffice for PDF conversion
+# Install system dependencies including LibreOffice for PDF conversion and libpq for PostgreSQL
 RUN apt-get update && apt-get install -y \
     libreoffice \
     libreoffice-writer \
     fonts-liberation \
+    libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
