@@ -3,7 +3,9 @@ import json
 import os
 from datetime import datetime
 
-DB_NAME = "redaxion.db"
+# Use persistent directory if available (Railway Volume), otherwise local
+DATA_DIR = "/app/data" if os.path.exists("/app/data") else "."
+DB_NAME = os.path.join(DATA_DIR, "redaxion.db")
 
 def init_db():
     """Initializes the database and creates tables if they don't exist."""

@@ -382,6 +382,13 @@ María García - QA Lead"></textarea>
                         </div>
                         <p id="file-name" style="margin-top: 0.5rem; text-align: center; color: var(--accent-cyan);">
                         </p>
+                        <!-- Time Estimate Display -->
+                        <div id="time-estimate"
+                            style="display: none; margin-top: 1rem; padding: 0.8rem; background: rgba(28, 198, 194, 0.1); border: 1px solid var(--accent-cyan); border-radius: 8px; text-align: center;">
+                            <span style="font-size: 1.1rem;">⏱️</span>
+                            <span id="estimate-text"
+                                style="margin-left: 0.5rem; font-weight: 600; color: var(--accent-cyan);"></span>
+                        </div>
                     </div>
 
                     <!-- Discount Code Section -->
@@ -464,9 +471,69 @@ María García - QA Lead"></textarea>
         fileInput.addEventListener('change', () => {
             const files = fileInput.files;
             if (files.length > 0) {
-                fileNameDisplay.textContent = `Archivo seleccionado: ${files[0].name}`;
+                const file = files[0];
+                fileNameDisplay.textContent = `Archivo seleccionado: ${file.name}`;
+
+                // Get audio duration and calculate estimated time
+                getAudioDuration(file).then(durationMinutes => {
+                    const estimated = calculateEstimatedTime(durationMinutes);
+                    displayTimeEstimate(estimated, durationMinutes);
+                }).catch(err => {
+                    console.log('Could not determine audio duration, using fallback estimate');
+                    const fileSizeMB = file.size / (1024 * 1024);
+                    const estimatedDuration = fileSizeMB * 1.5;
+                    const estimated = calculateEstimatedTime(estimatedDuration);
+                    displayTimeEstimate(estimated, estimatedDuration);
+                });
             }
         });
+
+        // Global variable to store estimated minutes
+        let estimatedMinutes = 0;
+
+        // Get audio file duration in minutes
+        function getAudioDuration(file) {
+            return new Promise((resolve, reject) => {
+                const audio = new Audio();
+                const objectUrl = URL.createObjectURL(file);
+                audio.addEventListener('loadedmetadata', () => {
+                    const durationMinutes = audio.duration / 60;
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(durationMinutes);
+                });
+                audio.addEventListener('error', (e) => {
+                    URL.revokeObjectURL(objectUrl);
+                    reject(e);
+                });
+                audio.src = objectUrl;
+            });
+        }
+
+        // Calculate estimated processing time for meetings (slightly longer than transcription)
+        function calculateEstimatedTime(audioDurationMinutes) {
+            const transcriptionTime = audioDurationMinutes * 0.1;
+            const gptTime = 3 + (audioDurationMinutes * 0.08); // Meetings need more GPT processing
+            const docGenTime = 2;
+            const baseTime = transcriptionTime + gptTime + docGenTime;
+            return Math.ceil(baseTime * 1.2);
+        }
+
+        // Display time estimate in the UI
+        function displayTimeEstimate(minutes, audioDurationMinutes) {
+            estimatedMinutes = minutes;
+            const estimateDiv = document.getElementById('time-estimate');
+            const estimateText = document.getElementById('estimate-text');
+
+            const minTime = Math.max(3, minutes - 1);
+            const maxTime = minutes + 2;
+
+            const audioDurationDisplay = audioDurationMinutes < 60
+                ? `${Math.round(audioDurationMinutes)} min de audio`
+                : `${Math.floor(audioDurationMinutes / 60)}h ${Math.round(audioDurationMinutes % 60)}min de audio`;
+
+            estimateText.textContent = `Tiempo estimado: ~${minTime}-${maxTime} minutos (${audioDurationDisplay})`;
+            estimateDiv.style.display = 'block';
+        }
 
         // Form Submission with Direct GCS Upload
         // Payment Modal Elements

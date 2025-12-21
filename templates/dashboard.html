@@ -226,7 +226,7 @@
         let progressInterval = null;
         let currentProgress = 0;
 
-        // Display estimated time remaining
+        // Display estimated time remaining + estimated delivery time
         function displayEstimatedTime(estimatedMinutes, createdAt) {
             const estimateDisplay = document.getElementById('estimated-time-display');
             const estimateText = document.getElementById('estimated-time-text');
@@ -235,8 +235,9 @@
 
             // Calculate elapsed time
             let elapsedMinutes = 0;
+            let startTime = new Date();
             if (createdAt) {
-                const startTime = new Date(createdAt);
+                startTime = new Date(createdAt);
                 const now = new Date();
                 elapsedMinutes = Math.floor((now - startTime) / 60000);
             }
@@ -244,16 +245,20 @@
             // Calculate remaining time
             const remainingMinutes = Math.max(0, estimatedMinutes - elapsedMinutes);
 
+            // Calculate estimated delivery time
+            const deliveryTime = new Date(startTime.getTime() + estimatedMinutes * 60000);
+            const deliveryHour = deliveryTime.getHours().toString().padStart(2, '0');
+            const deliveryMin = deliveryTime.getMinutes().toString().padStart(2, '0');
+            const deliveryTimeStr = `${deliveryHour}:${deliveryMin}`;
+
             // Create display text
             let displayText;
             if (remainingMinutes <= 0) {
-                displayText = 'Finalizando proceso...';
+                displayText = '✅ Finalizando proceso...';
             } else if (remainingMinutes <= 2) {
-                displayText = 'Casi listo... ~1-2 minutos restantes';
+                displayText = `🚀 Casi listo... (Entrega ~${deliveryTimeStr})`;
             } else {
-                const minRange = Math.max(1, remainingMinutes - 2);
-                const maxRange = remainingMinutes + 2;
-                displayText = `Tiempo estimado: ~${minRange}-${maxRange} minutos restantes`;
+                displayText = `⏱️ ~${remainingMinutes} min restantes · Entrega estimada: ~${deliveryTimeStr}`;
             }
 
             estimateText.textContent = displayText;

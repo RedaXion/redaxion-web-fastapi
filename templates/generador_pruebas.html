@@ -439,6 +439,15 @@
                         </div>
                     </div>
 
+                    <!-- Time Estimate Display -->
+                    <div id="time-estimate"
+                        style="margin-bottom: 1.5rem; padding: 0.8rem; background: rgba(28, 198, 194, 0.1); border: 1px solid var(--accent-cyan); border-radius: 8px; text-align: center;">
+                        <span style="font-size: 1.1rem;">⏱️</span>
+                        <span id="estimate-text"
+                            style="margin-left: 0.5rem; font-weight: 600; color: var(--accent-cyan);">Tiempo estimado:
+                            ~3-5 minutos</span>
+                    </div>
+
                     <button type="button" id="showPaymentModal" class="btn btn-primary"
                         style="width: 100%; font-size: 1.2rem; margin-top: 1rem;">
                         Generar Prueba y Pagar
@@ -491,6 +500,33 @@
         slider.addEventListener('input', () => {
             valueDisplay.textContent = slider.value;
         });
+
+        // Time estimation for exams
+        const pregAltInput = document.querySelector('[name="preguntas_alternativa"]');
+        const pregDesInput = document.querySelector('[name="preguntas_desarrollo"]');
+        const estimateText = document.getElementById('estimate-text');
+
+        function updateTimeEstimate() {
+            const pregAlt = parseInt(pregAltInput.value) || 0;
+            const pregDes = parseInt(pregDesInput.value) || 0;
+            const totalPreg = pregAlt + pregDes;
+
+            // Formula: 2 min base + 0.3 min per question + 1 min doc generation
+            const baseTime = 2;
+            const questionTime = totalPreg * 0.3;
+            const docGenTime = 1;
+            const estimated = Math.ceil((baseTime + questionTime + docGenTime) * 1.2);
+
+            const minTime = Math.max(2, estimated - 1);
+            const maxTime = estimated + 2;
+
+            estimateText.textContent = `Tiempo estimado: ~${minTime}-${maxTime} minutos (${totalPreg} preguntas)`;
+        }
+
+        // Update estimate when question counts change
+        pregAltInput.addEventListener('input', updateTimeEstimate);
+        pregDesInput.addEventListener('input', updateTimeEstimate);
+        updateTimeEstimate(); // Initial calculation
 
         // Payment Modal Elements
         const paymentModal = document.getElementById('paymentModal');
