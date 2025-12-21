@@ -9,8 +9,11 @@ import os
 
 from docx.enum.table import WD_ALIGN_VERTICAL
 
-# Threshold de palabras para insertar imagen generada
-IMAGE_THRESHOLD = 400
+# Visual generation configuration for Napkin AI
+# Base: 1 visual per ~800 words (~3 visuals per average document)
+# Extra: +1 visual if document exceeds 12 pages (~3600 words)
+VISUALS_PER_800_WORDS = 1
+EXTRA_VISUAL_PAGE_THRESHOLD = 12  # pages
 
 # Helper para logo
 def preparar_logo():
@@ -234,146 +237,9 @@ def configurar_columnas(doc, tipo):
             print(f"Warning: Failed to configure columns: {e}")
 
 
-from services.image_generation import generate_image_from_text
 from services.napkin_integration import generate_napkin_visual
 from io import BytesIO
-import requests
-from openai import OpenAI
-
-# Initialize OpenAI client for GPT (used for theme expansion)
-_openai_client = None
-if os.getenv("OPENAI_API_KEY"):
-    _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Initialize Google GenAI for Gemini Imagen
-_gemini_client = None
-GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
-if GOOGLE_AI_API_KEY:
-    try:
-        from google import genai
-        _gemini_client = genai.Client(api_key=GOOGLE_AI_API_KEY)
-        print("✅ Gemini Imagen client inicializado")
-    except ImportError:
-        # Try alternative import
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=GOOGLE_AI_API_KEY)
-            _gemini_client = genai
-            print("✅ Gemini generativeai client inicializado")
-        except Exception as e:
-            print(f"⚠️ Error initializing Gemini: {e}")
-    except Exception as e:
-        print(f"⚠️ Error initializing Gemini: {e}")
-
-# Color descriptions for image prompt
-COLOR_MAP = {
-    "azul elegante": "navy blue and white",
-    "azul pastel": "soft sky blue and white",
-    "rojo elegante": "deep burgundy red and cream",
-    "rojo pastel": "soft pink and white",
-    "gris elegante": "elegant gray and white",
-    "morado pastel": "soft lavender purple and white",
-    "verde pastel": "soft sage green and white",
-}
-
-def extract_titles_from_text(texto: str) -> str:
-    """Extract ALL # and ## titles from the processed text."""
-    titles = []
-    for line in texto.split('\n'):
-        line = line.strip()
-        if line.startswith('## ') or line.startswith('# '):
-            title = line.lstrip('#').strip()
-            if title and len(title) > 2:
-                titles.append(title)
-    
-    # Return all titles joined
-    return ", ".join(titles) if titles else "academic educational content"
-
-def summarize_titles_with_gpt(titles: str) -> str:
-    """Use GPT to create an expanded thematic description from titles."""
-    if not _openai_client:
-        return titles[:200]  # Fallback: just truncate
-    
-    try:
-        response = _openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant. Given a list of academic topics/titles, create a rich, descriptive summary (2-3 sentences) that captures the full scope and key concepts. This will be used to generate an educational diagram. Output ONLY the description in English."},
-                {"role": "user", "content": f"Topics: {titles}"}
-            ],
-            temperature=0.3,
-            max_tokens=150
-        )
-        summary = response.choices[0].message.content.strip()
-        print(f"📝 Tema expandido por GPT: {summary[:100]}...")
-        return summary
-    except Exception as e:
-        print(f"⚠️ Error summarizing with GPT: {e}")
-        return titles[:200]  # Fallback
-
-def generate_cover_image_dalle(texto: str, color: str = "azul elegante") -> BytesIO:
-    """
-    Generate a cover image using DALL-E 3 based on document titles and color scheme.
-    Creates flat, minimalist vector-style educational diagrams.
-    Returns image as BytesIO or None if generation fails.
-    """
-    if not _openai_client:
-        print("⚠️ No OPENAI_API_KEY configured. Skipping DALL-E image generation.")
-        return None
-    
-    try:
-        # Extract ALL titles for context
-        all_titles = extract_titles_from_text(texto)
-        
-        # Use GPT to create an expanded thematic description
-        theme_description = summarize_titles_with_gpt(all_titles)
-        
-        # Get color description
-        color_normalized = color.strip().lower()
-        color_desc = COLOR_MAP.get(color_normalized, "blue and white")
-        
-        # IMPROVED PROMPT: Very specific for flat minimalist style
-        prompt = f"""Create a FLAT, 2D vector-style educational diagram. 
-
-TOPIC: {theme_description}
-
-MANDATORY STYLE:
-- Flat design, NO 3D effects, NO shadows, NO gradients
-- Simple geometric shapes (circles, squares, hexagons)
-- Thin clean lines connecting concepts
-- Icons in a simple line-art style
-- Pure white background
-- {color_desc} color scheme only
-- Looks like a hand-drawn whiteboard sketch
-- Similar to Notion, Figma, or Napkin AI diagrams
-- NO photographs, NO realistic elements
-- NO text, NO letters, NO words, NO labels
-- Central concept with 3-4 connected sub-concepts
-- Minimalist, clean, professional"""
-
-        print(f"🎨 Generando imagen DALL-E con estilo flat/vector: {color_desc}")
-        
-        response = _openai_client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            size="1024x1024",
-            quality="standard",
-            style="natural",  # More literal interpretation
-            n=1,
-        )
-        
-        image_url = response.data[0].url
-        
-        # Download the image
-        img_response = requests.get(image_url)
-        img_response.raise_for_status()
-        
-        print("✅ Imagen DALL-E generada exitosamente")
-        return BytesIO(img_response.content)
-        
-    except Exception as e:
-        print(f"❌ Error generando imagen DALL-E: {e}")
-        return None
+import time
 
 def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscuro", columnas="simple"):
     preparar_logo()
@@ -391,22 +257,119 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # DISABLED: Image generation until Napkin AI is available
-    # cover_img = generate_cover_image_dalle(texto, color)
-    # if cover_img:
-    #     try:
-    #         doc.add_picture(cover_img, width=Inches(3) if columnas=="doble" else Inches(5))
-    #         last_p = doc.paragraphs[-1] 
-    #         last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    #         doc.add_paragraph("") # Spacing
-    #     except Exception as e:
-    #         print(f"Error inserting DALL-E cover image: {e}")
-
-    texto_lineas = texto.split('\n')
-    titulo_agregado = False
+    # ========================================================================
+    # NAPKIN AI: Intelligent Visual Selection Strategy
+    # ========================================================================
+    # Strategy:
+    # 1. Count total words in document
+    # 2. Calculate number of visuals: ~1 per 800 words (min 1, max 3)
+    # 3. If document > 12 pages (~3600 words), add 1 extra visual
+    # 4. Distribute visuals uniformly across major sections (##)
+    # 5. Generate visuals with Napkin AI (with rate limiting)
+    # ========================================================================
     
-    word_count_since_last_image = 0
-    current_topic = "Conceptos académicos generales" # Default topic
+    print("\n" + "="*70)
+    print("📊 ANALIZANDO DOCUMENTO PARA GENERACIÓN DE VISUALES")
+    print("="*70)
+    
+    # Parse document structure
+    texto_lineas = texto.split('\n')
+    total_words = sum(len(line.split()) for line in texto_lineas if line.strip())
+    
+    # Find all major sections (## titles)
+    sections = []
+    current_section = {"title": "Introducción", "start_line": 0, "content": [], "words": 0}
+    
+    for idx, linea in enumerate(texto_lineas):
+        linea_stripped = linea.strip()
+        if linea_stripped.startswith("## ") or linea_stripped.startswith("# "):
+            # Save previous section
+            if current_section["content"]:
+                current_section["words"] = sum(len(l.split()) for l in current_section["content"])
+                sections.append(current_section)
+            
+            # Start new section
+            title = linea_stripped.replace("## ", "").replace("# ", "").strip()
+            current_section = {"title": title, "start_line": idx, "content": [], "words": 0}
+        else:
+            current_section["content"].append(linea_stripped)
+    
+    # Don't forget the last section
+    if current_section["content"]:
+        current_section["words"] = sum(len(l.split()) for l in current_section["content"])
+        sections.append(current_section)
+    
+    # Calculate number of visuals
+    base_visuals = min(3, max(1, total_words // 800))  # 1 per 800 words, min 1, max 3
+    estimated_pages = total_words // 300  # Rough estimate: ~300 words per page
+    extra_visual = 1 if estimated_pages > EXTRA_VISUAL_PAGE_THRESHOLD else 0
+    num_visuals = base_visuals + extra_visual
+    
+    print(f"📝 Total de palabras: {total_words}")
+    print(f"📄 Páginas estimadas: {estimated_pages}")
+    print(f"🎨 Visuales a generar: {num_visuals} (base: {base_visuals}, extra: {extra_visual})")
+    print(f"📚 Secciones encontradas: {len(sections)}")
+    
+    # Select sections for visual generation
+    # Strategy: Distribute uniformly, prioritize longer sections
+    visual_sections = []
+    if num_visuals > 0 and len(sections) > 0:
+        # Sort sections by word count (descending)
+        sections_sorted = sorted(sections, key=lambda s: s["words"], reverse=True)
+        
+        # Select top N sections (up to num_visuals)
+        visual_sections = sections_sorted[:min(num_visuals, len(sections))]
+        
+        print(f"\n🎯 Secciones seleccionadas para visuales:")
+        for i, sec in enumerate(visual_sections, 1):
+            print(f"   {i}. \"{sec['title']}\" ({sec['words']} palabras)")
+    
+    # Generate visuals with Napkin AI
+    visuals_data = {}  # Dictionary: section_title -> BytesIO image
+    
+    if visual_sections:
+        print(f"\n{'='*70}")
+        print(f"🎨 GENERANDO VISUALES CON NAPKIN AI")
+        print(f"{'='*70}\n")
+        
+        for idx, section in enumerate(visual_sections, 1):
+            print(f"\n[{idx}/{len(visual_sections)}] Generando visual para: \"{section['title']}\"")
+            
+            # Prepare content for Napkin
+            # Use section title + first ~500 words of content for context
+            section_text = " ".join(section["content"])
+            max_context = 500
+            words = section_text.split()
+            context = " ".join(words[:max_context])
+            
+            # Combine title + context for better visual generation
+            napkin_input = f"{section['title']}. {context}"
+            
+            # Generate visual
+            img_stream = generate_napkin_visual(napkin_input, language="es")
+            
+            if img_stream:
+                visuals_data[section["title"]] = img_stream
+                print(f"✅ Visual generado para \"{section['title']}\"")
+            else:
+                print(f"⚠️ No se pudo generar visual para \"{section['title']}\"")
+            
+            # Rate limiting: wait between requests (except for last one)
+            if idx < len(visual_sections):
+                wait_time = 0.6  # Conservative: 2 req/sec max
+                print(f"⏳ Esperando {wait_time}s (rate limiting)...")
+                time.sleep(wait_time)
+        
+        print(f"\n{'='*70}")
+        print(f"✅ Generación de visuales completada: {len(visuals_data)}/{len(visual_sections)}")
+        print(f"{'='*70}\n")
+    
+    # ========================================================================
+    # Build Document with Visuals
+    # ========================================================================
+    
+    titulo_agregado = False
+    current_section_title = ""
     
     for linea in texto_lineas:
         linea = linea.rstrip()
@@ -414,31 +377,28 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             continue
 
         linea_normalizada = linea.lstrip()
-        word_count_since_last_image += len(linea_normalizada.split())
         
-        # Track topics to save tokens (don't send full text to GPT)
+        # Track current section
         if linea_normalizada.startswith("## ") or linea_normalizada.startswith("# "):
-            current_topic = linea_normalizada.replace("## ", "").replace("# ", "").strip()
-        elif linea_normalizada.startswith("### "):
-            current_topic = linea_normalizada.replace("### ", "").strip()
-
-        # Check for image insertion point
-        if word_count_since_last_image >= IMAGE_THRESHOLD:
-             print(f"🖼️ Threshold reached. Topic: '{current_topic}'")
-             # DISABLED UNTIL NAPKIN AI IS READY
-             # img_stream = generate_image_from_text(current_topic)
-             # if img_stream:
-             #     try:
-             #         doc.add_picture(img_stream, width=Inches(3) if columnas=="doble" else Inches(5.5))
-             #         last_p = doc.paragraphs[-1] 
-             #         last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-             #         doc.add_paragraph("")
-             #     except Exception as e:
-             #         print(f"Error inserting generated image: {e}")
-             
-             # Reset counters
-             word_count_since_last_image = 0
-             # accumulated_text_for_image = "" # No longer needed
+            current_section_title = linea_normalizada.replace("## ", "").replace("# ", "").strip()
+        
+        # Check if we should insert a visual BEFORE this section's content
+        if current_section_title in visuals_data and linea_normalizada.startswith("### "):
+            # Insert visual after first subsection of a major section
+            # This gives good placement without interrupting the main title
+            img_stream = visuals_data[current_section_title]
+            
+            try:
+                doc.add_picture(img_stream, width=Inches(3) if columnas=="doble" else Inches(5.5))
+                last_p = doc.paragraphs[-1]
+                last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                doc.add_paragraph("")  # Spacing
+                print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
+                
+                # Remove from dict so we don't insert again
+                del visuals_data[current_section_title]
+            except Exception as e:
+                print(f"❌ Error insertando visual para \"{current_section_title}\": {e}")
 
         # 🔁 Tolerancia: tratar #### como ### para subtítulos mal formateados
         if linea_normalizada.startswith("#### "):
@@ -474,6 +434,10 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
 
     doc.save(path_salida)
     return path_salida
+
+
+
+
 
 
 def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/quiz.docx", color="azul oscuro", columnas="simple"):
