@@ -5,12 +5,20 @@
                 <a href="/"><img src="/static/img/logo.png" alt="RedaXion Logo"
                         style="height: 60px; vertical-align: middle;"></a>
             </div>
-            <div class="nav-links">
+
+            <!-- Mobile menu button -->
+            <div class="mobile-menu-btn" id="mobileMenuBtn" style="display: none;">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <div class="nav-links" id="navLinks">
                 <a href="/">Inicio</a>
                 <a href="/como-funciona">Cómo Funciona</a>
                 <a href="/testimonios">Testimonios</a>
-                <div class="dropdown">
-                    <a href="#" class="dropdown-toggle">Servicios Especiales ▾</a>
+                <div class="dropdown" id="servicesDropdown">
+                    <a href="#" class="dropdown-toggle" id="servicesToggle">Servicios Especiales ▾</a>
                     <div class="dropdown-menu">
                         <a href="/generador-pruebas">📝 Generador de Pruebas</a>
                         <a href="/transcribe-reunion">🎙️ Transcribe Tu Reunión</a>
@@ -25,3 +33,53 @@
         </nav>
     </div>
 </header>
+
+<script>
+    // Mobile menu toggle
+    (function () {
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+        const servicesDropdown = document.getElementById('servicesDropdown');
+        const servicesToggle = document.getElementById('servicesToggle');
+
+        // Show/hide mobile button based on screen size
+        function checkMobile() {
+            if (window.innerWidth <= 768) {
+                mobileBtn.style.display = 'flex';
+            } else {
+                mobileBtn.style.display = 'none';
+                navLinks.classList.remove('active');
+                mobileBtn.classList.remove('active');
+            }
+        }
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        // Toggle mobile menu
+        mobileBtn.addEventListener('click', function () {
+            navLinks.classList.toggle('active');
+            mobileBtn.classList.toggle('active');
+        });
+
+        // Toggle services dropdown on mobile
+        if (servicesToggle) {
+            servicesToggle.addEventListener('click', function (e) {
+                if (window.innerWidth <= 768) {
+                    e.preventDefault();
+                    servicesDropdown.classList.toggle('active');
+                }
+            });
+        }
+
+        // Close menu when clicking a link
+        navLinks.querySelectorAll('a:not(.dropdown-toggle)').forEach(link => {
+            link.addEventListener('click', function () {
+                if (window.innerWidth <= 768) {
+                    navLinks.classList.remove('active');
+                    mobileBtn.classList.remove('active');
+                }
+            });
+        });
+    })();
+</script>
