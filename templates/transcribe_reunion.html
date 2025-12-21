@@ -443,15 +443,6 @@ María García - QA Lead"></textarea>
                         <div class="subtitle">Múltiples opciones de pago</div>
                     </div>
                 </div>
-                <!-- TEST BUTTON -->
-                <div class="payment-option" id="skipPaymentBtn"
-                    style="border: 2px dashed #f39c12; background: #fffdf6;">
-                    <span class="icon">⏩</span>
-                    <div class="info">
-                        <div class="title">Saltar Pago (Test)</div>
-                        <div class="subtitle">Transcribir sin pagar</div>
-                    </div>
-                </div>
             </div>
             <div class="payment-modal-close" id="closePaymentModal">Cancelar</div>
         </div>
@@ -520,36 +511,6 @@ María García - QA Lead"></textarea>
                 paymentModal.classList.remove('active');
             }
         });
-
-        // Skip Payment Button (in modal - legacy)
-        const skipPaymentBtn = document.getElementById('skipPaymentBtn');
-        if (skipPaymentBtn) {
-            skipPaymentBtn.addEventListener('click', () => processMeetingWithPayment('flow', 'skip'));
-        }
-
-        // Skip Payment Button (visible - new)
-        const skipPaymentBtnVisible = document.getElementById('skipPaymentBtnVisible');
-        if (skipPaymentBtnVisible) {
-            skipPaymentBtnVisible.addEventListener('click', () => {
-                const form = document.getElementById('meetingForm');
-                const audioFile = document.querySelector('[name="audio_file"]').files[0];
-
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
-
-                if (!audioFile) {
-                    const statusDiv = document.getElementById('status');
-                    statusDiv.style.display = 'block';
-                    statusDiv.className = 'error';
-                    statusDiv.textContent = 'Por favor selecciona un archivo de audio.';
-                    return;
-                }
-
-                processMeetingWithPayment('flow', 'skip');
-            });
-        }
 
         // Process meeting with selected payment gateway
         async function processMeetingWithPayment(gateway, action = 'pay') {
@@ -634,6 +595,12 @@ María García - QA Lead"></textarea>
                 orderFormData.append('orden_id', orden_id);
                 orderFormData.append('gateway', gateway);  // User's payment choice
                 orderFormData.append('action', action);
+
+                // Include discount code if applied
+                const discountCode = document.querySelector('[name="discount_code"]')?.value;
+                if (discountCode) {
+                    orderFormData.append('discount_code', discountCode);
+                }
 
                 const orderResponse = await fetch('/api/crear-orden-reunion', {
                     method: 'POST',

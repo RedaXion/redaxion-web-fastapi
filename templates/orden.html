@@ -389,15 +389,6 @@
                         <div class="subtitle">Múltiples opciones de pago</div>
                     </div>
                 </div>
-                <!-- TEST BUTTON -->
-                <div class="payment-option" id="skipPaymentBtn"
-                    style="border: 2px dashed #f39c12; background: #fffdf6;">
-                    <span class="icon">⏩</span>
-                    <div class="info">
-                        <div class="title">Saltar Pago (Test)</div>
-                        <div class="subtitle">Procesar sin pagar</div>
-                    </div>
-                </div>
             </div>
             <div class="payment-modal-close" id="closePaymentModal">Cancelar</div>
         </div>
@@ -429,7 +420,6 @@
         const closePaymentModalBtn = document.getElementById('closePaymentModal');
         const payWithFlowBtn = document.getElementById('payWithFlow');
         const payWithMercadoPagoBtn = document.getElementById('payWithMercadoPago');
-        const skipPaymentBtn = document.getElementById('skipPaymentBtn');
         const form = document.getElementById('redaxionForm');
 
         // Show payment modal on button click
@@ -467,7 +457,6 @@
         // Payment option click handlers
         payWithFlowBtn.addEventListener('click', () => processOrderWithPayment('flow', 'pay'));
         payWithMercadoPagoBtn.addEventListener('click', () => processOrderWithPayment('mercadopago', 'pay'));
-        skipPaymentBtn.addEventListener('click', () => processOrderWithPayment('flow', 'skip'));
 
         // Main function to process the order with the selected payment gateway
         async function processOrderWithPayment(gateway, action) {

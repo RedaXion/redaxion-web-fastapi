@@ -475,15 +475,6 @@
                         <div class="subtitle">Múltiples opciones de pago</div>
                     </div>
                 </div>
-                <!-- TEST BUTTON -->
-                <div class="payment-option" id="skipPaymentBtn"
-                    style="border: 2px dashed #f39c12; background: #fffdf6;">
-                    <span class="icon">⏩</span>
-                    <div class="info">
-                        <div class="title">Saltar Pago (Test)</div>
-                        <div class="subtitle">Generar sin pagar</div>
-                    </div>
-                </div>
             </div>
             <div class="payment-modal-close" id="closePaymentModal">Cancelar</div>
         </div>
@@ -529,24 +520,6 @@
                 paymentModal.classList.remove('active');
             }
         });
-
-        // Skip Payment Button (in modal - legacy)
-        const skipPaymentBtn = document.getElementById('skipPaymentBtn');
-        if (skipPaymentBtn) {
-            skipPaymentBtn.addEventListener('click', () => processPayment('flow', 'skip'));
-        }
-
-        // Skip Payment Button (visible - new)
-        const skipPaymentBtnVisible = document.getElementById('skipPaymentBtnVisible');
-        if (skipPaymentBtnVisible) {
-            skipPaymentBtnVisible.addEventListener('click', () => {
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
-                processPayment('flow', 'skip');
-            });
-        }
 
         // Process payment with selected gateway
         async function processPayment(gateway, action = 'pay') {
