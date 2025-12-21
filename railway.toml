@@ -6,6 +6,10 @@ healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 
-[[mounts]]
-source = "data"
-destination = "/app/data"
+# Note: To enable persistent storage, create a volume in Railway Dashboard:
+# 1. Go to your service Settings
+# 2. Add Volume with mount path: /app/data
+# 3. Then uncomment the lines below:
+# [[mounts]]
+# source = "data"
+# destination = "/app/data"
