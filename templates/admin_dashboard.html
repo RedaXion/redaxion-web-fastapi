@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin | RedaXion</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --accent-cyan: #1cc6c2;
+            --accent-orange: #fa8c16;
+            --text-gray: rgba(255, 255, 255, 0.6);
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+        }
+
+        h1 span {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-gray);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--accent-cyan);
+            color: #fff;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-gray);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-value.positive {
+            color: var(--success);
+        }
+
+        .stat-value.warning {
+            color: var(--warning);
+        }
+
+        .stat-value.negative {
+            color: var(--danger);
+        }
+
+        .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            margin-top: 0.25rem;
+        }
+
+        /* Sections */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-gray);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-size: 0.85rem;
+            color: var(--text-gray);
+            font-weight: 600;
+        }
+
+        td {
+            font-size: 0.9rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(46, 204, 113, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(243, 156, 18, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(28, 198, 194, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        /* Finance breakdown */
+        .finance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .finance-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .finance-item:last-child {
+            border-bottom: none;
+        }
+
+        .finance-label {
+            color: var(--text-gray);
+        }
+
+        .finance-value {
+            font-weight: 600;
+        }
+
+        /* Top pages */
+        .top-pages li {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            list-style: none;
+        }
+
+        .page-path {
+            color: var(--accent-cyan);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .page-count {
+            background: var(--bg-card);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Dashboard <span>Admin</span></h1>
+            <a href="/admin/logout" class="logout-btn">Cerrar Sesión</a>
+        </header>
+
+        <!-- Main Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">👁️ Visitas Totales</div>
+                <div class="stat-value">{{ analytics.total_views | default(0) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">📦 Órdenes Totales</div>
+                <div class="stat-value">{{ sales.total_orders | default(0) }}</div>
+                <div class="stat-sub">{{ sales.completed_orders | default(0) }} completadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">💰 Ingresos Brutos</div>
+                <div class="stat-value positive">${{ "{:,.0f}".format(sales.total_revenue | default(0)) }}</div>
+                <div class="stat-sub">CLP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">📈 Ganancia Neta</div>
+                <div class="stat-value {% if costs.net_profit > 0 %}positive{% else %}negative{% endif %}">
+                    ${{ "{:,.0f}".format(costs.net_profit | default(0)) }}
+                </div>
+                <div class="stat-sub">{{ costs.margin_percent | default(0) }}% margen</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">📊 Ventas Últimos 30 Días</div>
+                <canvas id="salesChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">🍩 Distribución por Producto</div>
+                <canvas id="productChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Finance Breakdown -->
+        <div class="section">
+            <h3 class="section-title">💵 Desglose Financiero</h3>
+            <div class="finance-grid">
+                <div>
+                    <h4 style="color: var(--accent-cyan); margin-bottom: 1rem;">Ingresos</h4>
+                    <div class="finance-item">
+                        <span class="finance-label">Ingresos Brutos</span>
+                        <span class="finance-value">${{ "{:,.0f}".format(costs.revenue.gross | default(0)) }}</span>
+                    </div>
+                    <div class="finance-item">
+                        <span class="finance-label">IVA (19%)</span>
+                        <span class="finance-value" style="color: var(--danger);">-${{
+                            "{:,.0f}".format(costs.revenue.iva | default(0)) }}</span>
+                    </div>
+                    <div class="finance-item">
+                        <span class="finance-label">Después de IVA</span>
+                        <span class="finance-value">${{ "{:,.0f}".format(costs.revenue.after_iva | default(0)) }}</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="color: var(--accent-orange); margin-bottom: 1rem;">Costos Estimados</h4>
+                    <div class="finance-item">
+                        <span class="finance-label">APIs (Transcripción)</span>
+                        <span class="finance-value">${{ "{:,.0f}".format((costs.api_costs.transcription | default(0)) *
+                            900) }}</span>
+                    </div>
+                    <div class="finance-item">
+                        <span class="finance-label">APIs (Reuniones)</span>
+                        <span class="finance-value">${{ "{:,.0f}".format((costs.api_costs.meeting | default(0)) * 900)
+                            }}</span>
+                    </div>
+                    <div class="finance-item">
+                        <span class="finance-label">APIs (Exámenes)</span>
+                        <span class="finance-value">${{ "{:,.0f}".format((costs.api_costs.exam | default(0)) * 900)
+                            }}</span>
+                    </div>
+                    <div class="finance-item">
+                        <span class="finance-label">Hosting</span>
+                        <span class="finance-value">${{ "{:,.0f}".format((costs.hosting_cost | default(0)) * 900)
+                            }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales by Product -->
+        <div class="section">
+            <h3 class="section-title">🛒 Ventas por Producto</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in sales.revenue_by_type %}
+                    <tr>
+                        <td>
+                            {% if item.service_type == 'transcription' %}📝 Transcripción
+                            {% elif item.service_type == 'exam' %}📋 Exámenes
+                            {% elif item.service_type == 'meeting' %}🤝 Reuniones
+                            {% else %}{{ item.service_type }}{% endif %}
+                        </td>
+                        <td>{{ item.count }}</td>
+                        <td>${{ "{:,}".format(item.price) }}</td>
+                        <td style="font-weight: 600;">${{ "{:,}".format(item.revenue) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Top Pages -->
+        <div class="charts-grid">
+            <div class="section">
+                <h3 class="section-title">🔥 Páginas Más Visitadas</h3>
+                <ul class="top-pages">
+                    {% for page in analytics.views_by_page %}
+                    <li>
+                        <span class="page-path">{{ page.path }}</span>
+                        <span class="page-count">{{ page.count }} visitas</span>
+                    </li>
+                    {% endfor %}
+                    {% if not analytics.views_by_page %}
+                    <li>No hay datos aún</li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="section">
+                <h3 class="section-title">📋 Órdenes Recientes</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders[:10] %}
+                        <tr>
+                            <td>{{ order.client }}</td>
+                            <td>
+                                {% if order.service_type == 'transcription' %}📝
+                                {% elif order.service_type == 'exam' %}📋
+                                {% elif order.service_type == 'meeting' %}🤝
+                                {% else %}📦{% endif %}
+                            </td>
+                            <td>
+                                {% if order.status == 'completed' %}
+                                <span class="badge badge-success">Completado</span>
+                                {% elif order.status == 'processing' %}
+                                <span class="badge badge-warning">Procesando</span>
+                                {% elif order.status == 'paid' %}
+                                <span class="badge badge-info">Pagado</span>
+                                {% elif order.status == 'pending' %}
+                                <span class="badge badge-info">Pendiente</span>
+                                {% else %}
+                                <span class="badge">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Projection -->
+        <div class="section">
+            <h3 class="section-title">🔮 Proyección Mensual</h3>
+            <p style="color: var(--text-gray); margin-bottom: 1rem;">
+                Basado en las ventas de los últimos 30 días
+            </p>
+            <div class="stats-grid" style="margin-bottom: 0;">
+                <div class="stat-card">
+                    <div class="stat-label">Ventas Proyectadas/Mes</div>
+                    <div class="stat-value">{{ (sales.completed_orders | default(0)) }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ingresos Proyectados/Mes</div>
+                    <div class="stat-value positive">${{ "{:,.0f}".format(sales.total_revenue | default(0)) }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ganancia Proyectada/Mes</div>
+                    <div class="stat-value {% if costs.net_profit > 0 %}positive{% else %}negative{% endif %}">
+                        ${{ "{:,.0f}".format(costs.net_profit | default(0)) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sales Chart
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        const salesData = {{ sales.orders_by_day | tojson | safe }};
+
+        new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: salesData.map(d => d.date),
+                datasets: [{
+                    label: 'Ventas',
+                    data: salesData.map(d => d.count),
+                    borderColor: '#1cc6c2',
+                    backgroundColor: 'rgba(28, 198, 194, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#888' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#888' } }
+                }
+            }
+        });
+
+        // Product Chart
+        const productCtx = document.getElementById('productChart').getContext('2d');
+        const productData = {{ sales.revenue_by_type | tojson | safe }};
+
+        new Chart(productCtx, {
+            type: 'doughnut',
+            data: {
+                labels: productData.map(d => {
+                    if (d.service_type === 'transcription') return 'Transcripción';
+                    if (d.service_type === 'exam') return 'Exámenes';
+                    if (d.service_type === 'meeting') return 'Reuniones';
+                    return d.service_type || 'Otro';
+                }),
+                datasets: [{
+                    data: productData.map(d => d.revenue),
+                    backgroundColor: ['#1cc6c2', '#fa8c16', '#9b59b6', '#3498db']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#fff' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

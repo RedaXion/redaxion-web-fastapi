@@ -45,6 +45,8 @@ templates = Jinja2Templates(directory="templates")
 @app.on_event("startup")
 def startup_event():
     database.init_db()
+    database.init_analytics_tables()
+    print("✅ Base de datos y analytics inicializados")
 
 # Security headers middleware
 @app.middleware("http")
@@ -1740,5 +1742,115 @@ async def mercadopago_webhook(request: Request, background_tasks: BackgroundTask
         print(f"Webhook Error: {e}")
         return JSONResponse(status_code=200, content={"status": "error"})
 
+
+# === Admin Dashboard ===
+import hashlib
+from starlette.responses import Response
+
+ADMIN_DASHBOARD_PASSWORD = os.getenv("ADMIN_DASHBOARD_PASSWORD", "redaxionSCR21")
+
+# Analytics tracking middleware
+@app.middleware("http")
+async def track_page_views(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Only track GET requests to HTML pages (not API or static)
+    path = request.url.path
+    if request.method == "GET" and not path.startswith("/api") and not path.startswith("/static") and not path.startswith("/admin"):
+        try:
+            # Hash IP for privacy
+            client_ip = request.client.host if request.client else "unknown"
+            ip_hash = hashlib.md5(client_ip.encode()).hexdigest()[:16]
+            
+            database.record_page_view(
+                path=path,
+                referrer=request.headers.get("referer"),
+                user_agent=request.headers.get("user-agent", "")[:200],
+                ip_hash=ip_hash
+            )
+        except Exception as e:
+            pass  # Don't break the request if tracking fails
+    
+    return response
+
+
+def verify_admin_session(request: Request) -> bool:
+    """Check if user has valid admin session."""
+    session_token = request.cookies.get("admin_session")
+    expected_token = hashlib.sha256(ADMIN_DASHBOARD_PASSWORD.encode()).hexdigest()
+    return session_token == expected_token
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+    """Admin login page."""
+    return templates.TemplateResponse("admin_login.html", {"request": request, "error": None})
+
+
+@app.post("/admin/auth")
+async def admin_auth(request: Request, password: str = Form(...)):
+    """Authenticate admin."""
+    if password == ADMIN_DASHBOARD_PASSWORD:
+        token = hashlib.sha256(ADMIN_DASHBOARD_PASSWORD.encode()).hexdigest()
+        response = RedirectResponse(url="/admin/dashboard", status_code=303)
+        response.set_cookie(
+            key="admin_session",
+            value=token,
+            httponly=True,
+            max_age=86400,  # 24 hours
+            samesite="strict"
+        )
+        return response
+    
+    return templates.TemplateResponse("admin_login.html", {
+        "request": request,
+        "error": "Contraseña incorrecta"
+    })
+
+
+@app.get("/admin/logout")
+async def admin_logout():
+    """Logout admin."""
+    response = RedirectResponse(url="/admin/login", status_code=303)
+    response.delete_cookie("admin_session")
+    return response
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    """Admin dashboard with all metrics."""
+    if not verify_admin_session(request):
+        return RedirectResponse(url="/admin/login", status_code=303)
+    
+    # Get all analytics data
+    analytics = database.get_analytics_summary()
+    sales = database.get_sales_summary()
+    costs = database.calculate_estimated_costs(sales)
+    recent_orders = database.get_recent_orders(20)
+    
+    return templates.TemplateResponse("admin_dashboard.html", {
+        "request": request,
+        "analytics": analytics,
+        "sales": sales,
+        "costs": costs,
+        "recent_orders": recent_orders
+    })
+
+
+@app.get("/api/admin/metrics")
+async def admin_metrics_api(request: Request):
+    """API endpoint for admin metrics (requires authentication)."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    analytics = database.get_analytics_summary()
+    sales = database.get_sales_summary()
+    costs = database.calculate_estimated_costs(sales)
+    
+    return {
+        "analytics": analytics,
+        "sales": sales,
+        "costs": costs
+    }
 
 
