@@ -99,3 +99,50 @@ def _enviar_con_smtp(destinatario: str, asunto: str, cuerpo: str, lista_archivos
         print(f"✅ Email enviado via SMTP a {destinatario}")
     except Exception as e:
         print(f"Error sending email via SMTP: {e}")
+
+
+def enviar_notificacion_error(orden_id: str, error_message: str, error_type: str = "orden", customer_email: str = None):
+    """
+    Notifica al administrador cuando ocurre un error crítico en el sistema.
+    
+    Args:
+        orden_id: ID de la orden que falló
+        error_message: Mensaje de error detallado
+        error_type: Tipo de error (orden, pago, transcripción, etc.)
+        customer_email: Email del cliente afectado (opcional)
+    """
+    admin_email = "chris.rodval@gmail.com"
+    
+    asunto = f"🚨 ERROR en RedaXion - {error_type.upper()} #{orden_id}"
+    
+    import datetime
+    cuerpo = f"""
+¡Alerta de Error en RedaXion!
+
+Tipo de Error: {error_type}
+Orden ID: {orden_id}
+Cliente: {customer_email or 'N/A'}
+Fecha/Hora: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+DETALLES DEL ERROR:
+{error_message}
+
+---
+Por favor revisa los logs del sistema y contacta al cliente si es necesario.
+
+Dashboard: {os.environ.get('BASE_URL', 'http://localhost:8000')}/dashboard?external_reference={orden_id}
+"""
+    
+    try:
+        # Intentar enviar sin adjuntos para notificaciones de error
+        enviar_correo_con_adjuntos(
+            destinatario=admin_email,
+            asunto=asunto,
+            cuerpo=cuerpo,
+            lista_archivos=[]
+        )
+        print(f"✅ Notificación de error enviada al administrador para orden {orden_id}")
+    except Exception as e:
+        print(f"⚠️ No se pudo enviar notificación de error: {e}")
+        # No queremos que falle todo si no se puede enviar el email de notificación
+

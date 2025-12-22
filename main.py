@@ -122,7 +122,7 @@ from services.transcription import transcribir_audio_async
 from services.text_processing import procesar_txt_con_chatgpt
 from services.formatting import guardar_como_docx, guardar_quiz_como_docx, convert_to_pdf
 from services.quiz_generation import generar_quiz_desde_docx
-from services.delivery import subir_archivo_a_drive, enviar_correo_con_adjuntos
+from services.delivery import subir_archivo_a_drive, enviar_correo_con_adjuntos, enviar_notificacion_error
 
 # New Special Services
 from services.exam_generator import generar_prueba
@@ -258,6 +258,13 @@ Equipo RedaXion.
     except Exception as e:
         print(f"[{orden_id}] Error en el procesamiento: {e}")
         database.update_order_status(orden_id, "error")
+        # Notificar al administrador del error
+        enviar_notificacion_error(
+            orden_id=orden_id,
+            error_message=str(e),
+            error_type="transcripción",
+            customer_email=correo_cliente
+        )
 
 # --- Endpoints ---
 
@@ -622,6 +629,13 @@ Gracias por usar RedaXion.
     except Exception as e:
         print(f"[{orden_id}] Error generando prueba: {e}")
         database.update_order_status(orden_id, "error")
+        # Notificar al administrador del error
+        enviar_notificacion_error(
+            orden_id=orden_id,
+            error_message=str(e),
+            error_type="generador de pruebas",
+            customer_email=correo
+        )
 
 
 @app.post("/api/crear-prueba")
@@ -893,6 +907,13 @@ Gracias por usar RedaXion.
     except Exception as e:
         print(f"[{orden_id}] Error procesando reunión: {e}")
         database.update_order_status(orden_id, "error")
+        # Notificar al administrador del error
+        enviar_notificacion_error(
+            orden_id=orden_id,
+            error_message=str(e),
+            error_type="transcripción de reunión",
+            customer_email=correo
+        )
 
 
 @app.post("/api/crear-orden-reunion")
