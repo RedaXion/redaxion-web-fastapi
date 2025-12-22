@@ -6,10 +6,12 @@ import docx
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# Initialize responsibly
-client = None
-if os.getenv("OPENAI_API_KEY"):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Client initialization moved to function to ensure env vars are loaded
+def get_client():
+    if not os.getenv("OPENAI_API_KEY"):
+        print("⚠️ OPENAI_API_KEY not found in quiz_generation. Using Mock mode.")
+        return None
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def extraer_texto_docx(path_docx):
     if not os.path.exists(path_docx):
@@ -21,6 +23,7 @@ def extraer_texto_docx(path_docx):
     return texto
 
 def generar_quiz_desde_docx(path_docx):
+    client = get_client()
     if not client:
         return "Pregunta 1: MOCK PREGUNTA (No API Key)\nA) Op1\nB) Op2\n\nRespuesta 1: A..."
 

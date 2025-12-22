@@ -3,12 +3,12 @@ import time
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
 
-# Initialize client responsibly
-client = None
-if os.getenv("OPENAI_API_KEY"):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-else:
-    print("Warning: OPENAI_API_KEY not found.")
+# Client initialization moved to function to ensure env vars are loaded
+def get_client():
+    if not os.getenv("OPENAI_API_KEY"):
+        print("⚠️ OPENAI_API_KEY not found in text_processing. Using Mock mode.")
+        return None
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_system_prompt():
     return """Eres un asistente experto en redacción académica y edición técnica. Tu tarea es transformar una transcripción de clase universitaria en un texto con estilo de libro profesional, manteniendo de forma exhaustiva todo el contenido relevante del original, sin resumir ni omitir detalles.
@@ -89,6 +89,7 @@ def dividir_texto_en_bloques(texto, palabras_por_bloque=1500):
     return [" ".join(palabras[i:i+palabras_por_bloque]) for i in range(0, len(palabras), palabras_por_bloque)]
 
 def procesar_txt_con_chatgpt(path_txt):
+    client = get_client()
     if not client:
         print("MOCK: Processing text with ChatGPT (No API Key)...")
         # Read original text just to simulate return
