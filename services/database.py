@@ -85,24 +85,31 @@ def init_db():
         # Migration: Add user_id to orders if not exists
         try:
             c.execute('ALTER TABLE orders ADD COLUMN user_id TEXT')
+            conn.commit()
             print("✅ Columna user_id agregada a orders")
         except Exception:
-            pass  # Column already exists
+            conn.rollback()  # Clear failed transaction state
         
         # Migration: Add paid_amount to orders if not exists
         try:
             c.execute('ALTER TABLE orders ADD COLUMN paid_amount INTEGER DEFAULT 0')
+            conn.commit()
             print("✅ Columna paid_amount agregada a orders")
         except Exception:
-            pass  # Column already exists
+            conn.rollback()  # Clear failed transaction state
         
         # Migration: Add discount_code and discount_percent to orders if not exists
         try:
             c.execute('ALTER TABLE orders ADD COLUMN discount_code TEXT')
+            conn.commit()
+        except Exception:
+            conn.rollback()
+        try:
             c.execute('ALTER TABLE orders ADD COLUMN discount_percent INTEGER DEFAULT 0')
+            conn.commit()
             print("✅ Columnas discount_code y discount_percent agregadas a orders")
         except Exception:
-            pass  # Columns already exist
+            conn.rollback()  # Clear failed transaction state
         
         # Insert initial discount codes (PostgreSQL ON CONFLICT syntax)
         try:
