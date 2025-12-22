@@ -711,10 +711,17 @@ def get_sales_summary():
             else:
                 revenue = count * 3000  # Legacy estimate
             
+        # Calculate price per unit for display
+        if count > 0:
+            price = revenue // count
+        else:
+            price = 1000 if (service == 'exam' or service == 'meeting') else 3000
+            
         total_revenue += revenue
         revenue_by_type.append({
             'service_type': service,
             'count': count,
+            'price': price,
             'revenue': revenue
         })
     
