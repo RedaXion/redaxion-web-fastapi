@@ -1265,14 +1265,17 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
             
             if order and order.get("status") == "pending":
                 service_type = order.get("service_type", "")
+                metadata = order.get("metadata", {})
+                print(f"🔍 DEBUG WEBHOOK: service_type='{service_type}', has_metadata={bool(metadata)}, metadata_keys={list(metadata.keys()) if metadata else []}")
                 
                 # Trigger processing based on service type
                 if service_type == "exam":
-                    # For exam, retrieve metadata from DB
-                    metadata = order.get("metadata", {})
-                    if metadata:
+                    # For exam, retrieve metadata from DB (already done above in debug line)
+                    if not metadata:
+                        print(f"⚠️ Exam order {commerce_order} has no metadata - cannot generate")
+                        database.update_order_status(commerce_order, "error")
+                    else:
                         database.update_order_status(commerce_order, "paid")
-                        
                         # Launch generation task
                         background_tasks.add_task(
                             procesar_y_enviar_prueba, 
@@ -1289,9 +1292,6 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                             metadata.get("eunacom", False)
                         )
                         print(f"✅ Pago confirmado y examen en generación: {commerce_order}")
-                    else:
-                        print(f"⚠️ Error: Orden de examen pagada pero sin metadatos: {commerce_order}")
-                        database.update_order_status(commerce_order, "paid")
                     
                 elif service_type == "meeting":
                     database.update_order_status(commerce_order, "paid")
@@ -1381,9 +1381,15 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
             # Get metadata and service type
             metadata = order.get("metadata", {})
             service_type = order.get("service_type", "")
+            print(f"🔍 DEBUG MP WEBHOOK: service_type='{service_type}', has_metadata={bool(metadata)}, metadata_keys={list(metadata.keys()) if metadata else []}")
             
             # Process based on service type
-            if service_type == "exam" and metadata:
+            if service_type == "exam":
+                if not metadata:
+                    print(f"⚠️ Exam order {orden_id} has no metadata - cannot generate, returning error")
+                    database.update_order_status(orden_id, "error")
+                    return RedirectResponse(url=f"/dashboard?external_reference={orden_id}", status_code=303)
+                    
                 background_tasks.add_task(
                     procesar_y_enviar_prueba,
                     orden_id,
