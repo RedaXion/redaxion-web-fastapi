@@ -610,7 +610,12 @@ def get_analytics_summary():
             GROUP BY DATE(created_at)
             ORDER BY date
         ''')
-    views_by_day = [dict(row) for row in c.fetchall()]
+    views_by_day = []
+    for row in c.fetchall():
+        r = dict(row)
+        if r.get("date"):
+            r["date"] = str(r["date"])
+        views_by_day.append(r)
     
     conn.close()
     
@@ -691,7 +696,12 @@ def get_sales_summary():
             GROUP BY DATE(created_at)
             ORDER BY date
         ''')
-    orders_by_day = [dict(row) for row in c.fetchall()]
+    orders_by_day = []
+    for row in c.fetchall():
+        r = dict(row)
+        if r.get("date"):
+            r["date"] = str(r["date"])
+        orders_by_day.append(r)
     
     conn.close()
     
