@@ -1868,3 +1868,30 @@ async def admin_deactivate_code(request: Request, code: str):
     return {"success": True, "message": f"Código {code} desactivado"}
 
 
+@app.post("/api/admin/activate-code/{code}")
+async def admin_activate_code(request: Request, code: str):
+    """Activate a discount code."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    database.activate_discount_code(code)
+    return {"success": True, "message": f"Código {code} activado"}
+
+
+@app.post("/api/admin/create-code")
+async def admin_create_code(
+    request: Request,
+    code: str = Form(...),
+    discount_percent: int = Form(...)
+):
+    """Create a new discount code."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    success = database.create_discount_code(code, discount_percent)
+    if success:
+        return RedirectResponse(url="/admin/dashboard", status_code=303)
+    else:
+        raise HTTPException(status_code=400, detail=f"El código {code} ya existe")
+
+

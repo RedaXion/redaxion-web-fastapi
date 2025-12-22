@@ -458,6 +458,18 @@ def deactivate_discount_code(code: str):
     conn.close()
 
 
+def activate_discount_code(code: str):
+    """Activate a discount code."""
+    conn = get_connection()
+    c = conn.cursor()
+    if USE_POSTGRES:
+        c.execute('UPDATE discount_codes SET active = 1 WHERE code = %s', (code.upper(),))
+    else:
+        c.execute('UPDATE discount_codes SET active = 1 WHERE code = ?', (code.upper(),))
+    conn.commit()
+    conn.close()
+
+
 # === Analytics Functions ===
 
 def init_analytics_tables():

@@ -476,6 +476,20 @@
         <!-- Discount Codes -->
         <div class="section">
             <h3 class="section-title">🏷️ Códigos de Descuento ({{ discount_stats.total_uses }} usos totales)</h3>
+
+            <!-- Create Code Form -->
+            <form action="/api/admin/create-code" method="POST"
+                style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <input type="text" name="code" placeholder="NUEVO_CODIGO" required
+                    style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-family: monospace; text-transform: uppercase;">
+                <input type="number" name="discount_percent" placeholder="%" min="1" max="100" required
+                    style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; width: 80px;">
+                <button type="submit"
+                    style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-orange)); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600;">
+                    + Crear Código
+                </button>
+            </form>
+
             <table>
                 <thead>
                     <tr>
@@ -483,6 +497,7 @@
                         <th>Descuento</th>
                         <th>Usos</th>
                         <th>Estado</th>
+                        <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -496,6 +511,19 @@
                             <span class="badge badge-success">Activo</span>
                             {% else %}
                             <span class="badge badge-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if code.active %}
+                            <button onclick="toggleCode('{{ code.code }}', 'deactivate')"
+                                style="padding: 0.3rem 0.8rem; background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.5); border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.8rem;">
+                                Desactivar
+                            </button>
+                            {% else %}
+                            <button onclick="toggleCode('{{ code.code }}', 'activate')"
+                                style="padding: 0.3rem 0.8rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.8rem;">
+                                Activar
+                            </button>
                             {% endif %}
                         </td>
                     </tr>
@@ -561,6 +589,22 @@
                 }
             }
         });
+
+        // Toggle discount code status
+        async function toggleCode(code, action) {
+            try {
+                const response = await fetch(`/api/admin/${action}-code/${code}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error al cambiar estado del código');
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            }
+        }
     </script>
 </body>
 
