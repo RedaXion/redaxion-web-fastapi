@@ -1856,3 +1856,13 @@ async def admin_metrics_api(request: Request):
     }
 
 
+@app.post("/api/admin/deactivate-code/{code}")
+async def admin_deactivate_code(request: Request, code: str):
+    """Deactivate a discount code."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    database.deactivate_discount_code(code)
+    return {"success": True, "message": f"Código {code} desactivado"}
+
+
