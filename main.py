@@ -65,12 +65,13 @@ async def add_security_headers(request: Request, call_next):
 MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 print(f"📦 GCS_BUCKET_NAME configurado: {GCS_BUCKET_NAME or '(no configurado)'}")
-# Fixed price for now as per requirements
-PRICE_AMOUNT = 3000
+# Prices in CLP
+PRICE_AMOUNT = 3000  # Transcripción de clase
 PRICE_CURRENCY = "CLP"
 
-# Price for special services (Generador de Pruebas, Transcribe Tu Reunión)
-SPECIAL_SERVICES_PRICE = 1000
+# Prices for special services
+EXAM_PRICE = 1500  # Generador de Pruebas
+MEETING_PRICE = 2000  # Transcripción de Reuniones
 
 # Base URL for callbacks (use production URL in Railway)
 BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8002")
@@ -678,7 +679,7 @@ async def crear_prueba(
     orden_id = str(uuid.uuid4())
     
     # Calculate price with discount
-    base_price = SPECIAL_SERVICES_PRICE
+    base_price = EXAM_PRICE
     discount_percent = 0
     final_price = base_price
     
@@ -973,7 +974,7 @@ async def crear_orden_reunion(
     """Create a meeting transcription order."""
     
     # Calculate price with discount
-    base_price = SPECIAL_SERVICES_PRICE
+    base_price = MEETING_PRICE
     discount_percent = 0
     final_price = base_price
     
@@ -1085,7 +1086,7 @@ async def crear_orden_reunion(
                 "items": [{
                     "title": "Transcripción de Reunión - RedaXion",
                     "quantity": 1,
-                    "unit_price": float(SPECIAL_SERVICES_PRICE),
+                    "unit_price": float(final_price),
                     "currency_id": PRICE_CURRENCY
                 }],
                 "payer": {"email": correo},

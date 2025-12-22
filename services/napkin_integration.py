@@ -1,13 +1,7 @@
-"""
-Napkin AI Integration Service for RedaXion
-
-Provides visual generation using Napkin.ai API.
-Replaces Unsplash and DALL-E as the sole image generation service.
-"""
-
 import os
 import requests
 import time
+import random
 from io import BytesIO
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
@@ -21,6 +15,17 @@ NAPKIN_API_URL = "https://api.napkin.ai"
 
 # Rate limiting: Max 2 requests/second during developer preview
 RATE_LIMIT_DELAY = 0.6  # seconds between requests (conservative)
+
+# Visual style variations for more diverse outputs
+VISUAL_QUERIES = [
+    "diagram",
+    "flowchart",
+    "mind map",
+    "infographic",
+    "concept map",
+    "process flow",
+    "hierarchy chart",
+]
 
 
 def create_visual_request(content: str, language: str = "es-ES") -> Optional[str]:
@@ -38,6 +43,10 @@ def create_visual_request(content: str, language: str = "es-ES") -> Optional[str
         print("⚠️ No NAPKIN_API_KEY configured. Skipping Napkin visual generation.")
         return None
     
+    # Select a random visual style for variety
+    visual_style = random.choice(VISUAL_QUERIES)
+    print(f"   🎲 Estilo visual seleccionado: {visual_style}")
+    
     headers = {
         "Authorization": f"Bearer {NAPKIN_API_KEY}",
         "Content-Type": "application/json"
@@ -47,7 +56,7 @@ def create_visual_request(content: str, language: str = "es-ES") -> Optional[str
         "content": content,
         "format": "png",
         "language": language,
-        "visual_query": "diagram",  # Request a diagram/scheme visualization
+        "visual_query": visual_style,  # Random visual style for variety
         "number_of_visuals": 1
     }
     
