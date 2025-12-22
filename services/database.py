@@ -89,6 +89,21 @@ def init_db():
         except Exception:
             pass  # Column already exists
         
+        # Migration: Add paid_amount to orders if not exists
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN paid_amount INTEGER DEFAULT 0')
+            print("✅ Columna paid_amount agregada a orders")
+        except Exception:
+            pass  # Column already exists
+        
+        # Migration: Add discount_code and discount_percent to orders if not exists
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN discount_code TEXT')
+            c.execute('ALTER TABLE orders ADD COLUMN discount_percent INTEGER DEFAULT 0')
+            print("✅ Columnas discount_code y discount_percent agregadas a orders")
+        except Exception:
+            pass  # Columns already exist
+        
         # Insert initial discount codes (PostgreSQL ON CONFLICT syntax)
         try:
             c.execute('''
@@ -212,8 +227,8 @@ def create_order(data: dict):
         
         if USE_POSTGRES:
             c.execute('''
-                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata, paid_amount, discount_code, discount_percent)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 data["id"],
                 data["status"],
@@ -225,12 +240,15 @@ def create_order(data: dict):
                 datetime.now(),
                 data.get("audio_url", ""),
                 data.get("service_type", ""),
-                metadata_json
+                metadata_json,
+                data.get("paid_amount", 0),
+                data.get("discount_code", ""),
+                data.get("discount_percent", 0)
             ))
         else:
             c.execute('''
-                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata, paid_amount, discount_code, discount_percent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data["id"],
                 data["status"],
@@ -242,7 +260,10 @@ def create_order(data: dict):
                 datetime.now(),
                 data.get("audio_url", ""),
                 data.get("service_type", ""),
-                metadata_json
+                metadata_json,
+                data.get("paid_amount", 0),
+                data.get("discount_code", ""),
+                data.get("discount_percent", 0)
             ))
         conn.commit()
     except Exception as e:
@@ -646,34 +667,34 @@ def get_sales_summary():
     # Completed orders (paid + completed)
     completed_count = orders_by_status.get('completed', 0) + orders_by_status.get('paid', 0)
     
-    # Orders by service type
+    # Orders by service type with actual revenue (using paid_amount)
     c.execute('''
-        SELECT service_type, COUNT(*) as count 
+        SELECT service_type, COUNT(*) as count, COALESCE(SUM(paid_amount), 0) as revenue
         FROM orders 
         WHERE status IN ('paid', 'completed', 'processing')
         GROUP BY service_type
     ''')
     orders_by_type = [dict(row) for row in c.fetchall()]
     
-    # Calculate revenue by service type
-    # Prices: transcription=3000, exam=1000, meeting=1000
+    # Calculate total from actual paid amounts
     revenue_by_type = []
     total_revenue = 0
     for item in orders_by_type:
         service = item.get('service_type', 'transcription') or 'transcription'
         count = item.get('count', 0)
+        revenue = item.get('revenue', 0) or 0
         
-        if service == 'exam' or service == 'meeting':
-            price = 1000
-        else:
-            price = 3000
+        # Fallback: if paid_amount is 0 (old orders), estimate using base price
+        if revenue == 0 and count > 0:
+            if service == 'exam' or service == 'meeting':
+                revenue = count * 1000  # Legacy estimate
+            else:
+                revenue = count * 3000  # Legacy estimate
             
-        revenue = count * price
         total_revenue += revenue
         revenue_by_type.append({
             'service_type': service,
             'count': count,
-            'price': price,
             'revenue': revenue
         })
     

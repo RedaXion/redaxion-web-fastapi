@@ -740,7 +740,10 @@ async def crear_prueba(
             "files": [],
             "audio_url": "",
             "service_type": "exam",
-            "metadata": exam_metadata
+            "metadata": exam_metadata,
+            "paid_amount": final_price,
+            "discount_code": discount_code or "",
+            "discount_percent": discount_percent
         }
         database.create_order(order_data)
         
@@ -771,7 +774,10 @@ async def crear_prueba(
         "files": [],
         "audio_url": "",
         "service_type": "exam",
-        "metadata": exam_metadata
+        "metadata": exam_metadata,
+        "paid_amount": final_price,
+        "discount_code": discount_code or "",
+        "discount_percent": discount_percent
     }
     database.create_order(order_data)
     
@@ -1003,7 +1009,10 @@ async def crear_orden_reunion(
             "files": [],
             "audio_url": audio_url,
             "service_type": "meeting",
-            "metadata": meeting_metadata
+            "metadata": meeting_metadata,
+            "paid_amount": final_price,
+            "discount_code": discount_code or "",
+            "discount_percent": discount_percent
         }
         database.create_order(order_data)
         
@@ -1033,7 +1042,10 @@ async def crear_orden_reunion(
         "files": [],
         "audio_url": audio_url,
         "service_type": "meeting",
-        "metadata": meeting_metadata
+        "metadata": meeting_metadata,
+        "paid_amount": final_price,
+        "discount_code": discount_code or "",
+        "discount_percent": discount_percent
     }
     database.create_order(order_data)
     
