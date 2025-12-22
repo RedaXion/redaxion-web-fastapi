@@ -187,12 +187,7 @@
                 <div id="processing-state" class="hidden">
                     <h2 style="margin-bottom: 1rem;">Estamos trabajando en tu documento 🤖</h2>
                     <p>Esto puede tomar unos minutos. Te avisaremos cuando esté listo.</p>
-                    <div id="estimated-time-display"
-                        style="display: none; margin-top: 1.5rem; padding: 1rem; background: rgba(28, 198, 194, 0.1); border: 1px solid var(--accent-cyan); border-radius: 12px;">
-                        <span style="font-size: 1.2rem;">⏱️</span>
-                        <span id="estimated-time-text"
-                            style="margin-left: 0.5rem; font-weight: 600; color: var(--accent-cyan);"></span>
-                    </div>
+                    <!-- Time estimator removed as requested -->
                     <div style="margin-top: 2rem; font-size: 2rem;" class="animate-spin">⏳</div>
                 </div>
 
@@ -227,44 +222,7 @@
         let progressInterval = null;
         let currentProgress = 0;
 
-        // Display estimated time remaining + estimated delivery time
-        function displayEstimatedTime(estimatedMinutes, createdAt) {
-            const estimateDisplay = document.getElementById('estimated-time-display');
-            const estimateText = document.getElementById('estimated-time-text');
-
-            if (!estimatedMinutes || !estimateDisplay) return;
-
-            // Calculate elapsed time
-            let elapsedMinutes = 0;
-            let startTime = new Date();
-            if (createdAt) {
-                startTime = new Date(createdAt);
-                const now = new Date();
-                elapsedMinutes = Math.floor((now - startTime) / 60000);
-            }
-
-            // Calculate remaining time
-            const remainingMinutes = Math.max(0, estimatedMinutes - elapsedMinutes);
-
-            // Calculate estimated delivery time
-            const deliveryTime = new Date(startTime.getTime() + estimatedMinutes * 60000);
-            const deliveryHour = deliveryTime.getHours().toString().padStart(2, '0');
-            const deliveryMin = deliveryTime.getMinutes().toString().padStart(2, '0');
-            const deliveryTimeStr = `${deliveryHour}:${deliveryMin}`;
-
-            // Create display text
-            let displayText;
-            if (remainingMinutes <= 0) {
-                displayText = '✅ Finalizando proceso...';
-            } else if (remainingMinutes <= 2) {
-                displayText = `🚀 Casi listo... (Entrega ~${deliveryTimeStr})`;
-            } else {
-                displayText = `⏱️ ~${remainingMinutes} min restantes · Entrega estimada: ~${deliveryTimeStr}`;
-            }
-
-            estimateText.textContent = displayText;
-            estimateDisplay.style.display = 'block';
-        }
+        // Time estimation function removed
 
         function updateProgress(status) {
             const bar = document.getElementById('progress-bar');
@@ -394,10 +352,7 @@
                 const data = await response.json();
                 console.log("Status update:", data);
 
-                // Update estimated time display if available
-                if (data.metadata && data.metadata.estimated_minutes) {
-                    displayEstimatedTime(data.metadata.estimated_minutes, data.created_at);
-                }
+                // Time estimation removed
 
                 updateProgress(data.status);
 
