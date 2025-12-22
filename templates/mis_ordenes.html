@@ -21,6 +21,65 @@
             padding: 2rem;
             backdrop-filter: blur(10px);
         }
+
+        .account-promo {
+            background: linear-gradient(135deg, rgba(28, 198, 194, 0.1), rgba(250, 140, 22, 0.1));
+            border: 1px solid rgba(28, 198, 194, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .account-promo h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .account-promo p {
+            color: var(--text-gray);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .account-promo .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            padding: 0.7rem 1.5rem;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 50px;
+            color: var(--accent-cyan);
+            background: transparent;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+        }
+
+        .divider-text {
+            color: var(--text-gray);
+            margin: 1.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .divider-text::before,
+        .divider-text::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
     </style>
     <link rel="icon" type="image/png" href="/static/img/favicon2.png">
 </head>
@@ -32,8 +91,21 @@
         <div class="container">
             <div class="tracking-container">
                 <h1>Rastrea tu <span class="text-gradient">Pedido</span></h1>
-                <p style="color: var(--text-gray); margin-bottom: 2rem;">Ingresa el ID de orden que recibiste en tu
-                    correo.</p>
+                <p style="color: var(--text-gray); margin-bottom: 2rem;">Encuentra el estado de tu orden.</p>
+
+                <!-- Account Promo (hidden if logged in) -->
+                <div class="account-promo" id="accountPromo">
+                    <h3>💡 ¿Sabías que puedes crear una cuenta?</h3>
+                    <p>Inicia sesión para ver automáticamente todas tus órdenes sin buscar IDs</p>
+                    <div class="btn-group">
+                        <a href="/login" class="btn-secondary">Iniciar Sesión</a>
+                        <a href="/registro" class="btn btn-primary" style="padding: 0.7rem 1.5rem;">Crear Cuenta</a>
+                    </div>
+                </div>
+
+                <div class="divider-text">
+                    <span>o busca por ID de orden</span>
+                </div>
 
                 <div class="search-box">
                     <form onsubmit="trackOrder(event)">
@@ -57,6 +129,23 @@
                 window.location.href = `/dashboard?external_reference=${orderId}`;
             }
         }
+
+        // Check if user is logged in, redirect to mi-cuenta if so
+        (async function () {
+            try {
+                const response = await fetch('/api/auth/me');
+                if (response.ok) {
+                    // User is logged in, redirect to mi-cuenta
+                    window.location.href = '/mi-cuenta';
+                } else {
+                    // Not logged in, show promo
+                    document.getElementById('accountPromo').style.display = 'block';
+                }
+            } catch (e) {
+                // Error, show promo anyway
+                document.getElementById('accountPromo').style.display = 'block';
+            }
+        })();
     </script>
 </body>
 

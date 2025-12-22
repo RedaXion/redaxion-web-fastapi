@@ -25,14 +25,35 @@
                         <a href="/soluciones-ia">🤖 Soluciones IA</a>
                     </div>
                 </div>
-                <a href="/mis-ordenes">Mis Órdenes</a>
+
+                <!-- Auth-dependent links -->
+                <a href="/mis-ordenes" id="navMisOrdenes">Mis Órdenes</a>
+                <a href="/mi-cuenta" id="navMiCuenta" style="display: none;">Mi Cuenta</a>
+
                 <a href="/ayuda">Ayuda</a>
+
+                <!-- Auth buttons -->
+                <a href="/login" id="navLogin" class="nav-auth-link">Iniciar Sesión</a>
+                <a href="#" id="navLogout" class="nav-auth-link" style="display: none;"
+                    onclick="headerLogout(event)">Cerrar Sesión</a>
+
                 <a href="/orden" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Haz Tus
                     Pedidos</a>
             </div>
         </nav>
     </div>
 </header>
+
+<style>
+    .nav-auth-link {
+        color: var(--accent-cyan) !important;
+        font-weight: 500;
+    }
+
+    .nav-auth-link:hover {
+        text-decoration: underline;
+    }
+</style>
 
 <script>
     // Mobile menu toggle
@@ -82,4 +103,39 @@
             });
         });
     })();
+
+    // Check authentication status and update nav
+    (async function checkHeaderAuth() {
+        try {
+            const response = await fetch('/api/auth/me');
+            if (response.ok) {
+                // User is logged in
+                const user = await response.json();
+
+                // Show "Mi Cuenta", hide "Mis Órdenes", show logout
+                document.getElementById('navMiCuenta').style.display = 'inline';
+                document.getElementById('navMisOrdenes').style.display = 'none';
+                document.getElementById('navLogin').style.display = 'none';
+                document.getElementById('navLogout').style.display = 'inline';
+
+                // Update Mi Cuenta text to show user name
+                document.getElementById('navMiCuenta').textContent = `👤 ${user.name.split(' ')[0]}`;
+            } else {
+                // Not logged in - default state is fine
+            }
+        } catch (e) {
+            // Error checking auth, keep default state
+        }
+    })();
+
+    // Logout function
+    async function headerLogout(e) {
+        e.preventDefault();
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        } catch (error) {
+            window.location.href = '/';
+        }
+    }
 </script>

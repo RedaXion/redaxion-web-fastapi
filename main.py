@@ -3,7 +3,7 @@ import uuid
 import asyncio
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, Form, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, UploadFile, Form, HTTPException, Request, BackgroundTasks, Response, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -136,6 +136,9 @@ from services.napkin_integration import generate_napkin_visual
 from services.flow_payment import crear_pago_flow, obtener_estado_pago, status_code_to_string
 PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "flow")
 print(f"💳 Payment Gateway: {PAYMENT_GATEWAY.upper()}")
+
+# Authentication Service
+from services.auth import hash_password, verify_password, create_access_token, decode_access_token
 
 # ORDERS_DB Removed - Using SQLite now
 
@@ -295,6 +298,19 @@ async def transcribe_reunion(request: Request):
 async def soluciones_ia(request: Request):
     return templates.TemplateResponse("soluciones_ia.html", {"request": request})
 
+# --- Authentication Routes ---
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/registro", response_class=HTMLResponse)
+async def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@app.get("/mi-cuenta", response_class=HTMLResponse)
+async def mi_cuenta_page(request: Request):
+    return templates.TemplateResponse("mi_cuenta.html", {"request": request})
+
 # --- Special Services API Endpoints ---
 
 # --- Discount Codes API ---
@@ -326,6 +342,144 @@ async def create_discount_code_endpoint(
         return {"success": True, "message": f"Código {code.upper()} creado con {discount_percent}% descuento"}
     else:
         raise HTTPException(status_code=400, detail="Código ya existe")
+
+
+# --- Authentication API ---
+
+async def get_current_user(request: Request):
+    """Dependency to get current authenticated user from JWT cookie."""
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+    
+    payload = decode_access_token(token)
+    if not payload:
+        return None
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+    
+    user = database.get_user_by_id(user_id)
+    return user
+
+
+@app.post("/api/auth/register")
+async def register_user(
+    response: Response,
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    """Register a new user account."""
+    # Validate email not already registered
+    existing = database.get_user_by_email(email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Este correo ya está registrado")
+    
+    # Validate password length
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+    
+    # Create user
+    user_id = str(uuid.uuid4())
+    password_hash = hash_password(password)
+    success = database.create_user(user_id, email, password_hash, name)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Error creando usuario")
+    
+    # Link existing orders with this email to the user
+    database.link_orders_to_user(email, user_id)
+    
+    # Generate token and set cookie
+    token = create_access_token({"sub": user_id, "email": email})
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7  # 7 days
+    )
+    
+    print(f"✅ Usuario registrado: {email}")
+    return {"success": True, "user": {"id": user_id, "name": name, "email": email}}
+
+
+@app.post("/api/auth/login")
+async def login_user(
+    response: Response,
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    """Login with email and password."""
+    user = database.get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+    
+    if not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+    
+    # Generate token
+    token = create_access_token({"sub": user["id"], "email": email})
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7  # 7 days
+    )
+    
+    print(f"✅ Usuario logueado: {email}")
+    return {"success": True, "user": {"id": user["id"], "name": user["name"], "email": email}}
+
+
+@app.get("/api/auth/me")
+async def get_me(request: Request):
+    """Get current logged in user."""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autenticado")
+    return {
+        "id": user["id"], 
+        "name": user["name"], 
+        "email": user["email"]
+    }
+
+
+@app.post("/api/auth/logout")
+async def logout_user(response: Response):
+    """Logout - clear auth cookie."""
+    response.delete_cookie("access_token")
+    return {"success": True}
+
+
+@app.get("/api/auth/orders")
+async def get_user_orders(request: Request):
+    """Get all orders for the logged in user."""
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autenticado")
+    
+    orders = database.get_orders_by_user_id(user["id"])
+    
+    # Also get orders by email that might not be linked yet
+    email_orders = database.get_orders_by_email(user["email"])
+    
+    # Merge and dedupe
+    order_ids = {o["id"] for o in orders}
+    for order in email_orders:
+        if order["id"] not in order_ids:
+            orders.append(order)
+            # Link this order to the user
+            database.update_order_user_id(order["id"], user["id"])
+    
+    # Sort by created_at descending
+    orders.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return {"orders": orders}
 
 
 @app.post("/api/reprocess-order")

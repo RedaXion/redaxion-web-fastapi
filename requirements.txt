@@ -16,3 +16,5 @@ httpx
 PyPDF2>=3.0.0
 python-pptx>=0.6.21
 psycopg2-binary>=2.9.9
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0

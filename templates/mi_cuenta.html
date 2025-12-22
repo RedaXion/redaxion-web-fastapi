@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Cuenta - RedaXion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/img/favicon2.png">
+    <style>
+        .account-container {
+            max-width: 900px;
+            margin: 6rem auto 4rem;
+            padding: 0 1rem;
+        }
+
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .account-header h1 {
+            font-size: 2rem;
+            margin: 0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+        }
+
+        .user-details {
+            text-align: left;
+        }
+
+        .user-details .name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .user-details .email {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+
+        .btn-logout {
+            padding: 0.6rem 1.2rem;
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            border-radius: 50px;
+            background: transparent;
+            color: #e74c3c;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-logout:hover {
+            background: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .orders-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .orders-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .order-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.2rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .order-card:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(28, 198, 194, 0.05);
+        }
+
+        .order-info h4 {
+            font-size: 1rem;
+            margin: 0 0 0.3rem 0;
+            color: white;
+        }
+
+        .order-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: var(--text-gray);
+        }
+
+        .order-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.7rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+
+        .status-processing {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+
+        .status-pending {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+
+        .status-paid {
+            background: rgba(155, 89, 182, 0.2);
+            color: #9b59b6;
+        }
+
+        .status-error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .order-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-view {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));
+            border: none;
+            border-radius: 50px;
+            color: var(--bg-dark);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+
+        .btn-view:hover {
+            transform: translateY(-2px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-gray);
+        }
+
+        .empty-state h3 {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state a {
+            color: var(--accent-cyan);
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-gray);
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .quick-action-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.2rem;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .quick-action-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-3px);
+        }
+
+        .quick-action-card .icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-action-card .label {
+            color: white;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .account-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .order-card {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .order-actions {
+                justify-content: center;
+            }
+
+            .user-info {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main>
+        <div class="account-container">
+            <!-- Account Header -->
+            <div class="account-header">
+                <h1>Mi <span class="text-gradient">Cuenta</span></h1>
+
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <div class="user-avatar" id="userAvatar">?</div>
+                    <div class="user-details">
+                        <div class="name" id="userName">Cargando...</div>
+                        <div class="email" id="userEmail"></div>
+                    </div>
+                    <button class="btn-logout" onclick="handleLogout()">Cerrar sesión</button>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="/orden" class="quick-action-card">
+                    <div class="icon">📝</div>
+                    <div class="label">Transcribir Audio</div>
+                </a>
+                <a href="/generador-pruebas" class="quick-action-card">
+                    <div class="icon">🎓</div>
+                    <div class="label">Generar Prueba</div>
+                </a>
+                <a href="/transcribe-reunion" class="quick-action-card">
+                    <div class="icon">🎙️</div>
+                    <div class="label">Acta de Reunión</div>
+                </a>
+            </div>
+
+            <!-- Orders Section -->
+            <div class="orders-section">
+                <h2 class="section-title">📦 Mis Órdenes</h2>
+
+                <div id="loadingState" class="loading-state">
+                    <p>⏳ Cargando tus órdenes...</p>
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <h3>No tienes órdenes aún</h3>
+                    <p>¡Haz tu primer pedido y aparecerá aquí!</p>
+                    <a href="/orden">Crear mi primera orden →</a>
+                </div>
+
+                <div id="ordersGrid" class="orders-grid" style="display: none;">
+                    <!-- Orders will be populated here by JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentUser = null;
+
+        // Status translations
+        const statusLabels = {
+            'pending': 'Pendiente',
+            'paid': 'Pagado',
+            'processing': 'Procesando',
+            'completed': 'Completado',
+            'error': 'Error'
+        };
+
+        // Service type labels
+        const serviceLabels = {
+            'transcription': '📝 Transcripción',
+            'exam': '🎓 Prueba',
+            'meeting': '🎙️ Reunión',
+            'exam_test': '🎓 Prueba (test)'
+        };
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('es-CL', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'pending': 'status-pending',
+                'paid': 'status-paid',
+                'processing': 'status-processing',
+                'completed': 'status-completed',
+                'error': 'status-error'
+            };
+            return classes[status] || 'status-pending';
+        }
+
+        function renderOrders(orders) {
+            const grid = document.getElementById('ordersGrid');
+            const empty = document.getElementById('emptyState');
+            const loading = document.getElementById('loadingState');
+
+            loading.style.display = 'none';
+
+            if (!orders || orders.length === 0) {
+                empty.style.display = 'block';
+                grid.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            grid.style.display = 'grid';
+
+            grid.innerHTML = orders.map(order => `
+                <div class="order-card">
+                    <div class="order-info">
+                        <h4>${serviceLabels[order.service_type] || '📄 Orden'} - #${order.id.substring(0, 8)}...</h4>
+                        <div class="order-meta">
+                            <span>📅 ${formatDate(order.created_at)}</span>
+                            <span class="status-badge ${getStatusClass(order.status)}">
+                                ${statusLabels[order.status] || order.status}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="order-actions">
+                        <a href="/dashboard?external_reference=${order.id}" class="btn-view">
+                            Ver Detalle
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadUserData() {
+            try {
+                // Get user info
+                const userResponse = await fetch('/api/auth/me');
+                if (!userResponse.ok) {
+                    // Not logged in, redirect to login
+                    window.location.href = '/login';
+                    return;
+                }
+
+                currentUser = await userResponse.json();
+
+                // Update UI with user info
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userEmail').textContent = currentUser.email;
+                document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+
+                // Get orders
+                const ordersResponse = await fetch('/api/auth/orders');
+                if (ordersResponse.ok) {
+                    const data = await ordersResponse.json();
+                    renderOrders(data.orders);
+                } else {
+                    document.getElementById('loadingState').innerHTML = '<p>Error cargando órdenes</p>';
+                }
+
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                window.location.href = '/login';
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/';
+            }
+        }
+
+        // Initialize
+        loadUserData();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Cuenta - RedaXion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/img/favicon2.png">
+    <style>
+        .auth-container {
+            max-width: 450px;
+            margin: 6rem auto 4rem;
+            padding: 0 1rem;
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-header p {
+            color: var(--text-gray);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-white);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(28, 198, 194, 0.2);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 0.4rem;
+            color: var(--text-gray);
+            font-size: 0.85rem;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));
+            color: var(--bg-dark);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(28, 198, 194, 0.4);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-gray);
+        }
+
+        .auth-footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(39, 174, 96, 0.15);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+            color: #27ae60;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .success-message.visible {
+            display: block;
+        }
+
+        .benefits-list {
+            background: rgba(28, 198, 194, 0.08);
+            border: 1px solid rgba(28, 198, 194, 0.2);
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .benefits-list h4 {
+            color: var(--accent-cyan);
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        .benefits-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .benefits-list li {
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            padding: 0.3rem 0;
+        }
+
+        .benefits-list li::before {
+            content: '✓ ';
+            color: var(--accent-cyan);
+        }
+
+        .password-match {
+            color: #27ae60;
+        }
+
+        .password-mismatch {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+
+<body>
+    {% include 'header.html' %}
+
+    <main>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1>Únete a <span class="text-gradient">RedaXion</span></h1>
+                    <p>Crea tu cuenta para gestionar tus pedidos</p>
+                </div>
+
+                <div class="benefits-list">
+                    <h4>🎁 Beneficios de tener cuenta:</h4>
+                    <ul>
+                        <li>Ver historial completo de tus órdenes</li>
+                        <li>Acceder a tus documentos desde cualquier dispositivo</li>
+                        <li>Recibir actualizaciones de estado en tiempo real</li>
+                        <li>Órdenes anteriores vinculadas automáticamente</li>
+                    </ul>
+                </div>
+
+                <div id="errorMessage" class="error-message"></div>
+                <div id="successMessage" class="success-message"></div>
+
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="name">Nombre Completo</label>
+                        <input type="text" id="name" name="name" placeholder="Tu nombre" required minlength="2">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Correo Electrónico</label>
+                        <input type="email" id="email" name="email" placeholder="tu@correo.com" required>
+                        <small>Usa el mismo correo de tus órdenes para vincularlas</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" name="password" placeholder="Mínimo 6 caracteres" required
+                            minlength="6">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirmar Contraseña</label>
+                        <input type="password" id="confirmPassword" placeholder="Repite tu contraseña" required
+                            minlength="6" oninput="checkPasswordMatch()">
+                        <small id="passwordMatchText"></small>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn-submit">
+                        Crear Mi Cuenta
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function checkPasswordMatch() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const matchText = document.getElementById('passwordMatchText');
+
+            if (confirm.length === 0) {
+                matchText.textContent = '';
+                matchText.className = '';
+            } else if (password === confirm) {
+                matchText.textContent = '✓ Las contraseñas coinciden';
+                matchText.className = 'password-match';
+            } else {
+                matchText.textContent = '✗ Las contraseñas no coinciden';
+                matchText.className = 'password-mismatch';
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+
+            // Reset messages
+            errorDiv.classList.remove('visible');
+            successDiv.classList.remove('visible');
+
+            // Check password match
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+
+            if (password !== confirm) {
+                errorDiv.textContent = 'Las contraseñas no coinciden';
+                errorDiv.classList.add('visible');
+                return;
+            }
+
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creando cuenta...';
+
+            const formData = new FormData(document.getElementById('registerForm'));
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successDiv.textContent = '¡Cuenta creada! Redirigiendo a tu panel...';
+                    successDiv.classList.add('visible');
+
+                    // Redirect to mi-cuenta after short delay
+                    setTimeout(() => {
+                        window.location.href = '/mi-cuenta';
+                    }, 1500);
+                } else {
+                    errorDiv.textContent = data.detail || 'Error al crear cuenta';
+                    errorDiv.classList.add('visible');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Mi Cuenta';
+                }
+            } catch (error) {
+                console.error('Register error:', error);
+                errorDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+                errorDiv.classList.add('visible');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Crear Mi Cuenta';
+            }
+        }
+
+        // Check if already logged in
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/me');
+                if (response.ok) {
+                    // Already logged in, redirect
+                    window.location.href = '/mi-cuenta';
+                }
+            } catch (e) {
+                // Not logged in, stay on page
+            }
+        }
+
+        checkAuth();
+    </script>
+</body>
+
+</html>

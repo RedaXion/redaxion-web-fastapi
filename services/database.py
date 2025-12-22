@@ -70,6 +70,25 @@ def init_db():
             )
         ''')
         
+        # Users table for authentication
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                email_verified INTEGER DEFAULT 0
+            )
+        ''')
+        
+        # Migration: Add user_id to orders if not exists
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN user_id TEXT')
+            print("✅ Columna user_id agregada a orders")
+        except Exception:
+            pass  # Column already exists
+        
         # Insert initial discount codes (PostgreSQL ON CONFLICT syntax)
         try:
             c.execute('''
@@ -127,6 +146,18 @@ def init_db():
             )
         ''')
         
+        # Users table for authentication
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                name TEXT NOT NULL,
+                created_at TIMESTAMP,
+                email_verified INTEGER DEFAULT 0
+            )
+        ''')
+        
         # Migration: Add columns if they don't exist (for existing DBs)
         try:
             c.execute('ALTER TABLE orders ADD COLUMN service_type TEXT')
@@ -135,6 +166,13 @@ def init_db():
             
         try:
             c.execute('ALTER TABLE orders ADD COLUMN metadata TEXT')
+        except sqlite3.OperationalError:
+            pass
+        
+        # Migration: Add user_id to orders for user authentication
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN user_id TEXT')
+            print("✅ Columna user_id agregada a orders")
         except sqlite3.OperationalError:
             pass
         
@@ -784,3 +822,139 @@ def get_discount_codes_stats():
         'codes': codes,
         'total_uses': total_uses
     }
+
+
+# === User Authentication Functions ===
+
+def create_user(user_id: str, email: str, password_hash: str, name: str):
+    """Create a new user account."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if USE_POSTGRES:
+            c.execute('''
+                INSERT INTO users (id, email, password_hash, name, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, email.lower(), password_hash, name, datetime.now()))
+        else:
+            c.execute('''
+                INSERT INTO users (id, email, password_hash, name, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, email.lower(), password_hash, name, datetime.now()))
+        conn.commit()
+        print(f"👤 Usuario creado: {email}")
+        return True
+    except Exception as e:
+        print(f"⚠️ Error creando usuario: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_user_by_email(email: str):
+    """Get user by email address."""
+    conn = get_connection()
+    
+    if USE_POSTGRES:
+        from psycopg2.extras import RealDictCursor
+        c = conn.cursor(cursor_factory=RealDictCursor)
+        c.execute('SELECT * FROM users WHERE email = %s', (email.lower(),))
+    else:
+        c = conn.cursor()
+        c.execute('SELECT * FROM users WHERE email = ?', (email.lower(),))
+    
+    row = c.fetchone()
+    conn.close()
+    
+    if row:
+        return dict(row)
+    return None
+
+
+def get_user_by_id(user_id: str):
+    """Get user by ID."""
+    conn = get_connection()
+    
+    if USE_POSTGRES:
+        from psycopg2.extras import RealDictCursor
+        c = conn.cursor(cursor_factory=RealDictCursor)
+        c.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+    else:
+        c = conn.cursor()
+        c.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    
+    row = c.fetchone()
+    conn.close()
+    
+    if row:
+        return dict(row)
+    return None
+
+
+def get_orders_by_user_id(user_id: str):
+    """Get all orders for a specific user ID."""
+    conn = get_connection()
+    
+    if USE_POSTGRES:
+        from psycopg2.extras import RealDictCursor
+        c = conn.cursor(cursor_factory=RealDictCursor)
+        c.execute('SELECT * FROM orders WHERE user_id = %s ORDER BY created_at DESC', (user_id,))
+    else:
+        c = conn.cursor()
+        c.execute('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    results = []
+    for row in rows:
+        r = dict(row)
+        if r.get("files"):
+            try:
+                r["files"] = json.loads(r["files"])
+            except:
+                r["files"] = []
+        if r.get("metadata"):
+            try:
+                r["metadata"] = json.loads(r["metadata"])
+            except:
+                r["metadata"] = {}
+        results.append(r)
+    return results
+
+
+def link_orders_to_user(email: str, user_id: str):
+    """Link all existing orders with this email to the user ID."""
+    conn = get_connection()
+    c = conn.cursor()
+    
+    try:
+        if USE_POSTGRES:
+            c.execute('UPDATE orders SET user_id = %s WHERE email = %s AND user_id IS NULL', 
+                     (user_id, email.lower()))
+        else:
+            c.execute('UPDATE orders SET user_id = ? WHERE email = ? AND user_id IS NULL', 
+                     (user_id, email.lower()))
+        
+        rows_updated = c.rowcount
+        conn.commit()
+        if rows_updated > 0:
+            print(f"🔗 {rows_updated} órdenes vinculadas al usuario {email}")
+    except Exception as e:
+        print(f"⚠️ Error vinculando órdenes: {e}")
+    finally:
+        conn.close()
+
+
+def update_order_user_id(orden_id: str, user_id: str):
+    """Update the user_id of an order."""
+    conn = get_connection()
+    c = conn.cursor()
+    
+    if USE_POSTGRES:
+        c.execute('UPDATE orders SET user_id = %s WHERE id = %s', (user_id, orden_id))
+    else:
+        c.execute('UPDATE orders SET user_id = ? WHERE id = ?', (user_id, orden_id))
+    
+    conn.commit()
+    conn.close()
