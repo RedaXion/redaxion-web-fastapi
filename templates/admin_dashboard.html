@@ -472,6 +472,37 @@
                 </div>
             </div>
         </div>
+
+        <!-- Discount Codes -->
+        <div class="section">
+            <h3 class="section-title">🏷️ Códigos de Descuento ({{ discount_stats.total_uses }} usos totales)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descuento</th>
+                        <th>Usos</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for code in discount_stats.codes %}
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 600;">{{ code.code }}</td>
+                        <td>{{ code.discount_percent }}%</td>
+                        <td>{{ code.uses_count or 0 }}</td>
+                        <td>
+                            {% if code.active %}
+                            <span class="badge badge-success">Activo</span>
+                            {% else %}
+                            <span class="badge badge-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>

@@ -1827,13 +1827,15 @@ async def admin_dashboard(request: Request):
     sales = database.get_sales_summary()
     costs = database.calculate_estimated_costs(sales)
     recent_orders = database.get_recent_orders(20)
+    discount_stats = database.get_discount_codes_stats()
     
     return templates.TemplateResponse("admin_dashboard.html", {
         "request": request,
         "analytics": analytics,
         "sales": sales,
         "costs": costs,
-        "recent_orders": recent_orders
+        "recent_orders": recent_orders,
+        "discount_stats": discount_stats
     })
 
 

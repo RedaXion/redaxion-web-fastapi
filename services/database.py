@@ -84,12 +84,12 @@ def init_db():
             ''')
             c.execute('''
                 INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count)
-                VALUES ('DESCUENTO80', 80, 1, NULL, 0)
+                VALUES ('JAIMESOTO_RX15', 20, 1, NULL, 0)
                 ON CONFLICT (code) DO NOTHING
             ''')
             c.execute('''
                 INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count)
-                VALUES ('JAIMESOTO_RX15', 20, 1, NULL, 0)
+                VALUES ('DAVID', 30, 1, NULL, 0)
                 ON CONFLICT (code) DO NOTHING
             ''')
             print("🏷️ Códigos de descuento inicializados")
@@ -150,11 +150,11 @@ def init_db():
             ''')
             c.execute('''
                 INSERT OR IGNORE INTO discount_codes (code, discount_percent, active, max_uses, uses_count, created_at)
-                VALUES ('DESCUENTO80', 80, 1, NULL, 0, datetime('now'))
+                VALUES ('JAIMESOTO_RX15', 20, 1, NULL, 0, datetime('now'))
             ''')
             c.execute('''
                 INSERT OR IGNORE INTO discount_codes (code, discount_percent, active, max_uses, uses_count, created_at)
-                VALUES ('JAIMESOTO_RX15', 20, 1, NULL, 0, datetime('now'))
+                VALUES ('DAVID', 30, 1, NULL, 0, datetime('now'))
             ''')
             print("🏷️ Códigos de descuento inicializados")
         except Exception as e:
@@ -745,3 +745,30 @@ def get_recent_orders(limit: int = 20):
     rows = c.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def get_discount_codes_stats():
+    """Get discount codes usage statistics for admin dashboard."""
+    conn = get_connection()
+    
+    if USE_POSTGRES:
+        c = conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        c = conn.cursor()
+    
+    c.execute('''
+        SELECT code, discount_percent, uses_count, active
+        FROM discount_codes
+        ORDER BY uses_count DESC
+    ''')
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    codes = [dict(row) for row in rows]
+    total_uses = sum(code.get('uses_count', 0) or 0 for code in codes)
+    
+    return {
+        'codes': codes,
+        'total_uses': total_uses
+    }
