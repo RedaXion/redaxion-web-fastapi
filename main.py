@@ -46,6 +46,8 @@ templates = Jinja2Templates(directory="templates")
 def startup_event():
     database.init_db()
     database.init_analytics_tables()
+    # Deactivate old codes
+    database.deactivate_discount_code("DESCUENTO80")
     print("✅ Base de datos y analytics inicializados")
 
 # Security headers middleware
