@@ -121,6 +121,38 @@ from services.auth import hash_password, verify_password, create_access_token, d
 
 # ORDERS_DB Removed - Using SQLite now
 
+# Helper functions for dashboard routing (async wrappers)
+async def _run_exam_generation(orden_id: str, order: dict, metadata: dict):
+    """Async wrapper to run exam generation from dashboard."""
+    print(f"🎓 [DASHBOARD] Starting exam generation for {orden_id}")
+    await procesar_y_enviar_prueba(
+        orden_id,
+        metadata.get("tema"),
+        metadata.get("asignatura"),
+        metadata.get("nivel"),
+        metadata.get("preguntas_alternativa"),
+        metadata.get("preguntas_desarrollo"),
+        metadata.get("dificultad"),
+        order.get("email"),
+        order.get("client"),
+        metadata.get("color", "azul elegante"),
+        metadata.get("eunacom", False),
+        metadata.get("context_material")
+    )
+
+async def _run_meeting_processing(orden_id: str, order: dict, metadata: dict):
+    """Async wrapper to run meeting processing from dashboard."""
+    print(f"📋 [DASHBOARD] Starting meeting processing for {orden_id}")
+    await procesar_y_enviar_reunion(
+        orden_id,
+        order.get("audio_url"),
+        metadata.get("titulo_reunion", ""),
+        metadata.get("asistentes", ""),
+        metadata.get("agenda", ""),
+        order.get("email"),
+        order.get("client")
+    )
+
 async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = None, user_metadata: dict = None):
     """
     Orchestrates the entire RedaXion pipeline.
@@ -1879,13 +1911,38 @@ async def read_dashboard(request: Request):
             # Trigger if it's a mock payment OR if returned from MP with success
             # AND status is still pending (avoid re-triggering if already processing/completed)
             if (mock == "true" or payment_status == "approved") and order["status"] == "pending":
-                 asyncio.create_task(procesar_audio_y_documentos(orden_id, order.get("audio_url"), order))
+                service_type = order.get("service_type", "")
+                metadata = order.get("metadata", {})
+                print(f"🔍 DASHBOARD ROUTING: order={orden_id}, service_type='{service_type}', has_metadata={bool(metadata)}")
+                
+                if service_type == "exam":
+                    if metadata:
+                        database.update_order_status(orden_id, "paid")
+                        asyncio.create_task(_run_exam_generation(orden_id, order, metadata))
+                    else:
+                        print(f"⚠️ Exam order {orden_id} missing metadata")
+                        database.update_order_status(orden_id, "error")
+                elif service_type == "meeting":
+                    database.update_order_status(orden_id, "paid")
+                    asyncio.create_task(_run_meeting_processing(orden_id, order, metadata))
+                else:
+                    # Default: transcription
+                    database.update_order_status(orden_id, "paid")
+                    asyncio.create_task(procesar_audio_y_documentos(orden_id, order.get("audio_url"), order))
             
-            # Re-trigger if error (Retry logic)
+            # Re-trigger if error (Retry logic) - same routing logic
             if order["status"] == "error" and (mock == "true" or payment_status == "approved"):
-                 print(f"Retrying order {orden_id}...")
-                 asyncio.create_task(procesar_audio_y_documentos(orden_id, order.get("audio_url"), order))
-            
+                service_type = order.get("service_type", "")
+                metadata = order.get("metadata", {})
+                print(f"🔄 RETRYING order {orden_id}, service_type='{service_type}'")
+                
+                if service_type == "exam" and metadata:
+                    asyncio.create_task(_run_exam_generation(orden_id, order, metadata))
+                elif service_type == "meeting":
+                    asyncio.create_task(_run_meeting_processing(orden_id, order, metadata))
+                else:
+                    asyncio.create_task(procesar_audio_y_documentos(orden_id, order.get("audio_url"), order))
+             
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 @app.get("/api/status/{orden_id}")
@@ -1914,13 +1971,44 @@ async def mercadopago_webhook(request: Request, background_tasks: BackgroundTask
                 if orden_id:
                      order = database.get_order(orden_id)
                      if order:
-                        print(f"Pago aprobado para orden: {orden_id}")
-                        background_tasks.add_task(
-                            procesar_audio_y_documentos, 
-                            orden_id, 
-                            audio_public_url=order.get("audio_url"),
-                            user_metadata=payment.get("metadata", {})
-                        )
+                        service_type = order.get("service_type", "")
+                        metadata = order.get("metadata", {})
+                        print(f"🔍 MP WEBHOOK ROUTING: order={orden_id}, service_type='{service_type}', has_metadata={bool(metadata)}")
+                        
+                        if service_type == "exam" and metadata:
+                            background_tasks.add_task(
+                                procesar_y_enviar_prueba,
+                                orden_id,
+                                metadata.get("tema"),
+                                metadata.get("asignatura"),
+                                metadata.get("nivel"),
+                                metadata.get("preguntas_alternativa"),
+                                metadata.get("preguntas_desarrollo"),
+                                metadata.get("dificultad"),
+                                order["email"],
+                                order["client"],
+                                metadata.get("color", "azul elegante"),
+                                metadata.get("eunacom", False)
+                            )
+                        elif service_type == "meeting":
+                            background_tasks.add_task(
+                                procesar_y_enviar_reunion,
+                                orden_id,
+                                order.get("audio_url"),
+                                metadata.get("titulo_reunion", ""),
+                                metadata.get("asistentes", ""),
+                                metadata.get("agenda", ""),
+                                order["email"],
+                                order["client"]
+                            )
+                        else:
+                            # Default: transcription
+                            background_tasks.add_task(
+                                procesar_audio_y_documentos, 
+                                orden_id, 
+                                audio_public_url=order.get("audio_url"),
+                                user_metadata=order
+                            )
         
         return JSONResponse(status_code=200, content={"status": "received"})
     except Exception as e:
