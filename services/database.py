@@ -488,12 +488,17 @@ def deactivate_discount_code(code: str):
     """Deactivate a discount code."""
     conn = get_connection()
     c = conn.cursor()
-    if USE_POSTGRES:
-        c.execute('UPDATE discount_codes SET active = 0 WHERE code = %s', (code.upper(),))
-    else:
-        c.execute('UPDATE discount_codes SET active = 0 WHERE code = ?', (code.upper(),))
-    conn.commit()
-    conn.close()
+    try:
+        if USE_POSTGRES:
+            c.execute('UPDATE discount_codes SET active = 0 WHERE code = %s', (code.upper(),))
+        else:
+            c.execute('UPDATE discount_codes SET active = 0 WHERE code = ?', (code.upper(),))
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Error desactivando código {code}: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 
 def activate_discount_code(code: str):

@@ -55,7 +55,7 @@ def startup_event():
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
@@ -796,7 +796,8 @@ async def crear_prueba(
                 "items": [{
                     "title": f"Generador de Pruebas - {asignatura}",
                     "quantity": 1,
-                    "unit_price": float(SPECIAL_SERVICES_PRICE),
+                    # FIX: Usar final_price calculado (con descuento) en lugar del precio base
+                    "unit_price": float(final_price),
                     "currency_id": PRICE_CURRENCY
                 }],
                 "payer": {"email": correo},
@@ -1999,21 +2000,30 @@ async def admin_dashboard(request: Request):
     if not verify_admin_session(request):
         return RedirectResponse(url="/admin/login", status_code=303)
     
-    # Get all analytics data
-    analytics = database.get_analytics_summary()
-    sales = database.get_sales_summary()
-    costs = database.calculate_estimated_costs(sales)
-    recent_orders = database.get_recent_orders(20)
-    discount_stats = database.get_discount_codes_stats()
-    
-    return templates.TemplateResponse("admin_dashboard.html", {
-        "request": request,
-        "analytics": analytics,
-        "sales": sales,
-        "costs": costs,
-        "recent_orders": recent_orders,
-        "discount_stats": discount_stats
-    })
+    try:
+        # Get all analytics data
+        analytics = database.get_analytics_summary()
+        sales = database.get_sales_summary()
+        costs = database.calculate_estimated_costs(sales)
+        recent_orders = database.get_recent_orders(20)
+        discount_stats = database.get_discount_codes_stats()
+        
+        return templates.TemplateResponse("admin_dashboard.html", {
+            "request": request,
+            "analytics": analytics,
+            "sales": sales,
+            "costs": costs,
+            "recent_orders": recent_orders,
+            "discount_stats": discount_stats
+        })
+    except Exception as e:
+        print(f"❌ Error loading admin dashboard: {e}")
+        import traceback
+        traceback.print_exc()
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, 
+            "error": f"Error interno cargando dashboard: {str(e)}"
+        })
 
 
 @app.get("/api/admin/metrics")
