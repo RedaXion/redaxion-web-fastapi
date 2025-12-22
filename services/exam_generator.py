@@ -11,17 +11,18 @@ Generates formal academic tests with:
 import os
 from openai import OpenAI
 
-# Initialize client
-client = None
-if os.getenv("OPENAI_API_KEY"):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-else:
-    print("Warning: OPENAI_API_KEY not found. Test generation will fail.")
+# Client initialization moved to functions to ensure env vars are loaded
+def get_client():
+    if not os.getenv("OPENAI_API_KEY"):
+        print("⚠️ OPENAI_API_KEY not found. Using Mock mode.")
+        return None
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def generar_nombre_prueba(asignatura: str, tema: str, nivel: str) -> str:
     """Generate a short exam name using AI (max 4 words)."""
     
+    client = get_client()
     if not client:
         # Fallback for no API key
         return f"Prueba {asignatura}"
@@ -257,6 +258,7 @@ def generar_prueba(tema: str, asignatura: str, nivel: str,
     # Generate AI name for the exam
     nombre_prueba = generar_nombre_prueba(asignatura, tema, nivel)
     
+    client = get_client()
     if not client:
         print("MOCK: Generating test (No API Key)...")
         examen_mock = f"""## PRUEBA DE {asignatura.upper()}

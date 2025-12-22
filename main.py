@@ -16,6 +16,7 @@ import uuid
 from google.cloud import storage
 from dotenv import load_dotenv
 from services import database
+from services.storage import get_storage_client, upload_file_to_gcs
 
 # Load environment variables
 load_dotenv()
@@ -78,44 +79,22 @@ BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8002")
 # Initialize Mercado Pago SDK
 sdk = mercadopago.SDK(MERCADOPAGO_ACCESS_TOKEN)
 
-# Initialize GCS Client
-storage_client = None
-try:
-    # Option 1: Try loading from JSON env var (Railway)
-    gcs_credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    if gcs_credentials_json:
-        import json
-        from google.oauth2 import service_account
-        credentials_dict = json.loads(gcs_credentials_json)
-        credentials = service_account.Credentials.from_service_account_info(credentials_dict)
-        storage_client = storage.Client(credentials=credentials, project=credentials_dict.get("project_id"))
-        print("✅ GCS Client inicializado desde GOOGLE_CREDENTIALS_JSON")
-    else:
-        # Option 2: Try default credentials (local dev with gcloud auth)
-        storage_client = storage.Client()
-        print("✅ GCS Client inicializado con credenciales por defecto")
-    
-    # Configure CORS on bucket for direct browser uploads
-    if storage_client and GCS_BUCKET_NAME:
-        try:
-            bucket = storage_client.bucket(GCS_BUCKET_NAME)
-            bucket.cors = [
-                {
-                    "origin": ["*"],  # Allow all origins for now
-                    "method": ["GET", "PUT", "POST", "OPTIONS"],
-                    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
-                    "maxAgeSeconds": 3600
-                }
-            ]
-            bucket.patch()
-            print("✅ CORS configurado en bucket GCS")
-        except Exception as e:
-            print(f"⚠️ No se pudo configurar CORS en bucket: {e}")
-            
-except Exception as e:
-    print(f"⚠️ Warning: Could not initialize GCS client: {e}")
-    print("   El sistema usará almacenamiento local como fallback.")
-    storage_client = None
+# Initialize GCS Client via service
+storage_client = get_storage_client()
+if storage_client and os.getenv("GCS_BUCKET_NAME"):
+    try:
+        bucket = storage_client.bucket(os.getenv("GCS_BUCKET_NAME"))
+        # Ensure CORS is set once
+        bucket.cors = [{
+            "origin": ["*"],
+            "method": ["GET", "PUT", "POST", "OPTIONS"],
+            "responseHeader": ["Content-Type", "Access-Control-Allow-Origin"],
+            "maxAgeSeconds": 3600
+        }]
+        bucket.patch()
+        print("✅ GCS CORS ensured via service")
+    except Exception as e:
+        print(f"⚠️ Warning config CORS: {e}")
 
 # --- Services ---
 from services.transcription import transcribir_audio_async
@@ -196,23 +175,30 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
         path_quiz_pdf = convert_to_pdf(path_quiz, color=color)
         
         # Update DB with files
-        # Convert local paths to URL paths
+        # Upload to GCS if configured
+        url_pdf_remote = upload_file_to_gcs(path_pdf, f"{orden_id}_documento.pdf")
+        url_doc_remote = upload_file_to_gcs(path_docx, f"{orden_id}_documento.docx")
+        url_quiz_pdf_remote = upload_file_to_gcs(path_quiz_pdf, f"{orden_id}_quiz.pdf")
+        url_quiz_doc_remote = upload_file_to_gcs(path_quiz, f"{orden_id}_quiz.docx")
+
+        # Use remote URLs if upload succeeded, else local
         base_url_path = "/static/generated"
+        final_url_pdf = url_pdf_remote or f"{base_url_path}/{os.path.basename(path_pdf)}"
+        final_url_doc = url_doc_remote or f"{base_url_path}/{os.path.basename(path_docx)}"
+        final_url_quiz_pdf = url_quiz_pdf_remote or f"{base_url_path}/{os.path.basename(path_quiz_pdf)}" if path_quiz_pdf else None
+        
+        # Update DB with files
         files_list = []
 
-        if path_pdf:
-            pdf_name = os.path.basename(path_pdf)
-            files_list.append({"name": "Documento Final", "url": f"{base_url_path}/{pdf_name}", "type": "pdf"})
+        if final_url_pdf:
+            files_list.append({"name": "Documento Final", "url": final_url_pdf, "type": "pdf"})
 
-        if path_quiz_pdf:
-             quiz_pdf_name = os.path.basename(path_quiz_pdf)
-             files_list.append({"name": "Quiz PDF", "url": f"{base_url_path}/{quiz_pdf_name}", "type": "pdf"})
+        if final_url_quiz_pdf:
+             files_list.append({"name": "Quiz PDF", "url": final_url_quiz_pdf, "type": "pdf"})
 
-        # Note: Napkin visuals are embedded directly in the DOCX/PDF by formatting.py
-
-        # Also add DOCX for reference if needed, or just PDF. User asked for products.
-        docx_name = os.path.basename(path_docx)
-        files_list.append({"name": "Documento Editable", "url": f"{base_url_path}/{docx_name}", "type": "docx"})
+        # Also add DOCX for reference
+        if final_url_doc:
+            files_list.append({"name": "Documento Editable", "url": final_url_doc, "type": "docx"})
 
         database.update_order_files(orden_id, files_list)
         database.update_order_status(orden_id, "completed")
@@ -863,18 +849,33 @@ async def procesar_y_enviar_reunion(orden_id: str, audio_url: str, titulo: str,
         
         guardar_acta_reunion_como_docx(contenido, path_docx)
         guardar_acta_reunion_como_pdf(contenido, path_pdf)
+        # Upload to GCS if configured
+        url_pdf_acta_remote = upload_file_to_gcs(path_pdf, f"{orden_id}_acta.pdf")
+        url_docx_acta_remote = upload_file_to_gcs(path_docx, f"{orden_id}_acta.docx")
+        
+        # Use remote URLs if upload succeeded, else local
+        base_url_path = "/static/generated"
+        final_url_pdf = url_pdf_acta_remote or f"{base_url_path}/Acta-{orden_id}.pdf"
+        final_url_docx = url_docx_acta_remote or f"{base_url_path}/Acta-{orden_id}.docx"
+        
+        # Update database with final URLs
+        database.add_file_to_order(orden_id, final_url_pdf, "Acta PDF")
+        database.add_file_to_order(orden_id, final_url_docx, "Acta Editable DOCX")
+        
+        database.update_order_status(orden_id, "completed")
+        print(f"✅ Orden {orden_id} completada.")
         
         print(f"[{orden_id}] Acta generada: {path_pdf}")
         
-        # 4. Update DB
-        import os
-        base_url_path = "/static/generated"
-        files_list = [
-            {"name": "Acta PDF", "url": f"{base_url_path}/Acta-{orden_id}.pdf", "type": "pdf"},
-            {"name": "Acta Editable", "url": f"{base_url_path}/Acta-{orden_id}.docx", "type": "docx"}
-        ]
-        database.update_order_files(orden_id, files_list)
-        database.update_order_status(orden_id, "completed")
+        # 4. Update DB (This section is now redundant with the GCS upload logic above)
+        # import os
+        # base_url_path = "/static/generated"
+        # files_list = [
+        #     {"name": "Acta PDF", "url": f"{base_url_path}/Acta-{orden_id}.pdf", "type": "pdf"},
+        #     {"name": "Acta Editable", "url": f"{base_url_path}/Acta-{orden_id}.docx", "type": "docx"}
+        # ]
+        # database.update_order_files(orden_id, files_list)
+        # database.update_order_status(orden_id, "completed")
         
         # 5. Send email
         if correo:
