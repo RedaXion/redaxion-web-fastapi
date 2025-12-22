@@ -667,24 +667,37 @@ def get_sales_summary():
     # Completed orders (paid + completed)
     completed_count = orders_by_status.get('completed', 0) + orders_by_status.get('paid', 0)
     
-    # Orders by service type with actual revenue (using paid_amount)
-    c.execute('''
-        SELECT service_type, COUNT(*) as count, COALESCE(SUM(paid_amount), 0) as revenue
-        FROM orders 
-        WHERE status IN ('paid', 'completed', 'processing')
-        GROUP BY service_type
-    ''')
-    orders_by_type = [dict(row) for row in c.fetchall()]
+    # Orders by service type with actual revenue (using paid_amount if available)
+    try:
+        c.execute('''
+            SELECT service_type, COUNT(*) as count, COALESCE(SUM(paid_amount), 0) as revenue
+            FROM orders 
+            WHERE status IN ('paid', 'completed', 'processing')
+            GROUP BY service_type
+        ''')
+        orders_by_type = [dict(row) for row in c.fetchall()]
+        has_paid_amount = True
+    except Exception as e:
+        # paid_amount column doesn't exist yet - use legacy query
+        print(f"⚠️ paid_amount column not available, using legacy calculation: {e}")
+        c.execute('''
+            SELECT service_type, COUNT(*) as count
+            FROM orders 
+            WHERE status IN ('paid', 'completed', 'processing')
+            GROUP BY service_type
+        ''')
+        orders_by_type = [dict(row) for row in c.fetchall()]
+        has_paid_amount = False
     
-    # Calculate total from actual paid amounts
+    # Calculate total from actual paid amounts or estimate
     revenue_by_type = []
     total_revenue = 0
     for item in orders_by_type:
         service = item.get('service_type', 'transcription') or 'transcription'
         count = item.get('count', 0)
-        revenue = item.get('revenue', 0) or 0
+        revenue = item.get('revenue', 0) or 0 if has_paid_amount else 0
         
-        # Fallback: if paid_amount is 0 (old orders), estimate using base price
+        # Fallback: if paid_amount is 0 (old orders) or column doesn't exist, estimate using base price
         if revenue == 0 and count > 0:
             if service == 'exam' or service == 'meeting':
                 revenue = count * 1000  # Legacy estimate
