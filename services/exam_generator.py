@@ -203,10 +203,16 @@ ESTRUCTURA:
 ## I. ALTERNATIVAS ({preguntas_alternativa} pts)
 
 1. [Pregunta breve]
-a) [Opción] b) [Opción] c) [Opción] d) [Opción]
+a) [Opción]
+b) [Opción]
+c) [Opción]
+d) [Opción]
 
 2. [Pregunta]
-a) [Opción] b) [Opción] c) [Opción] d) [Opción]
+a) [Opción]
+b) [Opción]
+c) [Opción]
+d) [Opción]
 
 [...hasta {preguntas_alternativa}]
 
