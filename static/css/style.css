@@ -249,6 +249,27 @@ nav {
     animation: fadeIn 1s ease-out;
 }
 
+.lifestyle-bg {
+    position: absolute;
+    z-index: 0;
+    opacity: 0.1;
+    /* Very subtle transparency */
+    pointer-events: none;
+    filter: grayscale(0.7) contrast(1.1) brightness(0.9);
+    mix-blend-mode: soft-light;
+    object-fit: cover;
+    -webkit-mask-image: radial-gradient(circle, black 25%, transparent 75%);
+    mask-image: radial-gradient(circle, black 25%, transparent 75%);
+    transition: opacity 0.5s ease;
+}
+
+@media (max-width: 768px) {
+    .lifestyle-bg {
+        opacity: 0.06;
+        /* Even more subtle on mobile */
+    }
+}
+
 .hero-text {
     font-size: 1.2rem;
     color: var(--text-gray);

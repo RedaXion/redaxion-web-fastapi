@@ -268,7 +268,11 @@
 <body>
     {% include 'header.html' %}
 
-    <main>
+    <main style="position: relative; overflow: hidden;">
+        <!-- Subtle Lifestyle Background Banner -->
+        <img src="/static/img/lifestyle_collaboration.jpg" class="lifestyle-bg"
+            style="top: 0; right: 0; width: 50%; height: 400px; -webkit-mask-image: radial-gradient(at top right, black, transparent 70%); mask-image: radial-gradient(at top right, black, transparent 70%);">
+
         <div class="account-container">
             <!-- Account Header -->
             <div class="account-header">
