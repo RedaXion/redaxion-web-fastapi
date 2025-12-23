@@ -30,12 +30,20 @@ REGLAS ESTRICTAS:
 
 ESTRUCTURA DE SALIDA OBLIGATORIA:
 
-## RESUMEN TLDR
-[1-2 líneas con lo más importante de la reunión]
+## 📌 LO MÁS IMPORTANTE (Resumen en 2 líneas)
+[1-2 líneas con lo más importante de la reunión - las decisiones y acciones clave]
 
 ---
 
-## RESUMEN EJECUTIVO
+## 🔥 TEMAS PRINCIPALES DISCUTIDOS
+[Lista de 3-5 temas más mencionados o relevantes, ordenados por importancia. Usa emojis para indicar el nivel de importancia:]
+- 🔴 **[Tema crítico/urgente]** - mencionado X veces
+- 🟡 **[Tema importante]** - mencionado X veces  
+- 🟢 **[Tema regular]** - mencionado X veces
+
+---
+
+## 📋 RESUMEN EJECUTIVO
 [3-5 líneas con las decisiones clave, principales tareas y responsables]
 
 ---
@@ -82,7 +90,8 @@ INSTRUCCIONES ADICIONALES:
 - Prioriza las tareas: "urgente" o fecha próxima = Alta, normal = Media, aplazable = Baja
 - Convierte fechas relativas ("próxima semana") a formato específico cuando sea posible
 - Incluye citas textuales importantes entre comillas
-- Si la transcripción es confusa o de baja calidad, menciona esto en las notas"""
+- Si la transcripción es confusa o de baja calidad, menciona esto en las notas
+- Para los temas principales, cuenta cuántas veces se menciona cada tema o cuánto tiempo se dedicó a discutirlo"""
 
 
 def procesar_reunion(transcripcion: str, titulo_reunion: str = None,

@@ -389,7 +389,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             img_stream = visuals_data[current_section_title]
             
             try:
-                doc.add_picture(img_stream, width=Inches(3) if columnas=="doble" else Inches(5.5))
+                doc.add_picture(img_stream, width=Inches(2.5) if columnas=="doble" else Inches(4.0))
                 last_p = doc.paragraphs[-1]
                 last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 doc.add_paragraph("")  # Spacing
@@ -429,6 +429,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
         else:
             p = doc.add_paragraph()
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            p.paragraph_format.space_after = Pt(4)  # Compact spacing
+            p.paragraph_format.line_spacing = 1.1  # Reduced line spacing
             agregar_texto_con_negrita(p, linea_normalizada)
             aplicar_estilo(p, "texto", color)
 
