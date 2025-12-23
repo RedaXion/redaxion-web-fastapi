@@ -30,20 +30,20 @@ REGLAS ESTRICTAS:
 
 ESTRUCTURA DE SALIDA OBLIGATORIA:
 
-## 📌 TLDR (Too Long; Didn't Read - Resumen Rápido)
+## TLDR (Too Long; Didn't Read - Resumen Rapido)
 [1-2 líneas con lo más importante de la reunión - las decisiones y acciones clave]
 
 ---
 
-## 🔥 TEMAS PRINCIPALES (Mapa de Relevancia)
+## TEMAS PRINCIPALES (Mapa de Relevancia)
 [Lista de 3-5 temas más mencionados, ordenados por importancia:]
-- 🔴 **[Tema crítico/urgente]** - mencionado X veces
-- 🟡 **[Tema importante]** - mencionado X veces  
-- 🟢 **[Tema regular]** - mencionado X veces
+- [ALTO] **[Tema crítico/urgente]** - mencionado X veces
+- [MEDIO] **[Tema importante]** - mencionado X veces  
+- [NORMAL] **[Tema regular]** - mencionado X veces
 
 ---
 
-## 📋 RESUMEN EJECUTIVO
+## RESUMEN EJECUTIVO
 [3-5 líneas con las decisiones clave, principales tareas y responsables]
 
 ---

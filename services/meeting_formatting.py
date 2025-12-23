@@ -115,9 +115,8 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
     while i < len(lineas):
         linea = lineas[i].rstrip()
         
-        # Skip empty lines but add spacing
+        # Skip empty lines (no extra paragraph)
         if not linea.strip():
-            doc.add_paragraph("")
             i += 1
             continue
         
@@ -129,8 +128,8 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
         # Handle --- separator lines
         if linea_normalizada.startswith('---'):
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(6)
-            p.paragraph_format.space_after = Pt(6)
+            p.paragraph_format.space_before = Pt(3)
+            p.paragraph_format.space_after = Pt(3)
             run = p.add_run("─" * 80)
             run.font.color.rgb = RGBColor(28, 198, 194)  # Accent cyan
             run.font.size = Pt(8)
@@ -142,8 +141,8 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
         if linea_normalizada.startswith('## '):
             texto = linea_normalizada.replace('## ', '')
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(14)
-            p.paragraph_format.space_after = Pt(6)
+            p.paragraph_format.space_before = Pt(8)
+            p.paragraph_format.space_after = Pt(4)
             run = p.add_run(texto)
             run.bold = True
             run.font.size = Pt(14)
@@ -156,8 +155,8 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
         if linea_normalizada.startswith('### '):
             texto = linea_normalizada.replace('### ', '')
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(10)
-            p.paragraph_format.space_after = Pt(4)
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.space_after = Pt(2)
             run = p.add_run(texto)
             run.bold = True
             run.font.size = Pt(12)
@@ -197,7 +196,7 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
                                     for run in paragraph.runs:
                                         run.font.size = Pt(10)
                 
-                doc.add_paragraph("")  # Spacing after table
+                doc.add_paragraph("").paragraph_format.space_after = Pt(2)  # Small spacing after table
             continue
         
         # Bullet points
@@ -211,7 +210,8 @@ def guardar_acta_reunion_como_docx(contenido: str, path_salida: str = "/tmp/acta
         # Numbered items
         if re.match(r'^\d+\.', linea_normalizada):
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(3)
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after = Pt(1)
             agregar_texto_con_negrita(p, linea_normalizada)
             i += 1
             continue
