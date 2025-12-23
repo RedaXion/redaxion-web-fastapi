@@ -30,13 +30,13 @@ REGLAS ESTRICTAS:
 
 ESTRUCTURA DE SALIDA OBLIGATORIA:
 
-## 📌 LO MÁS IMPORTANTE (Resumen en 2 líneas)
+## 📌 TLDR (Too Long; Didn't Read - Resumen Rápido)
 [1-2 líneas con lo más importante de la reunión - las decisiones y acciones clave]
 
 ---
 
-## 🔥 TEMAS PRINCIPALES DISCUTIDOS
-[Lista de 3-5 temas más mencionados o relevantes, ordenados por importancia. Usa emojis para indicar el nivel de importancia:]
+## 🔥 TEMAS PRINCIPALES (Mapa de Relevancia)
+[Lista de 3-5 temas más mencionados, ordenados por importancia:]
 - 🔴 **[Tema crítico/urgente]** - mencionado X veces
 - 🟡 **[Tema importante]** - mencionado X veces  
 - 🟢 **[Tema regular]** - mencionado X veces

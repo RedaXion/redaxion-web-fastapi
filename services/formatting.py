@@ -392,7 +392,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
                 doc.add_picture(img_stream, width=Inches(2.5) if columnas=="doble" else Inches(4.0))
                 last_p = doc.paragraphs[-1]
                 last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                doc.add_paragraph("")  # Spacing
+                last_p.paragraph_format.space_after = Pt(6)  # Minimal spacing after image
                 print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
                 
                 # Remove from dict so we don't insert again
