@@ -683,13 +683,19 @@ async def crear_prueba(
     base_price = EXAM_PRICE
     discount_percent = 0
     final_price = base_price
+    FLOW_MIN_AMOUNT = 350  # Flow minimum payment in CLP
     
     if discount_code:
         discount_result = database.validate_discount_code(discount_code)
         if discount_result.get("valid"):
             discount_percent = discount_result.get("discount_percent", 0)
             final_price = int(base_price * (1 - discount_percent / 100))
-            print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
+            # Enforce minimum price for Flow
+            if final_price < FLOW_MIN_AMOUNT:
+                final_price = FLOW_MIN_AMOUNT
+                print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → mínimo ${final_price}")
+            else:
+                print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
             # Increment usage count
             database.increment_code_usage(discount_code)
         else:
@@ -982,13 +988,19 @@ async def crear_orden_reunion(
     base_price = MEETING_PRICE
     discount_percent = 0
     final_price = base_price
+    FLOW_MIN_AMOUNT = 350  # Flow minimum payment in CLP
     
     if discount_code:
         discount_result = database.validate_discount_code(discount_code)
         if discount_result.get("valid"):
             discount_percent = discount_result.get("discount_percent", 0)
             final_price = int(base_price * (1 - discount_percent / 100))
-            print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
+            # Enforce minimum price for Flow
+            if final_price < FLOW_MIN_AMOUNT:
+                final_price = FLOW_MIN_AMOUNT
+                print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → mínimo ${final_price}")
+            else:
+                print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
             database.increment_code_usage(discount_code)
         else:
             print(f"⚠️ Código inválido: {discount_code} - {discount_result.get('reason')}")
@@ -1767,13 +1779,19 @@ async def crear_orden_gcs(
     base_price = PRICE_AMOUNT
     discount_percent = 0
     final_price = base_price
+    FLOW_MIN_AMOUNT = 350  # Flow minimum payment in CLP
     
     if discount_code:
         discount_result = database.validate_discount_code(discount_code)
         if discount_result.get("valid"):
             discount_percent = discount_result.get("discount_percent", 0)
             final_price = int(base_price * (1 - discount_percent / 100))
-            print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
+            # Enforce minimum price for Flow
+            if final_price < FLOW_MIN_AMOUNT:
+                final_price = FLOW_MIN_AMOUNT
+                print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → mínimo ${final_price}")
+            else:
+                print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
             database.increment_code_usage(discount_code)
         else:
             print(f"⚠️ Código inválido: {discount_code} - {discount_result.get('reason')}")
