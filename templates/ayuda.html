@@ -51,10 +51,69 @@
 
                 <!-- FAQ Item 3 Removed by user request -->
 
+                <div
+                    style="text-align: center; margin-top: 5rem; padding-top: 3rem; border-top: 1px solid var(--border);">
+                    <h2 style="margin-bottom: 1.5rem;">Sugerencias y <span class="text-gradient">Comentarios</span></h2>
+                    <p style="color: var(--text-gray); margin-bottom: 2rem;">Queremos mejorar para ti. Déjanos tus
+                        comentarios o sugerencias aquí.</p>
+
+                    <form id="commentForm" style="max-width: 600px; margin: 0 auto; text-align: left;">
+                        <input type="hidden" name="page" value="help">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <input type="text" name="name" placeholder="Tu Nombre"
+                                style="padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; color: white;">
+                            <input type="email" name="email" placeholder="Tu Email"
+                                style="padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; color: white;">
+                        </div>
+                        <textarea name="comment" required placeholder="Escribe aquí tus comentarios o sugerencias..."
+                            style="width: 100%; height: 120px; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; color: white; resize: vertical; margin-bottom: 1rem;"></textarea>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Enviar Comentario</button>
+                    </form>
+                    <div id="commentStatus" style="margin-top: 1rem; display: none; padding: 1rem; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <script>
+                    document.getElementById('commentForm').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const btn = e.target.querySelector('button');
+                        const status = document.getElementById('commentStatus');
+
+                        btn.disabled = true;
+                        btn.textContent = 'Enviando...';
+
+                        try {
+                            const formData = new FormData(e.target);
+                            const response = await fetch('/api/comments', {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            if (response.ok) {
+                                status.style.display = 'block';
+                                status.style.background = 'rgba(46, 204, 113, 0.2)';
+                                status.style.color = '#2ecc71';
+                                status.textContent = '¡Gracias! Tu comentario ha sido enviado correctamente.';
+                                e.target.reset();
+                            } else {
+                                throw new Error('Error al enviar');
+                            }
+                        } catch (err) {
+                            status.style.display = 'block';
+                            status.style.background = 'rgba(231, 76, 60, 0.2)';
+                            status.style.color = '#e74c3c';
+                            status.textContent = 'Hubo un error al enviar el comentario. Intenta de nuevo.';
+                        } finally {
+                            btn.disabled = false;
+                            btn.textContent = 'Enviar Comentario';
+                        }
+                    });
+                </script>
+
                 <div style="text-align: center; margin-top: 3rem;">
-                    <p style="color: var(--text-gray);">¿Aún tienes dudas?</p>
-                    <a href="mailto:soporte@redaxion.cl" class="btn btn-primary"
-                        style="margin-top: 1rem;">Contáctanos</a>
+                    <p style="color: var(--text-gray);">¿Necesitas soporte técnico?</p>
+                    <a href="mailto:soporte@redaxion.cl" class="btn btn-outline" style="margin-top: 1rem;">Contáctanos
+                        por Email</a>
                 </div>
             </div>
         </div>

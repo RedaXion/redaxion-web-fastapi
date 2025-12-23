@@ -220,8 +220,89 @@ def init_db():
         except Exception as e:
             print(f"⚠️ Error creando códigos iniciales: {e}")
     
+    init_comments_table()
     conn.commit()
     conn.close()
+
+
+def init_comments_table():
+    """Create comments table if it doesn't exist."""
+    conn = get_connection()
+    c = conn.cursor()
+    
+    if USE_POSTGRES:
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS comments (
+                id SERIAL PRIMARY KEY,
+                order_id TEXT,
+                page TEXT,
+                name TEXT,
+                email TEXT,
+                comment TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_reviewed INTEGER DEFAULT 0
+            )
+        ''')
+    else:
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id TEXT,
+                page TEXT,
+                name TEXT,
+                email TEXT,
+                comment TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_reviewed INTEGER DEFAULT 0
+            )
+        ''')
+    
+    conn.commit()
+    conn.close()
+
+
+def add_comment(order_id: str = None, page: str = None, name: str = None, email: str = None, comment: str = ""):
+    """Save a new comment to the database."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if USE_POSTGRES:
+            c.execute('''
+                INSERT INTO comments (order_id, page, name, email, comment)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (order_id, page, name, email, comment))
+        else:
+            c.execute('''
+                INSERT INTO comments (order_id, page, name, email, comment, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            ''', (order_id, page, name, email, comment))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error adding comment: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_all_comments(limit: int = 50):
+    """Get recent comments for admin dashboard."""
+    conn = get_connection()
+    try:
+        if USE_POSTGRES:
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute('SELECT * FROM comments ORDER BY created_at DESC LIMIT %s', (limit,))
+        else:
+            c = conn.cursor()
+            c.execute('SELECT * FROM comments ORDER BY created_at DESC LIMIT ?', (limit,))
+        
+        rows = c.fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"Error getting comments: {e}")
+        return []
+    finally:
+        conn.close()
 
 
 def create_order(data: dict):

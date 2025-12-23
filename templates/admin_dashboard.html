@@ -531,6 +531,60 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Comments Section -->
+        <div class="section">
+            <h3 class="section-title">💬 Comentarios y Feedback</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Página</th>
+                            <th>Pedido</th>
+                            <th>Usuario</th>
+                            <th>Comentario</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comment in comments %}
+                        <tr>
+                            <td style="white-space: nowrap; font-size: 0.8rem; color: var(--text-gray);">
+                                {{ comment.created_at }}
+                            </td>
+                            <td>
+                                {% if comment.page == 'order' %}📦 Pedido
+                                {% elif comment.page == 'help' %}❓ Ayuda
+                                {% else %}{{ comment.page }}{% endif %}
+                            </td>
+                            <td>
+                                {% if comment.order_id %}
+                                <a href="/dashboard?external_reference={{ comment.order_id }}" target="_blank"
+                                    style="color: var(--accent-cyan); text-decoration: none; font-family: monospace; font-size: 0.8rem;">
+                                    {{ comment.order_id[:8] }}...
+                                </a>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;">{{ comment.name or 'Anónimo' }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-gray);">{{ comment.email or '' }}
+                                </div>
+                            </td>
+                            <td style="max-width: 400px; line-height: 1.4;">
+                                {{ comment.comment }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not comments %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-gray); padding: 2rem;">No hay
+                                comentarios aún</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>

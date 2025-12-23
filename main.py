@@ -47,9 +47,10 @@ templates = Jinja2Templates(directory="templates")
 def startup_event():
     database.init_db()
     database.init_analytics_tables()
+    database.init_comments_table()
     # Deactivate old codes
     database.deactivate_discount_code("DESCUENTO80")
-    print("✅ Base de datos y analytics inicializados")
+    print("✅ Base de datos, analytics y comentarios inicializados")
 
 # Security headers middleware
 @app.middleware("http")
@@ -2118,6 +2119,7 @@ async def admin_dashboard(request: Request):
         costs = database.calculate_estimated_costs(sales)
         recent_orders = database.get_recent_orders(20)
         discount_stats = database.get_discount_codes_stats()
+        comments = database.get_all_comments(50)
         
         return templates.TemplateResponse("admin_dashboard.html", {
             "request": request,
@@ -2125,7 +2127,8 @@ async def admin_dashboard(request: Request):
             "sales": sales,
             "costs": costs,
             "recent_orders": recent_orders,
-            "discount_stats": discount_stats
+            "discount_stats": discount_stats,
+            "comments": comments
         })
     except Exception as e:
         print(f"❌ Error loading admin dashboard: {e}")
@@ -2189,5 +2192,27 @@ async def admin_create_code(
         return RedirectResponse(url="/admin/dashboard", status_code=303)
     else:
         raise HTTPException(status_code=400, detail=f"El código {code} ya existe")
+@app.post("/api/comments")
+async def post_comment(
+    order_id: Optional[str] = Form(None),
+    page: str = Form(...),
+    name: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    comment: str = Form(...)
+):
+    """Post a new comment."""
+    success = database.add_comment(order_id, page, name, email, comment)
+    if success:
+        return {"success": True, "message": "Comentario enviado correctamente"}
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar comentario")
 
+@app.get("/api/admin/comments")
+async def get_comments(request: Request, limit: int = 50):
+    """Get all comments (admin only)."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    comments = database.get_all_comments(limit)
+    return {"comments": comments}
 
