@@ -898,8 +898,11 @@ async def procesar_y_enviar_reunion(orden_id: str, audio_url: str, titulo: str,
         final_url_docx = url_docx_acta_remote or f"{base_url_path}/Acta-{orden_id}.docx"
         
         # Update database with final URLs
-        database.add_file_to_order(orden_id, final_url_pdf, "Acta PDF")
-        database.add_file_to_order(orden_id, final_url_docx, "Acta Editable DOCX")
+        files_list = [
+            {"name": "Acta PDF", "url": final_url_pdf, "type": "pdf"},
+            {"name": "Acta Editable DOCX", "url": final_url_docx, "type": "docx"}
+        ]
+        database.update_order_files(orden_id, files_list)
         
         database.update_order_status(orden_id, "completed")
         print(f"✅ Orden {orden_id} completada.")
