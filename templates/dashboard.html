@@ -383,6 +383,11 @@
                 updateProgress(data.status);
 
                 if (data.status === 'completed') {
+                    // Render files IMMEDIATELY if available (fixes race condition)
+                    if (data.files && data.files.length > 0) {
+                        renderFiles(data.files);
+                    }
+
                     // Only notify once
                     if (!completionNotified) {
                         completionNotified = true;
@@ -390,11 +395,6 @@
                         // Stop the progress bar animation
                         const bar = document.getElementById('progress-bar');
                         bar.classList.add('completed');
-
-                        // Render files if available
-                        if (data.files && data.files.length > 0) {
-                            renderFiles(data.files);
-                        }
 
                         // Show confetti celebration
                         confetti({
