@@ -255,6 +255,27 @@ nav {
     margin-bottom: 2rem;
 }
 
+/* Lifestyle Backgrounds */
+.lifestyle-bg {
+    position: absolute;
+    z-index: 0;
+    opacity: 0.25;
+    pointer-events: none;
+    filter: grayscale(0.5) contrast(1.1);
+    mix-blend-mode: soft-light;
+    object-fit: cover;
+    -webkit-mask-image: radial-gradient(circle, black 30%, transparent 80%);
+    mask-image: radial-gradient(circle, black 30%, transparent 80%);
+    transition: opacity 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .lifestyle-bg {
+        opacity: 0.15;
+    }
+}
+
+
 /* Sections */
 .section-padding {
     padding: 5rem 0;

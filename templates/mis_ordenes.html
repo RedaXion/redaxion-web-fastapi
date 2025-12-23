@@ -87,8 +87,12 @@
 <body>
     {% include 'header.html' %}
 
-    <main class="section-padding" style="padding-top: 8rem;">
-        <div class="container">
+    <main class="section-padding" style="padding-top: 8rem; position: relative; overflow: hidden;">
+        <!-- Lifestyle Background for Tracking -->
+        <img src="/static/img/lifestyle_reading.jpg" class="lifestyle-bg"
+            style="top: 20%; right: -10%; width: 45%; height: 50%; mix-blend-mode: overlay;">
+
+        <div class="container" style="position: relative; z-index: 1;">
             <div class="tracking-container">
                 <h1>Rastrea tu <span class="text-gradient">Pedido</span></h1>
                 <p style="color: var(--text-gray); margin-bottom: 2rem;">Encuentra el estado de tu orden.</p>

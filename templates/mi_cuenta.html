@@ -268,8 +268,12 @@
 <body>
     {% include 'header.html' %}
 
-    <main>
-        <div class="account-container">
+    <main style="position: relative; overflow: hidden;">
+        <!-- Lifestyle Background for My Account -->
+        <img src="/static/img/lifestyle_collaboration.jpg" class="lifestyle-bg"
+            style="top: 10%; right: -15%; width: 50%; height: 60%; transform: rotate(5deg); mix-blend-mode: overlay; opacity: 0.2;">
+
+        <div class="account-container" style="position: relative; z-index: 1;">
             <!-- Account Header -->
             <div class="account-header">
                 <h1>Mi <span class="text-gradient">Cuenta</span></h1>

@@ -13,8 +13,14 @@
 <body>
     {% include 'header.html' %}
 
-    <main class="section-padding" style="padding-top: 8rem;">
-        <div class="container">
+    <main class="section-padding" style="padding-top: 8rem; position: relative; overflow: hidden;">
+        <!-- Lifestyle Images for How It Works -->
+        <img src="/static/img/lifestyle_reading.jpg" class="lifestyle-bg"
+            style="top: 15%; right: -10%; width: 45%; height: 50%; mix-blend-mode: overlay;">
+        <img src="/static/img/lifestyle_focus.jpg" class="lifestyle-bg"
+            style="bottom: 10%; left: -5%; width: 40%; height: 45%; transform: rotate(-3deg);">
+
+        <div class="container" style="position: relative; z-index: 1;">
             <h1 style="text-align: center; margin-bottom: 3rem;">Descubre la Magia de <span
                     class="text-gradient">RedaXion</span></h1>
 

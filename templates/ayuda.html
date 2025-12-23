@@ -14,8 +14,14 @@
     <!-- Header will be updated globally later, using placeholder for structure -->
     {% include 'header.html' %}
 
-    <main class="section-padding" style="padding-top: 8rem;">
-        <div class="container">
+    <main class="section-padding" style="padding-top: 8rem; position: relative; overflow: hidden;">
+        <!-- Lifestyle Images for Help Page -->
+        <img src="/static/img/lifestyle_focus.jpg" class="lifestyle-bg"
+            style="top: 10%; left: -10%; width: 40%; height: 50%; transform: rotate(-5deg);">
+        <img src="/static/img/lifestyle_reading.jpg" class="lifestyle-bg"
+            style="bottom: 5%; right: -10%; width: 45%; height: 55%; transform: rotate(5deg);">
+
+        <div class="container" style="position: relative; z-index: 1;">
             <h1 style="text-align: center; margin-bottom: 2rem;">Centro de <span class="text-gradient">Ayuda</span></h1>
 
             <div style="max-width: 800px; margin: 0 auto; display: grid; gap: 2rem;">

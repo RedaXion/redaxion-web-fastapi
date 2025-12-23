@@ -157,8 +157,14 @@
 <body>
     {% include 'header.html' %}
 
-    <main class="section-padding" style="padding-top: 8rem;">
-        <div class="container">
+    <main class="section-padding" style="padding-top: 8rem; position: relative; overflow: hidden;">
+        <!-- Lifestyle Images for AI Solutions -->
+        <img src="/static/img/lifestyle_collaboration.jpg" class="lifestyle-bg"
+            style="top: 5%; right: -10%; width: 50%; height: 40%; mix-blend-mode: overlay; opacity: 0.15;">
+        <img src="/static/img/lifestyle_team.jpg" class="lifestyle-bg"
+            style="bottom: 10%; left: -5%; width: 40%; height: 35%; transform: rotate(-3deg);">
+
+        <div class="container" style="position: relative; z-index: 1;">
             <div class="hero-section">
                 <h1>Soluciones <span class="text-gradient">IA Personalizadas</span></h1>
                 <p>¿No encuentras lo que necesitas? Cuéntanos tu idea y te ayudamos a construirla con inteligencia
