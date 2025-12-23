@@ -268,8 +268,12 @@
 <body>
     {% include 'header.html' %}
 
-    <main>
-        <div class="account-container">
+    <main style="position: relative; overflow: hidden; min-height: 80vh;">
+        <!-- Banner Background Image -->
+        <img src="/static/img/banner_mi_cuenta.jpg" alt=""
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.15; pointer-events: none; z-index: 0; filter: grayscale(0.5);">
+
+        <div class="account-container" style="position: relative; z-index: 1;">
             <!-- Account Header -->
             <div class="account-header">
                 <h1>Mi <span class="text-gradient">Cuenta</span></h1>
