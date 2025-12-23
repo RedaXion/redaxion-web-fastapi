@@ -837,7 +837,8 @@ async def crear_prueba(
                     "orden_id": orden_id,
                     "service_type": "exam",
                     **exam_metadata
-                }
+                },
+                "notification_url": f"{BASE_URL}/webhook/mercadopago"
             }
             
             if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
@@ -1104,7 +1105,8 @@ async def crear_orden_reunion(
                     "orden_id": orden_id,
                     "service_type": "meeting",
                     **meeting_metadata
-                }
+                },
+                "notification_url": f"{BASE_URL}/webhook/mercadopago"
             }
             
             if "127.0.0.1" not in BASE_URL and "localhost" not in BASE_URL:
@@ -1887,7 +1889,8 @@ async def crear_orden_gcs(
                     "email": correo,
                     "color": color,
                     "columnas": columnas
-                }
+                },
+                "notification_url": f"{BASE_URL}/webhook/mercadopago"
             }
             
             # Only use auto_return in production
