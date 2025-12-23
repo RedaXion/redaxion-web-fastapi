@@ -8,6 +8,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="/static/img/favicon3.png">
+    <style>
+        .lifestyle-bg {
+            position: absolute;
+            z-index: 0;
+            opacity: 0.12;
+            pointer-events: none;
+            filter: grayscale(0.6) contrast(1.1);
+            mix-blend-mode: soft-light;
+            object-fit: cover;
+            -webkit-mask-image: radial-gradient(circle, black 30%, transparent 80%);
+            mask-image: radial-gradient(circle, black 30%, transparent 80%);
+        }
+
+        @media (max-width: 768px) {
+            .lifestyle-bg {
+                opacity: 0.08;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -21,6 +40,9 @@
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.2; z-index: 0; pointer-events: none;">
                 <source src="https://storage.googleapis.com/redaxion_audios/videobanner.mp4" type="video/mp4">
             </video>
+
+            <img src="/static/img/lifestyle_focus.jpg" class="lifestyle-bg"
+                style="top: 10%; right: -5%; width: 40%; height: 60%; transform: rotate(-5deg); -webkit-mask-image: linear-gradient(to left, black, transparent); mask-image: linear-gradient(to left, black, transparent);">
 
             <div class="container" style="position: relative; z-index: 1;">
                 <div class="hero-content" style="text-align: center; max-width: 800px; margin: 0 auto;">
@@ -47,8 +69,10 @@
 
         <!-- How It Works (Short) -->
         <section class="section-padding"
-            style="padding-top: 4rem; padding-bottom: 4rem; background: rgba(255, 255, 255, 0.03);">
-            <div class="container">
+            style="padding-top: 4rem; padding-bottom: 4rem; background: rgba(255, 255, 255, 0.03); position: relative; overflow: hidden;">
+            <img src="/static/img/lifestyle_reading.jpg" class="lifestyle-bg"
+                style="bottom: -10%; left: -10%; width: 35%; height: 80%; transform: rotate(5deg);">
+            <div class="container" style="position: relative; z-index: 1;">
                 <h2 style="text-align: center; margin-bottom: 3rem;">Cómo Funciona</h2>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
                     <div style="text-align: center;">
@@ -81,8 +105,10 @@
         </section>
 
         <!-- Features / Why Us -->
-        <section class="section-padding bg-lighter" style="padding: 4rem 0;">
-            <div class="container">
+        <section class="section-padding bg-lighter" style="padding: 4rem 0; position: relative; overflow: hidden;">
+            <img src="/static/img/lifestyle_group_steps.jpg" class="lifestyle-bg"
+                style="top: 20%; right: -5%; width: 45%; height: 70%; mix-blend-mode: overlay; opacity: 0.15;">
+            <div class="container" style="position: relative; z-index: 1;">
                 <h2 style="text-align: center; margin-bottom: 3rem;">¿Por qué elegir <span
                         class="text-gradient">RedaXion</span>?</h2>
                 <div class="grid-3"
@@ -113,8 +139,13 @@
         </section>
 
         <!-- Testimonials -->
-        <section id="testimonios" class="section-padding" style="padding: 4rem 0;">
-            <div class="container">
+        <section id="testimonios" class="section-padding"
+            style="padding: 4rem 0; position: relative; overflow: hidden;">
+            <img src="/static/img/lifestyle_collaboration.jpg" class="lifestyle-bg"
+                style="top: 10%; left: -5%; width: 40%; height: 60%; transform: rotate(-3deg);">
+            <img src="/static/img/lifestyle_team.jpg" class="lifestyle-bg"
+                style="bottom: -10%; right: -10%; width: 40%; height: 60%; transform: rotate(3deg);">
+            <div class="container" style="position: relative; z-index: 1;">
                 <h2 style="text-align: center; margin-bottom: 3rem;">Lo que dicen nuestros <span
                         class="text-gradient">Usuarios</span></h2>
                 <div class="grid-3"
