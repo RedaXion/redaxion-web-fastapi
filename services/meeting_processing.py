@@ -11,12 +11,13 @@ Uses ChatGPT to process meeting transcriptions and extract:
 import os
 from openai import OpenAI
 
-# Initialize client
-client = None
-if os.getenv("OPENAI_API_KEY"):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-else:
-    print("Warning: OPENAI_API_KEY not found. Meeting processing will fail.")
+# Client initialization - lazy to ensure env vars are loaded
+def get_client():
+    """Get OpenAI client lazily to ensure env vars are loaded."""
+    if not os.getenv("OPENAI_API_KEY"):
+        print("⚠️ OPENAI_API_KEY not found. Meeting processing will use mock mode.")
+        return None
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 MEETING_PROCESSING_PROMPT = """Eres un asistente experto en transcripción y actas de reuniones. Tu tarea es convertir una transcripción de una reunión en un documento estructurado y accionable.
@@ -109,6 +110,7 @@ def procesar_reunion(transcripcion: str, titulo_reunion: str = None,
         dict with 'contenido' (formatted meeting minutes) and 'success' status
     """
     
+    client = get_client()
     if not client:
         print("MOCK: Processing meeting (No API Key)...")
         return {
@@ -176,7 +178,8 @@ Esta es una versión de demostración del procesamiento de reuniones. Para obten
         
         print(f"🧠 Procesando reunión: {titulo_reunion or 'Sin título'}")
         
-        response = client.chat.completions.create(
+        openai_client = get_client()
+        response = openai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": MEETING_PROCESSING_PROMPT},

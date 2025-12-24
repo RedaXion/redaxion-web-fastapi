@@ -826,13 +826,15 @@ async def crear_prueba(
             # MercadoPago (legacy)
             preference_data = {
                 "items": [{
+                    "id": orden_id,
                     "title": f"Generador de Pruebas - {asignatura}",
+                    "description": f"Prueba de {asignatura} - Nivel {nivel} - {preguntas_alternativa} alt. + {preguntas_desarrollo} desarrollo",
+                    "category_id": "services",
                     "quantity": 1,
-                    # FIX: Usar final_price calculado (con descuento) en lugar del precio base
                     "unit_price": float(final_price),
                     "currency_id": PRICE_CURRENCY
                 }],
-                "payer": {"email": correo},
+                "payer": {"email": correo, "name": nombre},
                 "back_urls": {
                     "success": f"{BASE_URL}/dashboard",
                     "failure": f"{BASE_URL}/dashboard",
@@ -1101,12 +1103,15 @@ async def crear_orden_reunion(
             # MercadoPago (legacy)
             preference_data = {
                 "items": [{
+                    "id": orden_id,
                     "title": "Transcripción de Reunión - RedaXion",
+                    "description": f"Acta de reunión: {titulo_reunion[:50] if titulo_reunion else 'Sin título'}",
+                    "category_id": "services",
                     "quantity": 1,
                     "unit_price": float(final_price),
                     "currency_id": PRICE_CURRENCY
                 }],
-                "payer": {"email": correo},
+                "payer": {"email": correo, "name": nombre},
                 "back_urls": {
                     "success": f"{BASE_URL}/dashboard",
                     "failure": f"{BASE_URL}/dashboard",
@@ -1887,14 +1892,18 @@ async def crear_orden_gcs(
             preference_data = {
                 "items": [
                     {
+                        "id": orden_id,
                         "title": "Transcripción RedaXion",
+                        "description": f"Transcripción de audio con análisis - {color}",
+                        "category_id": "services",
                         "quantity": 1,
                         "unit_price": float(final_price),
                         "currency_id": PRICE_CURRENCY
                     }
                 ],
                 "payer": {
-                    "email": correo
+                    "email": correo,
+                    "name": nombre
                 },
                 "back_urls": {
                     "success": f"{BASE_URL}/dashboard",
