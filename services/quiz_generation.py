@@ -35,17 +35,36 @@ def generar_quiz_desde_docx(path_docx):
         texto_base = texto_base[:100000]
 
     prompt = f"""
-A partir del siguiente texto, genera 14 preguntas de práctica para reforzar el aprendizaje. Cada pregunta debe tener 5 alternativas (A–E), con solo una correcta. Alta complejidad, en caso de ser temas de medicina, que las preguntas sean tipo EUNACOM, máxima complejidad.
+A partir del siguiente texto, genera 14 preguntas de práctica para reforzar el aprendizaje.
 
-No muestres las respuestas inmediatamente. Deja al menos 15 líneas en blanco antes de la sección de respuestas.
+REQUISITOS:
+- Cada pregunta debe tener 5 alternativas (A–E), con solo una correcta
+- Alta complejidad (dificultad 8–9 de 10)
+- En temas de medicina, usar formato tipo EUNACOM
+- El objetivo es evaluar comprensión profunda, discriminación conceptual, razonamiento y aplicación práctica
 
-Luego incluye la sección de respuestas en este formato:
+FORMATO DE SALIDA OBLIGATORIO:
 
-Respuesta 1: B. Justificación breve…
-Respuesta 2: C. Justificación breve…
-…
+## PREGUNTAS
 
-El objetivo es evaluar comprensión profunda, discriminación conceptual, razonamiento lógico y aplicación práctica, con dificultad 8–9 de 10.
+1. [Pregunta]
+A) ...
+B) ...
+C) ...
+D) ...
+E) ...
+
+[... hasta la pregunta 14 ...]
+
+---
+
+## SOLUCIONARIO
+
+**IMPORTANTE: Esta sección es OBLIGATORIA. Incluye las 14 respuestas.**
+
+1. **Respuesta: B** - [Justificación breve de por qué B es correcta y las otras son incorrectas]
+2. **Respuesta: C** - [Justificación breve]
+... hasta la 14.
 
 Escribe todo en español.
 

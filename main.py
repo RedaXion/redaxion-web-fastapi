@@ -123,6 +123,53 @@ from services.auth import hash_password, verify_password, create_access_token, d
 
 # ORDERS_DB Removed - Using SQLite now
 
+def generar_nombre_documento(texto: str, orden_id: str) -> str:
+    """
+    Generate a short descriptive name (2-3 words) from document content using GPT.
+    Falls back to shortened orden_id on error.
+    """
+    import re
+    from openai import OpenAI
+    
+    # Fallback name
+    fallback_name = f"Transcripcion-{orden_id[:8]}"
+    
+    try:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return fallback_name
+            
+        client = OpenAI(api_key=api_key)
+        
+        # Take first ~2000 chars for context
+        texto_muestra = texto[:2000] if len(texto) > 2000 else texto
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Fast and cheap
+            messages=[
+                {"role": "system", "content": "Eres un asistente que genera títulos cortos. Responde SOLO con 2-3 palabras descriptivas, sin puntuación ni paréntesis."},
+                {"role": "user", "content": f"Genera un título de 2-3 palabras para este contenido académico:\n\n{texto_muestra}"}
+            ],
+            temperature=0.3,
+            max_tokens=20
+        )
+        
+        nombre_raw = response.choices[0].message.content.strip()
+        # Sanitize: remove special chars, limit length
+        nombre_limpio = re.sub(r'[^\w\s-]', '', nombre_raw).strip().replace(' ', '_')
+        
+        # Validate result
+        if len(nombre_limpio) < 3 or len(nombre_limpio) > 50:
+            return fallback_name
+            
+        print(f"📝 Nombre de documento generado: {nombre_limpio}")
+        return nombre_limpio
+        
+    except Exception as e:
+        print(f"⚠️ Error generando nombre de documento: {e}")
+        return fallback_name
+
+
 # Helper functions for dashboard routing (async wrappers)
 async def _run_exam_generation(orden_id: str, order: dict, metadata: dict):
     """Async wrapper to run exam generation from dashboard."""
@@ -208,12 +255,15 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
         guardar_quiz_como_docx(preguntas_quiz, path_quiz, color=color, columnas=columnas)
         path_quiz_pdf = convert_to_pdf(path_quiz, color=color)
         
+        # Generate descriptive document name from content
+        nombre_descriptivo = generar_nombre_documento(texto_procesado, orden_id)
+        
         # Update DB with files
-        # Upload to GCS if configured
-        url_pdf_remote = upload_file_to_gcs(path_pdf, f"{orden_id}_documento.pdf")
-        url_doc_remote = upload_file_to_gcs(path_docx, f"{orden_id}_documento.docx")
-        url_quiz_pdf_remote = upload_file_to_gcs(path_quiz_pdf, f"{orden_id}_quiz.pdf")
-        url_quiz_doc_remote = upload_file_to_gcs(path_quiz, f"{orden_id}_quiz.docx")
+        # Upload to GCS if configured - using descriptive names
+        url_pdf_remote = upload_file_to_gcs(path_pdf, f"{nombre_descriptivo}.pdf")
+        url_doc_remote = upload_file_to_gcs(path_docx, f"{nombre_descriptivo}.docx")
+        url_quiz_pdf_remote = upload_file_to_gcs(path_quiz_pdf, f"Quiz-{nombre_descriptivo}.pdf")
+        url_quiz_doc_remote = upload_file_to_gcs(path_quiz, f"Quiz-{nombre_descriptivo}.docx")
 
         # Use remote URLs if upload succeeded, else local
         base_url_path = "/static/generated"
@@ -240,7 +290,11 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
         print(f"[{orden_id}] Archivos generados y disponibles.")
         
         # 7. Notify Client
-        if correo_cliente:
+        # Check if email already sent
+        order_info = database.get_order(orden_id)
+        email_sent = order_info.get("email_sent", 0) if order_info else 0
+
+        if correo_cliente and not email_sent:
              print(f"[{orden_id}] Enviando correo a {correo_cliente}...")
              archivos_adjuntos = [path_docx, path_quiz]
              if path_pdf:
@@ -269,7 +323,10 @@ Equipo RedaXion.
                  cuerpo=cuerpo_correo,
                  lista_archivos=archivos_adjuntos
              )
+             database.mark_order_email_sent(orden_id)
              print(f"[{orden_id}] Correo enviado.")
+        elif email_sent:
+             print(f"[{orden_id}] Correo ya enviado anteriormente. Omitiendo.")
 
         database.update_order_status(orden_id, "completed")
 
@@ -618,7 +675,11 @@ async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, ni
         database.update_order_status(orden_id, "completed")
         
         # Send email
-        if correo:
+        # Check if email already sent
+        order_info = database.get_order(orden_id)
+        email_sent = order_info.get("email_sent", 0) if order_info else 0
+        
+        if correo and not email_sent:
             cuerpo = f"""Hola {nombre},
 
 ¡Tu prueba de {asignatura} está lista! 🎓
@@ -644,7 +705,10 @@ Gracias por usar RedaXion.
                 cuerpo=cuerpo,
                 lista_archivos=[path_pdf_examen, path_docx_examen, path_pdf_solucionario, path_docx_solucionario]
             )
+            database.mark_order_email_sent(orden_id)
             print(f"[{orden_id}] Correo enviado a {correo}")
+        elif email_sent:
+            print(f"[{orden_id}] Correo ya enviado anteriormente. Omitiendo.")
             
     except Exception as e:
         print(f"[{orden_id}] Error generando prueba: {e}")
@@ -930,7 +994,11 @@ async def procesar_y_enviar_reunion(orden_id: str, audio_url: str, titulo: str,
         # database.update_order_status(orden_id, "completed")
         
         # 5. Send email
-        if correo:
+        # Check if email already sent
+        order_info = database.get_order(orden_id)
+        email_sent = order_info.get("email_sent", 0) if order_info else 0
+
+        if correo and not email_sent:
             cuerpo = f"""Hola {nombre},
 
 ¡Tu acta de reunión está lista! 📋
@@ -956,7 +1024,10 @@ Gracias por usar RedaXion.
                 cuerpo=cuerpo,
                 lista_archivos=[path_pdf, path_docx]
             )
+            database.mark_order_email_sent(orden_id)
             print(f"[{orden_id}] Correo enviado a {correo}")
+        elif email_sent:
+            print(f"[{orden_id}] Correo ya enviado anteriormente. Omitiendo.")
             
     except Exception as e:
         print(f"[{orden_id}] Error procesando reunión: {e}")
@@ -1416,12 +1487,13 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
         return "OK"
 
 
-@app.post("/api/flow-return")
+@app.api_route("/api/flow-return", methods=["GET", "POST"])
 async def flow_return(request: Request, background_tasks: BackgroundTasks):
     """
     Handle Flow return URL (User redirection after payment).
     Flow redirects here ONLY on successful payment.
     We get orden_id from query params (we put it there when creating payment).
+    Note: Flow uses GET redirect, but we accept POST as fallback.
     """
     try:
         # Get orden_id from our query param (we added it when creating the payment)
