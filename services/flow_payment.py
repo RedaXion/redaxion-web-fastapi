@@ -134,7 +134,8 @@ def obtener_estado_pago(token: str) -> dict:
     Get the status of a payment by token.
     NEVER raises exceptions - always returns a dict.
     """
-    print(f"🔵 [NEW CODE] obtener_estado_pago called with token={token[:20]}...")
+    token_preview = token[:20] if len(token) > 20 else token
+    print(f"🔵 obtener_estado_pago called with token={token_preview}...")
     
     client = get_flow_client()
     
@@ -212,34 +213,6 @@ def obtener_estado_pago_manual(token: str) -> dict:
     except Exception as e:
         print(f"❌ Excepción manual Flow: {e}")
         return {"error": str(e)}
-    """
-    Verify the signature of a Flow webhook notification.
-    
-    Args:
-        data: The data received in the webhook
-        firma_recibida: The signature from Flow
-        
-    Returns:
-        True if signature is valid, False otherwise
-    """
-    api_secret = os.getenv("FLOW_API_SECRET")
-    
-    if not api_secret:
-        print("⚠️ No se puede verificar firma: FLOW_API_SECRET no configurado")
-        return False
-    
-    # Sort keys and create string to sign
-    sorted_keys = sorted(data.keys())
-    to_sign = "&".join(f"{k}={data[k]}" for k in sorted_keys if k != "s")
-    
-    # Create HMAC-SHA256 signature
-    firma_calculada = hmac.new(
-        api_secret.encode(),
-        to_sign.encode(),
-        hashlib.sha256
-    ).hexdigest()
-    
-    return hmac.compare_digest(firma_calculada, firma_recibida)
 
 
 # Payment status codes from Flow

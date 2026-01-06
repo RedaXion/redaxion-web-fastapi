@@ -1370,6 +1370,7 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
     """
     Handle Flow payment confirmation webhook.
     Flow sends a POST with token to confirm payment status.
+    CRITICAL: Must always return HTTP 200 to Flow, never 500.
     """
     try:
         form_data = await request.form()
@@ -1377,21 +1378,25 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
         
         if not token:
             print("⚠️ Flow webhook: No token received")
-            return JSONResponse({"error": "No token"}, status_code=400)
+            # Even on error, return 200 to Flow to prevent retries
+            return Response(content="OK", status_code=200, media_type="text/plain")
         
-        print(f"🔵 [NEW CODE] Flow webhook recibido: token={token[:20]}...")
+        # Safe token logging (handle short tokens)
+        token_preview = token[:20] if len(token) > 20 else token
+        print(f"🔵 Flow webhook recibido: token={token_preview}...")
         
         # Get payment status from Flow
         try:
             status_data = obtener_estado_pago(token)
         except Exception as e:
             print(f"❌ Error crítico obteniendo estado: {e}")
-            # Return success to Flow to avoid retries, but don't process order
-            return "OK"
+            traceback.print_exc()
+            return Response(content="OK", status_code=200, media_type="text/plain")
         
         if not status_data or "error" in status_data:
-            print(f"❌ Error obteniendo estado de pago: {status_data.get('error') if status_data else 'No response'}")
-            return "OK"  # Return OK to Flow to prevent retries
+            error_msg = status_data.get('error') if status_data else 'No response'
+            print(f"❌ Error obteniendo estado de pago: {error_msg}")
+            return Response(content="OK", status_code=200, media_type="text/plain")
         
         flow_status = status_data.get("status", 0)
         commerce_order = status_data.get("commerceOrder")  # This is our orden_id
@@ -1409,7 +1414,7 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                 
                 # Trigger processing based on service type
                 if service_type == "exam":
-                    # For exam, retrieve metadata from DB (already done above in debug line)
+                    # For exam, retrieve metadata from DB
                     if not metadata:
                         print(f"⚠️ Exam order {commerce_order} has no metadata - cannot generate")
                         database.update_order_status(commerce_order, "error")
@@ -1438,7 +1443,7 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                     # Try to retrieve metadata if available
                     metadata = order.get("metadata", {})
                     
-                    # Launch meeting meeting processing
+                    # Launch meeting processing
                     background_tasks.add_task(
                         procesar_y_enviar_reunion, 
                         commerce_order, 
@@ -1468,23 +1473,29 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                         user_metadata
                     )
                     print(f"✅ Pago confirmado y transcripción iniciada: {commerce_order}")
+            else:
+                if not order:
+                    print(f"⚠️ Order {commerce_order} not found in database")
+                else:
+                    print(f"ℹ️ Order {commerce_order} already processed (status: {order.get('status')})")
         
         elif flow_status == 3:  # RECHAZADA (Rejected)
-            database.update_order_status(commerce_order, "failed")
+            if commerce_order:
+                database.update_order_status(commerce_order, "failed")
             print(f"❌ Pago rechazado para orden: {commerce_order}")
             
         elif flow_status == 4:  # ANULADA (Cancelled)
-            database.update_order_status(commerce_order, "cancelled")
+            if commerce_order:
+                database.update_order_status(commerce_order, "cancelled")
             print(f"⚠️ Pago anulado para orden: {commerce_order}")
         
-        return "OK"
+        return Response(content="OK", status_code=200, media_type="text/plain")
         
     except Exception as e:
         print(f"❌ Error en webhook de Flow: {e}")
-        import traceback
         traceback.print_exc()
-        # ALWAYS return OK to Flow to prevent retries and avoid "Invalid Signature" loops
-        return "OK"
+        # CRITICAL: ALWAYS return 200 to Flow to prevent retries
+        return Response(content="OK", status_code=200, media_type="text/plain")
 
 
 @app.api_route("/api/flow-return", methods=["GET", "POST"])
