@@ -247,6 +247,12 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     _forzar_calibri_en_estilo(doc)
     insertar_logo_encabezado_derecha(doc)
     
+    # Agregar título "Transcripción" al documento TCP
+    titulo = doc.add_heading("Transcripción", level=1)
+    titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    aplicar_estilo(titulo, "titulo", color)
+    doc.add_paragraph("")
+    
     if columnas == "doble":
         configurar_columnas(doc, columnas)
 
@@ -472,7 +478,7 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
         flags=re.MULTILINE
     )
 
-    titulo = doc.add_heading("RedaQuiz", level=1)
+    titulo = doc.add_heading("Quiz", level=1)
     titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     aplicar_estilo(titulo, "titulo", color)
     doc.add_paragraph("")
@@ -566,6 +572,16 @@ def hex_to_rgb(hex_str: str):
     except:
         return (0, 0, 0)
 
+
+def clean_markdown_for_pdf(text):
+    """Remove markdown formatting for PDF fallback rendering."""
+    import re
+    # Remove ## headers (keep text)
+    text = re.sub(r'^#{1,6}\s*', '', text)
+    # Remove ** bold markers (keep text)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    return text.strip()
+
 def fallback_pdf_conversion(path_docx, path_pdf, color="azul elegante"):
     """
     Fallback avanzado: Lee el DOCX e intenta replicar formato completo (Negrita, Color, Tamaño, Fondos)
@@ -637,11 +653,13 @@ def fallback_pdf_conversion(path_docx, path_pdf, color="azul elegante"):
             is_title = False
             is_subtitle = False
             
-            # Heurística: detectar títulos por marcadores markdown, texto específico o tamaño
-            if text.startswith("#"):
-                text = text.lstrip("#").strip()
+            # Limpiar markdown del texto (## y **)
+            text = clean_markdown_for_pdf(text)
+            
+            # Heurística: detectar títulos por texto específico o tamaño
+            if para.text.strip().startswith("#"):
                 is_title = True
-            elif "RedaQuiz" in text or "RedaXion" in text or text.startswith("Preguntas de"):
+            elif "Quiz" in text or "Transcripción" in text or "RedaXion" in text or text.startswith("Preguntas de"):
                 # Títulos especiales como "RedaQuiz", "Preguntas de práctica", etc.
                 is_title = True
             elif para.runs and para.runs[0].font.size:
