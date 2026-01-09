@@ -50,17 +50,6 @@ def startup_event():
     database.init_comments_table()
     # Deactivate old codes
     database.deactivate_discount_code("DESCUENTO80")
-    
-    # Create special skip-payment code (max 4 uses, expires Jan 20 2026)
-    # Code: liuhaflivliueyrgbclwiuyrghdlqiwygd654789067457234r23**^^^
-    database.create_discount_code(
-        code="liuhaflivliueyrgbclwiuyrghdlqiwygd654789067457234r23**^^^",
-        discount_percent=100,  # 100% off = free
-        max_uses=4,
-        expiry_date="2026-01-20",
-        skip_payment=True
-    )
-    
     print("✅ Base de datos, analytics y comentarios inicializados")
 
 # Security headers middleware
@@ -759,13 +748,11 @@ async def crear_prueba(
     discount_percent = 0
     final_price = base_price
     FLOW_MIN_AMOUNT = 350  # Flow minimum payment in CLP
-    skip_payment_by_code = False  # Flag for special codes that bypass payment
     
     if discount_code:
         discount_result = database.validate_discount_code(discount_code)
         if discount_result.get("valid"):
             discount_percent = discount_result.get("discount_percent", 0)
-            skip_payment_by_code = discount_result.get("skip_payment", False)
             final_price = int(base_price * (1 - discount_percent / 100))
             # Enforce minimum price for Flow
             if final_price < FLOW_MIN_AMOUNT:
@@ -773,22 +760,6 @@ async def crear_prueba(
                 print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → mínimo ${final_price}")
             else:
                 print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
-            
-            # Check if this is a skip-payment code
-            if skip_payment_by_code:
-                print(f"🔓 CÓDIGO ESPECIAL: {discount_code.upper()} - Saltando pago completamente")
-                # Send admin notification
-                try:
-                    from services.email_service import enviar_notificacion_error
-                    enviar_notificacion_error(
-                        orden_id=orden_id,
-                        error_message=f"Código especial usado: {discount_code.upper()}",
-                        error_type="skip_payment_code_used",
-                        customer_email=correo
-                    )
-                except Exception as e:
-                    print(f"⚠️ Error enviando notificación admin: {e}")
-            
             # Increment usage count
             database.increment_code_usage(discount_code)
         else:
@@ -830,8 +801,8 @@ async def crear_prueba(
         "final_price": final_price
     }
     
-    # Handle Skip Payment (Test Mode OR special discount code)
-    if action == "skip" or skip_payment_by_code:
+    # Handle Skip Payment (Test Mode)
+    if action == "skip":
         print(f"⏩ SKIP PAYMENT: Creating paid order {orden_id}")
         order_data = {
             "id": orden_id,
@@ -1091,13 +1062,11 @@ async def crear_orden_reunion(
     discount_percent = 0
     final_price = base_price
     FLOW_MIN_AMOUNT = 350  # Flow minimum payment in CLP
-    skip_payment_by_code = False  # Flag for special codes that bypass payment
     
     if discount_code:
         discount_result = database.validate_discount_code(discount_code)
         if discount_result.get("valid"):
             discount_percent = discount_result.get("discount_percent", 0)
-            skip_payment_by_code = discount_result.get("skip_payment", False)
             final_price = int(base_price * (1 - discount_percent / 100))
             # Enforce minimum price for Flow
             if final_price < FLOW_MIN_AMOUNT:
@@ -1105,22 +1074,6 @@ async def crear_orden_reunion(
                 print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → mínimo ${final_price}")
             else:
                 print(f"🏷️ Código {discount_code.upper()} aplicado: {discount_percent}% off → ${final_price}")
-            
-            # Check if this is a skip-payment code
-            if skip_payment_by_code:
-                print(f"🔓 CÓDIGO ESPECIAL: {discount_code.upper()} - Saltando pago completamente")
-                # Send admin notification
-                try:
-                    from services.email_service import enviar_notificacion_error
-                    enviar_notificacion_error(
-                        orden_id=orden_id,
-                        error_message=f"Código especial usado: {discount_code.upper()}",
-                        error_type="skip_payment_code_used",
-                        customer_email=correo
-                    )
-                except Exception as e:
-                    print(f"⚠️ Error enviando notificación admin: {e}")
-            
             database.increment_code_usage(discount_code)
         else:
             print(f"⚠️ Código inválido: {discount_code} - {discount_result.get('reason')}")
@@ -1134,8 +1087,8 @@ async def crear_orden_reunion(
         "final_price": final_price
     }
     
-    # Handle Skip Payment (Test Mode OR special discount code)
-    if action == "skip" or skip_payment_by_code:
+    # Handle Skip Payment (Test Mode)
+    if action == "skip":
         print(f"⏩ SKIP PAYMENT: Creating paid meeting order {orden_id}")
         order_data = {
             "id": orden_id,
