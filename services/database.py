@@ -66,7 +66,8 @@ def init_db():
                 max_uses INTEGER,
                 uses_count INTEGER DEFAULT 0,
                 expiry_date TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                skip_payment INTEGER DEFAULT 0
             )
         ''')
         
@@ -110,6 +111,23 @@ def init_db():
             print("✅ Columnas discount_code y discount_percent agregadas a orders")
         except Exception:
             conn.rollback()  # Clear failed transaction state
+        
+        # Migration: Add email_sent to orders if not exists
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN email_sent INTEGER DEFAULT 0')
+            conn.commit()
+            print("✅ Columna email_sent agregada a orders")
+        except Exception:
+            conn.rollback()
+
+        # Migration: Add skip_payment to discount_codes if not exists
+        try:
+            c.execute('ALTER TABLE discount_codes ADD COLUMN skip_payment INTEGER DEFAULT 0')
+            conn.commit()
+            print("✅ Columna skip_payment agregada a discount_codes")
+        except Exception:
+            conn.rollback()
+
         
         # Insert initial discount codes (PostgreSQL ON CONFLICT syntax)
         try:
@@ -164,7 +182,8 @@ def init_db():
                 max_uses INTEGER,
                 uses_count INTEGER DEFAULT 0,
                 expiry_date TIMESTAMP,
-                created_at TIMESTAMP
+                created_at TIMESTAMP,
+                skip_payment INTEGER DEFAULT 0
             )
         ''')
         
@@ -191,12 +210,46 @@ def init_db():
         except sqlite3.OperationalError:
             pass
         
+        # Migration: Add paid_amount to orders
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN paid_amount INTEGER DEFAULT 0')
+            print("✅ Columna paid_amount agregada a orders")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration: Add discount_code and discount_percent to orders
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN discount_code TEXT')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN discount_percent INTEGER DEFAULT 0')
+            print("✅ Columnas discount_code y discount_percent agregadas a orders")
+        except sqlite3.OperationalError:
+            pass
+
+        
         # Migration: Add user_id to orders for user authentication
         try:
             c.execute('ALTER TABLE orders ADD COLUMN user_id TEXT')
             print("✅ Columna user_id agregada a orders")
         except sqlite3.OperationalError:
             pass
+
+        # Migration: Add email_sent to orders
+        try:
+            c.execute('ALTER TABLE orders ADD COLUMN email_sent INTEGER DEFAULT 0')
+            print("✅ Columna email_sent agregada a orders")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration: Add skip_payment to discount_codes
+        try:
+            c.execute('ALTER TABLE discount_codes ADD COLUMN skip_payment INTEGER DEFAULT 0')
+            print("✅ Columna skip_payment agregada a discount_codes")
+        except sqlite3.OperationalError:
+            pass
+
         
         # Insert initial discount codes (SQLite INSERT OR IGNORE)
         try:
@@ -315,8 +368,8 @@ def create_order(data: dict):
         
         if USE_POSTGRES:
             c.execute('''
-                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata, paid_amount, discount_code, discount_percent)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata, paid_amount, discount_code, discount_percent, email_sent)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 data["id"],
                 data["status"],
@@ -331,12 +384,13 @@ def create_order(data: dict):
                 metadata_json,
                 data.get("paid_amount", 0),
                 data.get("discount_code", ""),
-                data.get("discount_percent", 0)
+                data.get("discount_percent", 0),
+                data.get("email_sent", 0)
             ))
         else:
             c.execute('''
-                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata, paid_amount, discount_code, discount_percent)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (id, status, client, email, color, columnas, files, created_at, audio_url, service_type, metadata, paid_amount, discount_code, discount_percent, email_sent)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data["id"],
                 data["status"],
@@ -351,7 +405,8 @@ def create_order(data: dict):
                 metadata_json,
                 data.get("paid_amount", 0),
                 data.get("discount_code", ""),
-                data.get("discount_percent", 0)
+                data.get("discount_percent", 0),
+                data.get("email_sent", 0)
             ))
         conn.commit()
     except Exception as e:
@@ -405,6 +460,19 @@ def update_order_status(orden_id: str, status: str):
         c.execute('UPDATE orders SET status = %s WHERE id = %s', (status, orden_id))
     else:
         c.execute('UPDATE orders SET status = ? WHERE id = ?', (status, orden_id))
+    conn.commit()
+    conn.commit()
+    conn.close()
+
+
+def mark_order_email_sent(orden_id: str):
+    """Marks an order's email as sent."""
+    conn = get_connection()
+    c = conn.cursor()
+    if USE_POSTGRES:
+        c.execute('UPDATE orders SET email_sent = 1 WHERE id = %s', (orden_id,))
+    else:
+        c.execute('UPDATE orders SET email_sent = 1 WHERE id = ?', (orden_id,))
     conn.commit()
     conn.close()
 
@@ -492,23 +560,25 @@ def get_latest_pending_exam_order():
 
 # --- Discount Codes ---
 
-def create_discount_code(code: str, discount_percent: int, max_uses: int = None, expiry_date: str = None):
-    """Create a new discount code."""
+def create_discount_code(code: str, discount_percent: int, max_uses: int = None, expiry_date: str = None, skip_payment: bool = False):
+    """Create a new discount code. If skip_payment=True, the code bypasses payment entirely."""
     conn = get_connection()
     c = conn.cursor()
     try:
+        skip_payment_int = 1 if skip_payment else 0
         if USE_POSTGRES:
             c.execute('''
-                INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count, expiry_date, created_at)
-                VALUES (%s, %s, 1, %s, 0, %s, %s)
-            ''', (code.upper(), discount_percent, max_uses, expiry_date, datetime.now()))
+                INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count, expiry_date, created_at, skip_payment)
+                VALUES (%s, %s, 1, %s, 0, %s, %s, %s)
+            ''', (code.upper(), discount_percent, max_uses, expiry_date, datetime.now(), skip_payment_int))
         else:
             c.execute('''
-                INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count, expiry_date, created_at)
-                VALUES (?, ?, 1, ?, 0, ?, ?)
-            ''', (code.upper(), discount_percent, max_uses, expiry_date, datetime.now()))
+                INSERT INTO discount_codes (code, discount_percent, active, max_uses, uses_count, expiry_date, created_at, skip_payment)
+                VALUES (?, ?, 1, ?, 0, ?, ?, ?)
+            ''', (code.upper(), discount_percent, max_uses, expiry_date, datetime.now(), skip_payment_int))
         conn.commit()
-        print(f"✅ Código de descuento creado: {code.upper()} ({discount_percent}%)")
+        skip_label = " [SKIP PAYMENT]" if skip_payment else ""
+        print(f"✅ Código de descuento creado: {code.upper()} ({discount_percent}%){skip_label}")
         return True
     except Exception as e:
         print(f"⚠️ Código {code} ya existe o error: {e}")
@@ -562,7 +632,8 @@ def validate_discount_code(code: str) -> dict:
     
     return {
         "valid": True,
-        "discount_percent": row.get("discount_percent", 0)
+        "discount_percent": row.get("discount_percent", 0),
+        "skip_payment": bool(row.get("skip_payment", 0))
     }
 
 
