@@ -132,38 +132,27 @@ def crear_pago_flow(
 def obtener_estado_pago(token: str) -> dict:
     """
     Get the status of a payment by token.
+    Uses manual implementation directly to avoid pyflowcl signature issues.
     NEVER raises exceptions - always returns a dict.
     """
     token_preview = token[:20] if len(token) > 20 else token
     print(f"🔵 obtener_estado_pago called with token={token_preview}...")
     
-    client = get_flow_client()
+    # Check if Flow is configured
+    api_key = os.getenv("FLOW_API_KEY")
+    api_secret = os.getenv("FLOW_API_SECRET")
     
-    if not client:
+    if not api_key or not api_secret:
+        print("⚠️ Flow credentials not configured, returning mock PAID status")
         return {"status": 2, "statusStr": "PAGADA", "mock": True}
     
-    # Try pyflowcl first, but ALWAYS fallback to manual on ANY error
-    try:
-        print(f"🔍 Trying pyflowcl getStatus...")
-        resultado = Payment.getStatus(client, {"token": token.strip()})
-        print(f"✅ pyflowcl succeeded")
-        # Convert PaymentStatusResponse to dict if needed
-        if hasattr(resultado, '__dict__'):
-            return vars(resultado)
-        return resultado
-    except Exception as e:
-        # Catch ALL exceptions including GenericError from pyflowcl
-        error_msg = str(e)[:100] if str(e) else type(e).__name__
-        print(f"⚠️ pyflowcl failed: {error_msg}")
-        print(f"🔄 Switching to manual implementation...")
-    
-    # Always try manual method as fallback
+    # Use manual implementation directly (pyflowcl has signature issues)
     try:
         return obtener_estado_pago_manual(token)
-    except Exception as e2:
-        print(f"❌ Manual method also failed: {e2}")
+    except Exception as e:
+        print(f"❌ Manual method failed: {e}")
         # Return a safe default that won't crash the webhook
-        return {"error": str(e2), "status": 0}
+        return {"error": str(e), "status": 0}
 
 def obtener_estado_pago_manual(token: str) -> dict:
     """Manual implementation of Flow getStatus to avoid library issues."""
