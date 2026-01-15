@@ -395,7 +395,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             img_stream = visuals_data[current_section_title]
             
             try:
-                doc.add_picture(img_stream, width=Inches(3.2) if columnas=="doble" else Inches(5.0))
+                # 10% larger images for better visibility (3.2->3.52, 5.0->5.5)
+                doc.add_picture(img_stream, width=Inches(3.52) if columnas=="doble" else Inches(5.5))
                 last_p = doc.paragraphs[-1]
                 last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 last_p.paragraph_format.space_after = Pt(6)  # Minimal spacing after image
@@ -499,16 +500,22 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
             continue
 
         encabezado = lineas[0].strip()
-        if "preguntas de práctica" in encabezado.lower():
+        # Limpiar markdown headers (## PREGUNTAS -> PREGUNTAS)
+        encabezado = re.sub(r'^#{1,6}\s*', '', encabezado)
+        
+        if "preguntas de práctica" in encabezado.lower() or "preguntas" == encabezado.lower():
             p = doc.add_paragraph()
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            run = p.add_run("Preguntas de práctica")
+            run = p.add_run("Preguntas de práctica" if "práctica" in encabezado.lower() else "Preguntas")
             run.bold = True
             _set_run_calibri(run)
             run.font.size = Pt(13)
             aplicar_estilo(p, "subtitulo", color, espaciado_extra=True)
             p.paragraph_format.space_after = Pt(6)
         else:
+            # Skip empty headers after cleaning
+            if not encabezado:
+                continue
             p = doc.add_paragraph()
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             run = p.add_run(encabezado)
@@ -521,8 +528,11 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
             linea = linea.strip()
             if not linea:
                 continue
-            # ❌ Antes: se removían **...**
-            # ✅ Ahora: se mantienen para que agregar_texto_con_negrita aplique bold
+            # Limpiar markdown headers de las líneas también
+            linea = re.sub(r'^#{1,6}\s*', '', linea)
+            if not linea:
+                continue
+            # Se mantienen **...** para que agregar_texto_con_negrita aplique bold
             para = doc.add_paragraph()
             para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             agregar_texto_con_negrita(para, linea)

@@ -417,11 +417,12 @@
                             <th>Cliente</th>
                             <th>Tipo</th>
                             <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for order in recent_orders[:10] %}
-                        <tr>
+                        <tr id="order-row-{{ order.id }}">
                             <td>{{ order.client }}</td>
                             <td>
                                 {% if order.service_type == 'transcription' %}📝
@@ -429,7 +430,7 @@
                                 {% elif order.service_type == 'meeting' %}🤝
                                 {% else %}📦{% endif %}
                             </td>
-                            <td>
+                            <td id="order-status-{{ order.id }}">
                                 {% if order.status == 'completed' %}
                                 <span class="badge badge-success">Completado</span>
                                 {% elif order.status == 'processing' %}
@@ -440,6 +441,22 @@
                                 <span class="badge badge-info">Pendiente</span>
                                 {% else %}
                                 <span class="badge">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td id="order-actions-{{ order.id }}">
+                                {% if order.status == 'pending' or order.status == 'paid' or order.status ==
+                                'processing' %}
+                                <button onclick="completeOrder('{{ order.id }}')"
+                                    style="padding: 0.3rem 0.6rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.75rem;">
+                                    ✓ Completar
+                                </button>
+                                {% elif order.status == 'completed' %}
+                                <button onclick="markPending('{{ order.id }}')"
+                                    style="padding: 0.3rem 0.6rem; background: rgba(243,156,18,0.2); border: 1px solid rgba(243,156,18,0.5); border-radius: 6px; color: var(--warning); cursor: pointer; font-size: 0.75rem;">
+                                    ↩ Pendiente
+                                </button>
+                                {% else %}
+                                <span style="color: var(--text-gray); font-size: 0.75rem;">-</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -654,6 +671,62 @@
                     location.reload();
                 } else {
                     alert('Error al cambiar estado del código');
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            }
+        }
+
+        // Complete an order
+        async function completeOrder(orderId) {
+            try {
+                const response = await fetch(`/api/admin/complete-order/${orderId}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    // Update UI without full reload
+                    const statusCell = document.getElementById(`order-status-${orderId}`);
+                    const actionsCell = document.getElementById(`order-actions-${orderId}`);
+
+                    if (statusCell) {
+                        statusCell.innerHTML = '<span class="badge badge-success">Completado</span>';
+                    }
+                    if (actionsCell) {
+                        actionsCell.innerHTML = `<button onclick="markPending('${orderId}')" 
+                            style="padding: 0.3rem 0.6rem; background: rgba(243,156,18,0.2); border: 1px solid rgba(243,156,18,0.5); border-radius: 6px; color: var(--warning); cursor: pointer; font-size: 0.75rem;">
+                            ↩ Pendiente
+                        </button>`;
+                    }
+                } else {
+                    alert('Error al completar la orden');
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            }
+        }
+
+        // Mark an order as pending
+        async function markPending(orderId) {
+            try {
+                const response = await fetch(`/api/admin/mark-pending/${orderId}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    // Update UI without full reload
+                    const statusCell = document.getElementById(`order-status-${orderId}`);
+                    const actionsCell = document.getElementById(`order-actions-${orderId}`);
+
+                    if (statusCell) {
+                        statusCell.innerHTML = '<span class="badge badge-info">Pendiente</span>';
+                    }
+                    if (actionsCell) {
+                        actionsCell.innerHTML = `<button onclick="completeOrder('${orderId}')" 
+                            style="padding: 0.3rem 0.6rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.75rem;">
+                            ✓ Completar
+                        </button>`;
+                    }
+                } else {
+                    alert('Error al marcar como pendiente');
                 }
             } catch (e) {
                 alert('Error de conexión');

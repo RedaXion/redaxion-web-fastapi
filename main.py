@@ -2305,6 +2305,36 @@ async def admin_create_code(
         return RedirectResponse(url="/admin/dashboard", status_code=303)
     else:
         raise HTTPException(status_code=400, detail=f"El código {code} ya existe")
+@app.post("/api/admin/complete-order/{orden_id}")
+async def admin_complete_order(request: Request, orden_id: str):
+    """Mark an order as completed (admin only)."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    order = database.get_order(orden_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    
+    database.update_order_status(orden_id, "completed")
+    print(f"✅ [ADMIN] Orden {orden_id} marcada como completada manualmente")
+    return {"success": True, "message": f"Orden {orden_id} marcada como completada"}
+
+
+@app.post("/api/admin/mark-pending/{orden_id}")
+async def admin_mark_pending(request: Request, orden_id: str):
+    """Mark an order as pending (admin only)."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    order = database.get_order(orden_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    
+    database.update_order_status(orden_id, "pending")
+    print(f"⏳ [ADMIN] Orden {orden_id} marcada como pendiente manualmente")
+    return {"success": True, "message": f"Orden {orden_id} marcada como pendiente"}
+
+
 @app.post("/api/comments")
 async def post_comment(
     order_id: Optional[str] = Form(None),
