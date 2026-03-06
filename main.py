@@ -344,43 +344,43 @@ Equipo RedaXion.
         )
 
 # --- Endpoints ---
-
+# TEMPORARY MAINTENANCE OVERRIDE
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 @app.get("/orden", response_class=HTMLResponse)
 async def read_orden(request: Request):
-    return templates.TemplateResponse("orden.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 @app.get("/mis-ordenes", response_class=HTMLResponse)
 async def mis_ordenes(request: Request):
-    return templates.TemplateResponse("mis_ordenes.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
     
 @app.get("/ayuda", response_class=HTMLResponse)
 async def ayuda(request: Request):
-    return templates.TemplateResponse("ayuda.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 @app.get("/como-funciona", response_class=HTMLResponse)
 async def como_funciona(request: Request):
-    return templates.TemplateResponse("como_funciona.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 @app.get("/testimonios", response_class=HTMLResponse)
 async def testimonios(request: Request):
-    return templates.TemplateResponse("testimonios.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 # --- Special Services Routes ---
 @app.get("/generador-pruebas", response_class=HTMLResponse)
 async def generador_pruebas(request: Request):
-    return templates.TemplateResponse("generador_pruebas.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 @app.get("/transcribe-reunion", response_class=HTMLResponse)
 async def transcribe_reunion(request: Request):
-    return templates.TemplateResponse("transcribe_reunion.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 @app.get("/soluciones-ia", response_class=HTMLResponse)
 async def soluciones_ia(request: Request):
-    return templates.TemplateResponse("soluciones_ia.html", {"request": request})
+    return templates.TemplateResponse("mantenimiento.html", {"request": request})
 
 # --- Authentication Routes ---
 @app.get("/login", response_class=HTMLResponse)

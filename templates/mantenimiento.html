@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mantenimiento | RedaXion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--bg-dark); /* Ensure this variable exists or fallback to #111 */
+            color: white;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+        }
+        .maintenance-container {
+            max-width: 600px;
+            padding: 3rem;
+            background: rgba(28, 198, 194, 0.05); /* Slight cyan tint */
+            border: 1px solid var(--accent-cyan);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h1 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+        }
+        p {
+            color: var(--text-gray);
+            line-height: 1.6;
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="maintenance-container">
+        <div class="icon">🛠️</div>
+        <h1>Sitio en Mantenimiento</h1>
+        <p>Estamos realizando mejoras en nuestra plataforma. RedaXion volverá a estar disponible muy pronto.</p>
+        <p>Gracias por tu paciencia.</p>
+    </div>
+</body>
+</html>
