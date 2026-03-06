@@ -628,45 +628,90 @@ María García - QA Lead"></textarea>
                 // Step 2: Upload directly to GCS using signed URL
                 progressText.textContent = 'Subiendo audio a la nube... 0%';
 
-                await new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
+                let finalAudioUrl = public_url;
 
-                    xhr.upload.addEventListener('progress', function (event) {
-                        if (event.lengthComputable) {
-                            const percentComplete = Math.round((event.loaded / event.total) * 100);
-                            progressBar.style.width = percentComplete + '%';
-                            progressText.textContent = `Subiendo audio... ${percentComplete}%`;
-                        }
+                try {
+                    await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+
+                        xhr.upload.addEventListener('progress', function (event) {
+                            if (event.lengthComputable) {
+                                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                                progressBar.style.width = percentComplete + '%';
+                                progressText.textContent = `Subiendo audio... ${percentComplete}%`;
+                            }
+                        });
+
+                        xhr.addEventListener('load', function () {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                resolve(public_url);
+                            } else {
+                                reject(new Error('GCS_HTTP_ERROR_' + xhr.status));
+                            }
+                        });
+
+                        xhr.addEventListener('error', function () {
+                            reject(new Error('Error de red al subir a GCS'));
+                        });
+
+                        xhr.open('PUT', upload_url);
+                        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                        xhr.send(audioFile);
                     });
+                } catch (gcsError) {
+                    console.warn("⚠️ GCS Upload Failed:", gcsError);
+                    progressText.textContent = 'GCS falló. Intentando subida de emergencia (Local)... 0%';
+                    progressBar.style.width = '0%';
+                    progressBar.style.background = 'linear-gradient(90deg, #f39c12, #e74c3c)'; // Orange/Red warning colors
 
-                    xhr.addEventListener('load', function () {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            resolve();
-                        } else {
-                            reject(new Error('Error subiendo a GCS: ' + xhr.status));
-                        }
+                    // Fallback to local upload
+                    finalAudioUrl = await new Promise((resolve, reject) => {
+                        const localXhr = new XMLHttpRequest();
+                        const localUrl = `/api/upload-local/${orden_id}`;
+
+                        localXhr.upload.addEventListener('progress', function (event) {
+                            if (event.lengthComputable) {
+                                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                                progressBar.style.width = percentComplete + '%';
+                                progressText.textContent = `Subida de emergencia... ${percentComplete}%`;
+                            }
+                        });
+
+                        localXhr.addEventListener('load', function () {
+                            if (localXhr.status >= 200 && localXhr.status < 300) {
+                                try {
+                                    const response = JSON.parse(localXhr.responseText);
+                                    const localFileUrl = window.location.origin + '/' + response.path;
+                                    resolve(localFileUrl);
+                                } catch (e) {
+                                    resolve(window.location.origin + `/static/uploads/${orden_id}_audio.mp3`);
+                                }
+                            } else {
+                                reject(new Error('Fallback local falló: ' + localXhr.status));
+                            }
+                        });
+
+                        localXhr.addEventListener('error', function () {
+                            reject(new Error('Error de red en subida local'));
+                        });
+
+                        localXhr.open('PUT', localUrl);
+                        localXhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                        localXhr.send(audioFile);
                     });
-
-                    xhr.addEventListener('error', function () {
-                        reject(new Error('Error de red al subir a GCS'));
-                    });
-
-                    xhr.open('PUT', upload_url);
-                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-                    xhr.send(audioFile);
-                });
+                }
 
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Subida completa. Creando orden...';
 
-                // Step 3: Create meeting order with GCS audio URL and selected gateway
+                // Step 3: Create meeting order with final audio URL (GCS or Local) and selected gateway
                 const orderFormData = new FormData();
                 orderFormData.append('nombre', document.querySelector('[name="nombre"]').value);
                 orderFormData.append('correo', document.querySelector('[name="correo"]').value);
                 orderFormData.append('titulo_reunion', document.querySelector('[name="titulo_reunion"]').value);
                 orderFormData.append('asistentes', document.querySelector('[name="asistentes"]').value);
                 orderFormData.append('agenda', document.querySelector('[name="agenda"]').value);
-                orderFormData.append('audio_url', public_url);
+                orderFormData.append('audio_url', finalAudioUrl);
                 orderFormData.append('orden_id', orden_id);
                 orderFormData.append('orden_id', orden_id);
                 orderFormData.append('gateway', gateway);  // User's payment choice
