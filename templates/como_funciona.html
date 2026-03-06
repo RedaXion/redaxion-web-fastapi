@@ -33,10 +33,11 @@
                 <div class="video-container"
                     style="flex: 1; min-width: 300px; max-width: 600px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
                     <!-- Removed poster attribute so browser renders first frame, unless user provides a valid poster image -->
-                    <!-- Video (Local Static) -->
+                    <!-- Video (GCS) -->
                     <video controls width="100%" style="display: block; background: #000; border-radius: 20px;"
                         onerror="this.style.display='none'; document.getElementById('video-fallback').style.display='block';">
-                        <source src="/static/video/explainer.mp4" type="video/mp4">
+                        <source src="https://storage.googleapis.com/redaxion_audios/Co%CC%81mo%20Funciona.mp4"
+                            type="video/mp4">
                         Tu navegador no soporta el elemento de video.
                     </video>
                 </div>
