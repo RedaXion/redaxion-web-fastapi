@@ -2231,6 +2231,7 @@ async def admin_dashboard(request: Request):
         sales = database.get_sales_summary()
         costs = database.calculate_estimated_costs(sales)
         recent_orders = database.get_recent_orders(20)
+        all_orders = database.get_all_orders()
         discount_stats = database.get_discount_codes_stats()
         comments = database.get_all_comments(50)
         
@@ -2240,6 +2241,7 @@ async def admin_dashboard(request: Request):
             "sales": sales,
             "costs": costs,
             "recent_orders": recent_orders,
+            "all_orders": all_orders,
             "discount_stats": discount_stats,
             "comments": comments
         })
@@ -2294,17 +2296,51 @@ async def admin_activate_code(request: Request, code: str):
 async def admin_create_code(
     request: Request,
     code: str = Form(...),
-    discount_percent: int = Form(...)
+    discount_percent: int = Form(...),
+    max_uses: Optional[int] = Form(None),
+    expiry_date: Optional[str] = Form(None)
 ):
-    """Create a new discount code."""
+    """Create a new discount code with optional max_uses and expiry_date."""
     if not verify_admin_session(request):
         raise HTTPException(status_code=401, detail="Not authorized")
     
-    success = database.create_discount_code(code, discount_percent)
+    # Normalize empty strings to None
+    expiry = expiry_date.strip() if expiry_date and expiry_date.strip() else None
+    uses_limit = max_uses if max_uses and max_uses > 0 else None
+    
+    success = database.create_discount_code(code, discount_percent, max_uses=uses_limit, expiry_date=expiry)
     if success:
         return RedirectResponse(url="/admin/dashboard", status_code=303)
     else:
         raise HTTPException(status_code=400, detail=f"El código {code} ya existe")
+
+
+@app.delete("/api/admin/delete-order/{orden_id}")
+async def admin_delete_order(request: Request, orden_id: str):
+    """Permanently delete an order (admin only)."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    deleted = database.delete_order(orden_id)
+    if deleted:
+        print(f"🗑️ [ADMIN] Orden {orden_id} eliminada")
+        return {"success": True, "message": f"Orden {orden_id} eliminada"}
+    else:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+
+
+@app.delete("/api/admin/delete-code/{code}")
+async def admin_delete_code(request: Request, code: str):
+    """Permanently delete a discount code (admin only)."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    deleted = database.delete_discount_code(code)
+    if deleted:
+        print(f"🗑️ [ADMIN] Código {code} eliminado")
+        return {"success": True, "message": f"Código {code} eliminado"}
+    else:
+        raise HTTPException(status_code=404, detail="Código no encontrado")
 @app.post("/api/admin/complete-order/{orden_id}")
 async def admin_complete_order(request: Request, orden_id: str):
     """Mark an order as completed (admin only)."""

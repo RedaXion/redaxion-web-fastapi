@@ -288,20 +288,20 @@
             </div>
             <div class="stat-card">
                 <div class="stat-label">📦 Órdenes Totales</div>
-                <div class="stat-value">{{ sales.total_orders | default(0) }}</div>
-                <div class="stat-sub">{{ sales.completed_orders | default(0) }} completadas</div>
+                <div class="stat-value" id="stat-total-orders">{{ sales.total_orders | default(0) }}</div>
+                <div class="stat-sub" id="stat-completed-orders">{{ sales.completed_orders | default(0) }} completadas</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">💰 Ingresos Brutos</div>
-                <div class="stat-value positive">${{ "{:,.0f}".format(sales.total_revenue | default(0)) }}</div>
+                <div class="stat-value positive" id="stat-revenue">${{ "{:,.0f}".format(sales.total_revenue | default(0)) }}</div>
                 <div class="stat-sub">CLP</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">📈 Ganancia Neta</div>
-                <div class="stat-value {% if costs.net_profit > 0 %}positive{% else %}negative{% endif %}">
+                <div class="stat-value {% if costs.net_profit > 0 %}positive{% else %}negative{% endif %}" id="stat-net-profit">
                     ${{ "{:,.0f}".format(costs.net_profit | default(0)) }}
                 </div>
-                <div class="stat-sub">{{ costs.margin_percent | default(0) }}% margen</div>
+                <div class="stat-sub" id="stat-margin">{{ costs.margin_percent | default(0) }}% margen</div>
             </div>
         </div>
 
@@ -394,76 +394,108 @@
         </div>
 
         <!-- Top Pages -->
-        <div class="charts-grid">
-            <div class="section">
-                <h3 class="section-title">🔥 Páginas Más Visitadas</h3>
-                <ul class="top-pages">
-                    {% for page in analytics.views_by_page %}
-                    <li>
-                        <span class="page-path">{{ page.path }}</span>
-                        <span class="page-count">{{ page.count }} visitas</span>
-                    </li>
+        <div class="section">
+            <h3 class="section-title">🔥 Páginas Más Visitadas</h3>
+            <ul class="top-pages">
+                {% for page in analytics.views_by_page %}
+                <li>
+                    <span class="page-path">{{ page.path }}</span>
+                    <span class="page-count">{{ page.count }} visitas</span>
+                </li>
+                {% endfor %}
+                {% if not analytics.views_by_page %}
+                <li>No hay datos aún</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Full Order History -->
+        <div class="section" style="overflow-x: auto;">
+            <h3 class="section-title">📋 Historial Completo de Órdenes ({{ all_orders | length }})</h3>
+            <table id="orders-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Email</th>
+                        <th>Tipo</th>
+                        <th>Descuento</th>
+                        <th>Monto</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in all_orders %}
+                    <tr id="order-row-{{ order.id }}">
+                        <td style="font-family: monospace; font-size: 0.75rem; color: var(--text-gray);">
+                            {{ order.id[:8] }}...
+                        </td>
+                        <td style="font-weight: 600;">{{ order.client }}</td>
+                        <td style="font-size: 0.8rem; color: var(--text-gray);">{{ order.email }}</td>
+                        <td>
+                            {% if order.service_type == 'transcription' %}📝 Transcripción
+                            {% elif order.service_type == 'exam' %}📋 Examen
+                            {% elif order.service_type == 'meeting' %}🤝 Reunión
+                            {% else %}📦 Orden{% endif %}
+                        </td>
+                        <td style="font-family: monospace; font-size: 0.8rem;">
+                            {% if order.discount_code %}
+                            <span style="color: var(--accent-cyan);">{{ order.discount_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-gray);">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: 600;">
+                            {% if order.paid_amount %}
+                            ${{ "{:,}".format(order.paid_amount | int) }}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td id="order-status-{{ order.id }}">
+                            {% if order.status == 'completed' %}
+                            <span class="badge badge-success">Completado</span>
+                            {% elif order.status == 'processing' %}
+                            <span class="badge badge-warning">Procesando</span>
+                            {% elif order.status == 'paid' %}
+                            <span class="badge badge-info">Pagado</span>
+                            {% elif order.status == 'pending' %}
+                            <span class="badge badge-warning">Pendiente</span>
+                            {% elif order.status == 'error' %}
+                            <span class="badge badge-danger">Error</span>
+                            {% else %}
+                            <span class="badge">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-gray); white-space: nowrap;">
+                            {{ order.created_at[:16] if order.created_at else '—' }}
+                        </td>
+                        <td id="order-actions-{{ order.id }}" style="display: flex; gap: 0.4rem; align-items: center;">
+                            {% if order.status in ['pending', 'paid', 'processing'] %}
+                            <button onclick="completeOrder('{{ order.id }}')"
+                                style="padding: 0.3rem 0.5rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.7rem; white-space: nowrap;">
+                                ✓ Completar
+                            </button>
+                            {% elif order.status == 'completed' %}
+                            <button onclick="markPending('{{ order.id }}')"
+                                style="padding: 0.3rem 0.5rem; background: rgba(243,156,18,0.2); border: 1px solid rgba(243,156,18,0.5); border-radius: 6px; color: var(--warning); cursor: pointer; font-size: 0.7rem; white-space: nowrap;">
+                                ↩ Pendiente
+                            </button>
+                            {% endif %}
+                            <button onclick="deleteOrder('{{ order.id }}', '{{ order.client }}')"
+                                style="padding: 0.3rem 0.5rem; background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4); border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.7rem;">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
                     {% endfor %}
-                    {% if not analytics.views_by_page %}
-                    <li>No hay datos aún</li>
+                    {% if not all_orders %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-gray); padding: 2rem;">No hay órdenes aún</td>
+                    </tr>
                     {% endif %}
-                </ul>
-            </div>
-            <div class="section">
-                <h3 class="section-title">📋 Órdenes Recientes</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Tipo</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in recent_orders[:10] %}
-                        <tr id="order-row-{{ order.id }}">
-                            <td>{{ order.client }}</td>
-                            <td>
-                                {% if order.service_type == 'transcription' %}📝
-                                {% elif order.service_type == 'exam' %}📋
-                                {% elif order.service_type == 'meeting' %}🤝
-                                {% else %}📦{% endif %}
-                            </td>
-                            <td id="order-status-{{ order.id }}">
-                                {% if order.status == 'completed' %}
-                                <span class="badge badge-success">Completado</span>
-                                {% elif order.status == 'processing' %}
-                                <span class="badge badge-warning">Procesando</span>
-                                {% elif order.status == 'paid' %}
-                                <span class="badge badge-info">Pagado</span>
-                                {% elif order.status == 'pending' %}
-                                <span class="badge badge-info">Pendiente</span>
-                                {% else %}
-                                <span class="badge">{{ order.status }}</span>
-                                {% endif %}
-                            </td>
-                            <td id="order-actions-{{ order.id }}">
-                                {% if order.status == 'pending' or order.status == 'paid' or order.status ==
-                                'processing' %}
-                                <button onclick="completeOrder('{{ order.id }}')"
-                                    style="padding: 0.3rem 0.6rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.75rem;">
-                                    ✓ Completar
-                                </button>
-                                {% elif order.status == 'completed' %}
-                                <button onclick="markPending('{{ order.id }}')"
-                                    style="padding: 0.3rem 0.6rem; background: rgba(243,156,18,0.2); border: 1px solid rgba(243,156,18,0.5); border-radius: 6px; color: var(--warning); cursor: pointer; font-size: 0.75rem;">
-                                    ↩ Pendiente
-                                </button>
-                                {% else %}
-                                <span style="color: var(--text-gray); font-size: 0.75rem;">-</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
 
         <!-- Projection -->
@@ -496,13 +528,29 @@
 
             <!-- Create Code Form -->
             <form action="/api/admin/create-code" method="POST"
-                style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <input type="text" name="code" placeholder="NUEVO_CODIGO" required
-                    style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-family: monospace; text-transform: uppercase;">
-                <input type="number" name="discount_percent" placeholder="%" min="1" max="100" required
-                    style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; width: 80px;">
+                style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: flex-end;">
+                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-gray);">Código *</label>
+                    <input type="text" name="code" placeholder="NUEVO_CODIGO" required
+                        style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-family: monospace; text-transform: uppercase; min-width: 140px;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-gray);">Descuento % *</label>
+                    <input type="number" name="discount_percent" placeholder="%" min="1" max="100" required
+                        style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; width: 80px;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-gray);">Usos máx. (opcional)</label>
+                    <input type="number" name="max_uses" placeholder="∞" min="1"
+                        style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff; width: 100px;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                    <label style="font-size: 0.75rem; color: var(--text-gray);">Fecha expiración (opcional)</label>
+                    <input type="date" name="expiry_date"
+                        style="padding: 0.6rem 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+                </div>
                 <button type="submit"
-                    style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-orange)); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600;">
+                    style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-orange)); border: none; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600; height: 38px;">
                     + Crear Código
                 </button>
             </form>
@@ -513,16 +561,24 @@
                         <th>Código</th>
                         <th>Descuento</th>
                         <th>Usos</th>
+                        <th>Límite</th>
+                        <th>Expira</th>
                         <th>Estado</th>
-                        <th>Acción</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for code in discount_stats.codes %}
-                    <tr>
+                    <tr id="code-row-{{ code.code }}">
                         <td style="font-family: monospace; font-weight: 600;">{{ code.code }}</td>
                         <td>{{ code.discount_percent }}%</td>
                         <td>{{ code.uses_count or 0 }}</td>
+                        <td style="color: var(--text-gray);">
+                            {% if code.max_uses %}{{ code.max_uses }}{% else %}<span title="Sin límite">∞</span>{% endif %}
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-gray);">
+                            {% if code.expiry_date %}{{ code.expiry_date[:10] }}{% else %}—{% endif %}
+                        </td>
                         <td>
                             {% if code.active %}
                             <span class="badge badge-success">Activo</span>
@@ -530,18 +586,22 @@
                             <span class="badge badge-danger">Inactivo</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td style="display: flex; gap: 0.4rem;">
                             {% if code.active %}
                             <button onclick="toggleCode('{{ code.code }}', 'deactivate')"
-                                style="padding: 0.3rem 0.8rem; background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.5); border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.8rem;">
+                                style="padding: 0.3rem 0.6rem; background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.5); border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.75rem;">
                                 Desactivar
                             </button>
                             {% else %}
                             <button onclick="toggleCode('{{ code.code }}', 'activate')"
-                                style="padding: 0.3rem 0.8rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.8rem;">
+                                style="padding: 0.3rem 0.6rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.75rem;">
                                 Activar
                             </button>
                             {% endif %}
+                            <button onclick="deleteCode('{{ code.code }}')"
+                                style="padding: 0.3rem 0.5rem; background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.35); border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.75rem;">
+                                🗑️
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -712,21 +772,98 @@
                     method: 'POST'
                 });
                 if (response.ok) {
-                    // Update UI without full reload
                     const statusCell = document.getElementById(`order-status-${orderId}`);
                     const actionsCell = document.getElementById(`order-actions-${orderId}`);
 
                     if (statusCell) {
-                        statusCell.innerHTML = '<span class="badge badge-info">Pendiente</span>';
+                        statusCell.innerHTML = '<span class="badge badge-warning">Pendiente</span>';
                     }
                     if (actionsCell) {
                         actionsCell.innerHTML = `<button onclick="completeOrder('${orderId}')" 
-                            style="padding: 0.3rem 0.6rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.75rem;">
+                            style="padding: 0.3rem 0.5rem; background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.5); border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.7rem; white-space: nowrap;">
                             ✓ Completar
+                        </button>
+                        <button onclick="deleteOrder('${orderId}')" 
+                            style="padding: 0.3rem 0.5rem; background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4); border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.7rem;">
+                            🗑️
                         </button>`;
                     }
                 } else {
                     alert('Error al marcar como pendiente');
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            }
+        }
+
+        // Delete an order permanently
+        async function deleteOrder(orderId, clientName) {
+            const name = clientName || orderId.substring(0, 8);
+            if (!confirm(`¿Eliminar permanentemente la orden de "${name}"?\n\nEsta acción no se puede deshacer.`)) return;
+            try {
+                const response = await fetch(`/api/admin/delete-order/${orderId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    const row = document.getElementById(`order-row-${orderId}`);
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 300);
+                    }
+                    // Refresh financial stats after deletion
+                    await refreshStats();
+                } else {
+                    alert('Error al eliminar la orden');
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            }
+        }
+
+        // Refresh stat cards from API without reloading the page
+        async function refreshStats() {
+            try {
+                const res = await fetch('/api/admin/metrics');
+                if (!res.ok) return;
+                const data = await res.json();
+                const fmt = (n) => '$' + new Intl.NumberFormat('es-CL').format(Math.round(n));
+
+                const elTotal = document.getElementById('stat-total-orders');
+                const elCompleted = document.getElementById('stat-completed-orders');
+                const elRevenue = document.getElementById('stat-revenue');
+                const elProfit = document.getElementById('stat-net-profit');
+                const elMargin = document.getElementById('stat-margin');
+
+                if (elTotal) elTotal.textContent = data.sales.total_orders;
+                if (elCompleted) elCompleted.textContent = data.sales.completed_orders + ' completadas';
+                if (elRevenue) elRevenue.textContent = fmt(data.sales.total_revenue);
+                if (elProfit) {
+                    elProfit.textContent = fmt(data.costs.net_profit);
+                    elProfit.className = 'stat-value ' + (data.costs.net_profit >= 0 ? 'positive' : 'negative');
+                }
+                if (elMargin) elMargin.textContent = data.costs.margin_percent + '% margen';
+            } catch (e) {
+                console.warn('No se pudieron refrescar las estadísticas:', e);
+            }
+        }
+
+        // Delete a discount code permanently
+        async function deleteCode(code) {
+            if (!confirm(`¿Eliminar permanentemente el código "${code}"?\n\nEsta acción no se puede deshacer.`)) return;
+            try {
+                const response = await fetch(`/api/admin/delete-code/${code}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    const row = document.getElementById(`code-row-${code}`);
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 300);
+                    }
+                } else {
+                    alert('Error al eliminar el código');
                 }
             } catch (e) {
                 alert('Error de conexión');

@@ -3,20 +3,27 @@ import requests
 import time
 import random
 from io import BytesIO
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 # Configuration
-NAPKIN_API_KEY = os.getenv("NAPKIN_API_KEY")
 NAPKIN_API_URL = "https://api.napkin.ai"
 
-# Rate limiting: Max 2 requests/second during developer preview
-RATE_LIMIT_DELAY = 0.6  # seconds between requests (conservative)
+# Fallback chain: Primary → Backup 1 → Backup 2
+# Each entry: (account_name, api_key)
+NAPKIN_ACCOUNTS = [
+    ("Principal",   os.getenv("NAPKIN_API_KEY")),
+    ("RXRESPALDO",  os.getenv("NAPKIN_API_KEY_BACKUP1")),
+    ("RX2RESPALDO", os.getenv("NAPKIN_API_KEY_BACKUP2")),
+]
 
-# Visual style variations for more diverse outputs
+# Rate limiting
+RATE_LIMIT_DELAY = 0.6  # seconds between requests
+
+# Visual style variations
 VISUAL_QUERIES = [
     "diagram",
     "flowchart",
@@ -28,251 +35,240 @@ VISUAL_QUERIES = [
 ]
 
 
-def create_visual_request(content: str, language: str = "es-ES") -> Optional[str]:
+class NapkinCreditsExhausted(Exception):
+    """Raised when a Napkin account returns 402 (insufficient credits)."""
+    pass
+
+
+def _create_visual_request(content: str, language: str, api_key: str) -> Optional[str]:
     """
-    Create a visual generation request with Napkin AI.
-    
-    Args:
-        content: Text content to convert into a visual diagram
-        language: BCP 47 language code (es-ES, en-US, etc.)
-    
+    Create a visual generation request with a specific API key.
+
     Returns:
-        Request ID if successful, None if failed
+        request_id (str) if successful.
+        None if any non-credit error occurred.
+
+    Raises:
+        NapkinCreditsExhausted if the account has no credits (402).
     """
-    if not NAPKIN_API_KEY:
-        print("⚠️ No NAPKIN_API_KEY configured. Skipping Napkin visual generation.")
-        return None
-    
-    # Select a random visual style for variety
     visual_style = random.choice(VISUAL_QUERIES)
-    print(f"   🎲 Estilo visual seleccionado: {visual_style}")
-    
+    print(f"   🎲 Estilo visual: {visual_style}")
+
     headers = {
-        "Authorization": f"Bearer {NAPKIN_API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "content": content,
         "format": "png",
         "language": language,
-        "visual_query": visual_style,  # Random visual style for variety
+        "visual_query": visual_style,
         "number_of_visuals": 1
     }
-    
+
     try:
-        print(f"🎨 Creando solicitud de visual en Napkin AI...")
-        print(f"   URL: {NAPKIN_API_URL}/v1/visual")
-        print(f"   Content length: {len(content)} chars")
-        
         response = requests.post(
             f"{NAPKIN_API_URL}/v1/visual",
             headers=headers,
             json=payload,
             timeout=30
         )
-        
-        # Log rate limit info
-        if "x-ratelimit-remaining" in response.headers:
-            remaining = response.headers.get("x-ratelimit-remaining")
+
+        # Log rate limit info if available
+        remaining = response.headers.get("x-ratelimit-remaining")
+        if remaining:
             print(f"   Rate limit restante: {remaining}")
-        
-        print(f"   Status code: {response.status_code}")
-        
+
+        print(f"   Status: {response.status_code}")
+
+        if response.status_code == 402:
+            # Credits exhausted — signal to try next account
+            raise NapkinCreditsExhausted(f"Créditos agotados (402)")
+
         if response.status_code in [200, 201]:
             result = response.json()
-            print(f"   Response keys: {list(result.keys())}")
             request_id = result.get("id") or result.get("request_id")
-            
             if request_id:
-                print(f"✅ Solicitud creada: {request_id}")
+                print(f"   ✅ Request creado: {request_id}")
                 return request_id
             else:
-                print(f"❌ No se obtuvo request_id en la respuesta")
-                print(f"   Full response: {result}")
+                print(f"   ❌ No se obtuvo request_id. Respuesta: {result}")
                 return None
-        else:
-            print(f"❌ Error al crear visual: {response.status_code}")
-            print(f"   Respuesta completa: {response.text}")
-            return None
-            
+
+        print(f"   ❌ Error HTTP {response.status_code}: {response.text[:200]}")
+        return None
+
+    except NapkinCreditsExhausted:
+        raise  # propagate to caller
     except requests.exceptions.Timeout:
-        print(f"❌ Timeout al crear visual en Napkin AI")
+        print(f"   ❌ Timeout al crear solicitud")
         return None
     except Exception as e:
-        print(f"❌ Error inesperado al crear visual: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"   ❌ Error inesperado: {e}")
         return None
 
 
-def poll_visual_status(request_id: str, timeout: int = 60, poll_interval: float = 2.0) -> Optional[Dict[str, Any]]:
+def _poll_visual_status(
+    request_id: str,
+    api_key: str,
+    timeout: int = 60,
+    poll_interval: float = 2.0
+) -> Optional[Dict[str, Any]]:
     """
-    Poll the status of a visual generation request until completion or timeout.
-    
-    Args:
-        request_id: The request ID from create_visual_request
-        timeout: Maximum time to wait in seconds (default: 60)
-        poll_interval: Time between status checks in seconds (default: 2.0)
-    
-    Returns:
-        Status data with generated_files if successful, None if failed
+    Poll the status of a visual generation request.
+    Returns status data on completion, None on failure/timeout.
     """
-    if not NAPKIN_API_KEY:
-        return None
-    
-    headers = {
-        "Authorization": f"Bearer {NAPKIN_API_KEY}"
-    }
-    
+    headers = {"Authorization": f"Bearer {api_key}"}
     start_time = time.time()
     attempt = 0
-    
+
     while (time.time() - start_time) < timeout:
         attempt += 1
-        
         try:
             response = requests.get(
                 f"{NAPKIN_API_URL}/v1/visual/{request_id}/status",
                 headers=headers,
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 status_data = response.json()
                 status = status_data.get("status")
-                
                 print(f"   [{attempt}] Estado: {status}")
-                
+
                 if status == "completed":
-                    print(f"✅ Visual generado exitosamente")
+                    print(f"   ✅ Visual generado")
                     return status_data
                 elif status == "failed":
-                    print(f"❌ La generación del visual falló")
-                    error_msg = status_data.get("error", "Unknown error")
-                    print(f"   Error: {error_msg}")
+                    print(f"   ❌ Generación fallida: {status_data.get('error', 'unknown')}")
                     return None
                 elif status in ["pending", "processing"]:
-                    # Continue polling
                     time.sleep(poll_interval)
                 else:
-                    print(f"⚠️ Estado desconocido: {status}")
+                    print(f"   ⚠️ Estado desconocido: {status}")
                     time.sleep(poll_interval)
             else:
-                print(f"❌ Error al verificar estado: {response.status_code}")
+                print(f"   ❌ Error al verificar estado: {response.status_code}")
                 return None
-                
+
         except requests.exceptions.Timeout:
-            print(f"❌ Timeout al verificar estado del visual")
+            print(f"   ❌ Timeout verificando estado")
             return None
         except Exception as e:
-            print(f"❌ Error al verificar estado: {e}")
+            print(f"   ❌ Error: {e}")
             return None
-    
-    print(f"⏱️ Timeout alcanzado después de {timeout}s")
+
+    print(f"   ⏱️ Timeout alcanzado ({timeout}s)")
     return None
 
 
-def download_visual_file(file_url: str) -> Optional[BytesIO]:
-    """
-    Download a generated visual file from Napkin AI.
-    
-    Args:
-        file_url: The URL of the generated file (from status response)
-    
-    Returns:
-        BytesIO object with image data if successful, None if failed
-    """
-    if not NAPKIN_API_KEY:
-        return None
-    
-    headers = {
-        "Authorization": f"Bearer {NAPKIN_API_KEY}"
-    }
-    
+def _download_visual(file_url: str, api_key: str) -> Optional[BytesIO]:
+    """Download a generated visual file."""
+    headers = {"Authorization": f"Bearer {api_key}"}
     try:
-        print(f"📥 Descargando visual de Napkin...")
         response = requests.get(file_url, headers=headers, timeout=30)
-        
         if response.status_code == 200:
-            print(f"✅ Visual descargado ({len(response.content)} bytes)")
+            print(f"   📥 Visual descargado ({len(response.content)} bytes)")
             return BytesIO(response.content)
-        else:
-            print(f"❌ Error al descargar visual: {response.status_code}")
-            return None
-            
+        print(f"   ❌ Error descargando visual: {response.status_code}")
+        return None
     except requests.exceptions.Timeout:
-        print(f"❌ Timeout al descargar visual")
+        print(f"   ❌ Timeout descargando visual")
         return None
     except Exception as e:
-        print(f"❌ Error al descargar visual: {e}")
+        print(f"   ❌ Error: {e}")
         return None
+
+
+def _try_generate_with_key(text: str, language: str, api_key: str) -> Optional[BytesIO]:
+    """
+    Try to generate a visual with a specific API key.
+    Returns image BytesIO on success, None on failure.
+    Propagates NapkinCreditsExhausted so the caller can try the next account.
+    """
+    # Step 1: Create request (may raise NapkinCreditsExhausted)
+    request_id = _create_visual_request(text, language, api_key)
+    if not request_id:
+        return None
+
+    # Respect rate limiting
+    time.sleep(RATE_LIMIT_DELAY)
+
+    # Step 2: Poll for completion
+    status_data = _poll_visual_status(request_id, api_key, timeout=60, poll_interval=3.0)
+    if not status_data:
+        return None
+
+    # Step 3: Extract file URL
+    generated_files = status_data.get("generated_files", [])
+    if not generated_files:
+        print("   ❌ No se generaron archivos")
+        return None
+
+    file_url = generated_files[0].get("url")
+    if not file_url:
+        print("   ❌ No se encontró URL del archivo")
+        return None
+
+    # Step 4: Download
+    return _download_visual(file_url, api_key)
 
 
 def generate_napkin_visual(text: str, language: str = "es-ES") -> Optional[BytesIO]:
     """
-    Complete workflow to generate a visual from text using Napkin AI.
-    
-    This is the main function to use for generating visuals.
-    It handles the entire process: create request, poll status, download file.
-    
-    Args:
-        text: Text content to convert into a visual
-        language: BCP 47 language code (default: "es-ES" for Spanish)
-    
+    Generate a visual from text using Napkin AI with automatic fallback.
+
+    Tries accounts in order: Principal → RXRESPALDO → RX2RESPALDO.
+    Switches to the next account automatically on 402 (credits exhausted).
+
     Returns:
-        BytesIO object with PNG image data if successful, None if failed
+        BytesIO with PNG image data, or None if all accounts fail.
     """
-    if not NAPKIN_API_KEY:
-        print("⚠️ No NAPKIN_API_KEY configurada. Saltando generación de visual.")
-        return None
-    
     # Validate input
     if not text or len(text.strip()) < 10:
         print("⚠️ Texto demasiado corto para generar visual")
         return None
-    
-    # Truncate if too long (Napkin might have limits)
-    max_content_length = 2000
-    if len(text) > max_content_length:
-        text = text[:max_content_length] + "..."
-        print(f"⚠️ Texto truncado a {max_content_length} caracteres")
-    
+
+    # Truncate if needed
+    max_length = 2000
+    if len(text) > max_length:
+        text = text[:max_length] + "..."
+        print(f"⚠️ Texto truncado a {max_length} caracteres")
+
+    # Filter to only accounts that have a key configured
+    active_accounts = [(name, key) for name, key in NAPKIN_ACCOUNTS if key]
+
+    if not active_accounts:
+        print("⚠️ No hay NAPKIN_API_KEY configurada. Saltando generación de visual.")
+        return None
+
     print(f"\n{'='*60}")
     print(f"🎨 GENERANDO VISUAL CON NAPKIN AI")
     print(f"{'='*60}")
-    print(f"Contenido: {text[:100]}...")
-    print(f"Idioma: {language}")
-    print()
-    
-    # Step 1: Create visual request
-    request_id = create_visual_request(text, language)
-    if not request_id:
-        return None
-    
-    # Respect rate limiting
-    time.sleep(RATE_LIMIT_DELAY)
-    
-    # Step 2: Poll for completion
-    status_data = poll_visual_status(request_id, timeout=60, poll_interval=3.0)
-    if not status_data:
-        return None
-    
-    # Step 3: Extract file URL
-    generated_files = status_data.get("generated_files", [])
-    if not generated_files:
-        print("❌ No se generaron archivos")
-        return None
-    
-    file_url = generated_files[0].get("url")
-    if not file_url:
-        print("❌ No se encontró URL del archivo")
-        return None
-    
-    # Step 4: Download the file
-    image_data = download_visual_file(file_url)
-    
-    if image_data:
-        print(f"{'='*60}\n")
-    
-    return image_data
+    print(f"Cuentas disponibles: {[n for n, _ in active_accounts]}")
+    print(f"Contenido: {text[:80]}...")
+    print(f"Idioma: {language}\n")
+
+    for account_name, api_key in active_accounts:
+        print(f"🔑 Intentando con cuenta: {account_name}")
+        try:
+            image_data = _try_generate_with_key(text, language, api_key)
+            if image_data:
+                print(f"✅ Visual generado con cuenta: {account_name}")
+                print(f"{'='*60}\n")
+                return image_data
+            else:
+                print(f"⚠️ {account_name} falló (error no relacionado con créditos). Siguiente cuenta...")
+                continue
+
+        except NapkinCreditsExhausted:
+            print(f"💳 {account_name}: créditos agotados → pasando a siguiente cuenta...")
+            continue
+        except Exception as e:
+            print(f"❌ Error inesperado con {account_name}: {e}")
+            continue
+
+    print("❌ Todas las cuentas de Napkin fallaron. El documento se generará sin visual.")
+    print(f"{'='*60}\n")
+    return None

@@ -128,6 +128,29 @@ def init_db():
         except Exception:
             conn.rollback()
 
+        # Data migration: Backfill paid_amount for completed orders where it was never saved.
+        # Uses base price by service_type × (1 - discount_percent / 100).
+        # Only touches rows where paid_amount = 0 or NULL.
+        try:
+            c.execute('''
+                UPDATE orders
+                SET paid_amount = ROUND(
+                    CASE
+                        WHEN service_type = 'exam'    THEN 1500
+                        WHEN service_type = 'meeting' THEN 2000
+                        ELSE 3000
+                    END
+                    * (1.0 - COALESCE(discount_percent, 0) / 100.0)
+                )
+                WHERE status IN ('paid', 'completed', 'processing')
+                AND (paid_amount IS NULL OR paid_amount = 0)
+            ''')
+            conn.commit()
+            print("💰 Migración de paid_amount completada (backfill de órdenes sin monto)")
+        except Exception as e:
+            print(f"⚠️ Error en backfill de paid_amount: {e}")
+            conn.rollback()
+
         
         # Insert initial discount codes (PostgreSQL ON CONFLICT syntax)
         try:
@@ -249,6 +272,25 @@ def init_db():
             print("✅ Columna skip_payment agregada a discount_codes")
         except sqlite3.OperationalError:
             pass
+
+        # Data migration: Backfill paid_amount for completed orders where it was never saved.
+        try:
+            c.execute('''
+                UPDATE orders
+                SET paid_amount = ROUND(
+                    CASE
+                        WHEN service_type = 'exam'    THEN 1500
+                        WHEN service_type = 'meeting' THEN 2000
+                        ELSE 3000
+                    END
+                    * (1.0 - COALESCE(discount_percent, 0) / 100.0)
+                )
+                WHERE status IN ('paid', 'completed', 'processing')
+                AND (paid_amount IS NULL OR paid_amount = 0)
+            ''')
+            print("💰 Migración de paid_amount completada (backfill de órdenes sin monto)")
+        except Exception as e:
+            print(f"⚠️ Error en backfill de paid_amount: {e}")
 
         
         # Insert initial discount codes (SQLite INSERT OR IGNORE)
@@ -488,6 +530,28 @@ def update_order_files(orden_id: str, files_list: list):
         c.execute('UPDATE orders SET files = ? WHERE id = ?', (files_json, orden_id))
     conn.commit()
     conn.close()
+
+
+def delete_order(orden_id: str) -> bool:
+    """Permanently delete an order by ID. Returns True if deleted, False if not found."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if USE_POSTGRES:
+            c.execute('DELETE FROM orders WHERE id = %s', (orden_id,))
+        else:
+            c.execute('DELETE FROM orders WHERE id = ?', (orden_id,))
+        deleted = c.rowcount > 0
+        conn.commit()
+        if deleted:
+            print(f"🗑️ Orden {orden_id} eliminada permanentemente")
+        return deleted
+    except Exception as e:
+        print(f"❌ Error eliminando orden {orden_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
     
 
 def get_orders_by_email(email: str):
@@ -638,15 +702,34 @@ def validate_discount_code(code: str) -> dict:
 
 
 def increment_code_usage(code: str):
-    """Increment the usage count for a discount code."""
+    """Increment the usage count for a discount code.
+    Auto-deactivates the code if max_uses is reached."""
     conn = get_connection()
     c = conn.cursor()
-    if USE_POSTGRES:
-        c.execute('UPDATE discount_codes SET uses_count = uses_count + 1 WHERE code = %s', (code.upper(),))
-    else:
-        c.execute('UPDATE discount_codes SET uses_count = uses_count + 1 WHERE code = ?', (code.upper(),))
-    conn.commit()
-    conn.close()
+    try:
+        if USE_POSTGRES:
+            c.execute('UPDATE discount_codes SET uses_count = uses_count + 1 WHERE code = %s', (code.upper(),))
+            c.execute('SELECT uses_count, max_uses FROM discount_codes WHERE code = %s', (code.upper(),))
+        else:
+            c.execute('UPDATE discount_codes SET uses_count = uses_count + 1 WHERE code = ?', (code.upper(),))
+            c.execute('SELECT uses_count, max_uses FROM discount_codes WHERE code = ?', (code.upper(),))
+        conn.commit()
+        row = c.fetchone()
+        if row:
+            row = dict(row)
+            uses_count = row.get('uses_count', 0)
+            max_uses = row.get('max_uses')
+            if max_uses is not None and uses_count >= max_uses:
+                if USE_POSTGRES:
+                    c.execute('UPDATE discount_codes SET active = 0 WHERE code = %s', (code.upper(),))
+                else:
+                    c.execute('UPDATE discount_codes SET active = 0 WHERE code = ?', (code.upper(),))
+                conn.commit()
+                print(f"🏷️ Código {code.upper()} alcanzó el límite de {max_uses} usos → desactivado automáticamente")
+    except Exception as e:
+        print(f"⚠️ Error incrementando uso del código {code}: {e}")
+    finally:
+        conn.close()
 
 
 def get_all_discount_codes():
@@ -691,6 +774,28 @@ def activate_discount_code(code: str):
         c.execute('UPDATE discount_codes SET active = 1 WHERE code = ?', (code.upper(),))
     conn.commit()
     conn.close()
+
+
+def delete_discount_code(code: str) -> bool:
+    """Permanently delete a discount code. Returns True if deleted."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if USE_POSTGRES:
+            c.execute('DELETE FROM discount_codes WHERE code = %s', (code.upper(),))
+        else:
+            c.execute('DELETE FROM discount_codes WHERE code = ?', (code.upper(),))
+        deleted = c.rowcount > 0
+        conn.commit()
+        if deleted:
+            print(f"🗑️ Código {code.upper()} eliminado permanentemente")
+        return deleted
+    except Exception as e:
+        print(f"❌ Error eliminando código {code}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 
 # === Analytics Functions ===
@@ -856,18 +961,14 @@ def get_sales_summary():
         count = item.get('count', 0)
         revenue = item.get('revenue', 0) or 0 if has_paid_amount else 0
         
-        # Fallback: if paid_amount is 0 (old orders) or column doesn't exist, estimate using base price
-        if revenue == 0 and count > 0:
-            if service == 'exam' or service == 'meeting':
-                revenue = count * 1000  # Legacy estimate
-            else:
-                revenue = count * 3000  # Legacy estimate
-            
-        # Calculate price per unit for display
-        if count > 0:
+        # No fallback estimation: only count real paid amounts.
+        # Orders with paid_amount = 0 (abandoned / legacy) are excluded from revenue.
+        
+        # Price per unit for display (avoid division by zero)
+        if count > 0 and revenue > 0:
             price = revenue // count
         else:
-            price = 1000 if (service == 'exam' or service == 'meeting') else 3000
+            price = 0
             
         total_revenue += revenue
         revenue_by_type.append({
@@ -1006,6 +1107,30 @@ def get_recent_orders(limit: int = 20):
             ORDER BY created_at DESC 
             LIMIT ?
         ''', (limit,))
+    
+    rows = c.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_all_orders():
+    """Get all orders for the admin full history view."""
+    conn = get_connection()
+    
+    if USE_POSTGRES:
+        c = conn.cursor(cursor_factory=RealDictCursor)
+        c.execute('''
+            SELECT id, status, client, email, service_type, created_at, discount_code, paid_amount
+            FROM orders 
+            ORDER BY created_at DESC
+        ''')
+    else:
+        c = conn.cursor()
+        c.execute('''
+            SELECT id, status, client, email, service_type, created_at, discount_code, paid_amount
+            FROM orders 
+            ORDER BY created_at DESC
+        ''')
     
     rows = c.fetchall()
     conn.close()
