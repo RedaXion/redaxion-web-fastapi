@@ -1110,7 +1110,14 @@ def get_recent_orders(limit: int = 20):
     
     rows = c.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    
+    result = []
+    for row in rows:
+        r = dict(row)
+        if r.get("created_at"):
+            r["created_at"] = str(r["created_at"])
+        result.append(r)
+    return result
 
 
 def get_all_orders():
@@ -1134,7 +1141,14 @@ def get_all_orders():
     
     rows = c.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    
+    result = []
+    for row in rows:
+        r = dict(row)
+        if r.get("created_at"):
+            r["created_at"] = str(r["created_at"])
+        result.append(r)
+    return result
 
 
 def get_discount_codes_stats():

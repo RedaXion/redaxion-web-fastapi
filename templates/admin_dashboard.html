@@ -468,7 +468,7 @@
                             {% endif %}
                         </td>
                         <td style="font-size: 0.8rem; color: var(--text-gray); white-space: nowrap;">
-                            {{ order.created_at[:16] if order.created_at else '—' }}
+                            {{ (order.created_at | string)[:16] if order.created_at else '—' }}
                         </td>
                         <td id="order-actions-{{ order.id }}" style="display: flex; gap: 0.4rem; align-items: center;">
                             {% if order.status in ['pending', 'paid', 'processing'] %}
