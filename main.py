@@ -1412,6 +1412,11 @@ async def flow_webhook(request: Request, background_tasks: BackgroundTasks):
                 metadata = order.get("metadata", {})
                 print(f"🔍 DEBUG WEBHOOK: service_type='{service_type}', has_metadata={bool(metadata)}, metadata_keys={list(metadata.keys()) if metadata else []}")
                 
+                # Persist confirmed paid amount (use stored paid_amount from order creation)
+                confirmed_amount = order.get("paid_amount") or status_data.get("amount", 0)
+                if confirmed_amount:
+                    database.update_paid_amount(commerce_order, int(confirmed_amount))
+                
                 # Trigger processing based on service type
                 if service_type == "exam":
                     # For exam, retrieve metadata from DB
@@ -1527,7 +1532,11 @@ async def flow_return(request: Request, background_tasks: BackgroundTasks):
         # If order is still pending, mark as paid and process
         if order.get("status") == "pending":
             database.update_order_status(orden_id, "paid")
-            print(f"✅ Order {orden_id} marked as PAID")
+            # Persist paid_amount (stored at order creation from the discounted price)
+            confirmed_amount = order.get("paid_amount")
+            if confirmed_amount:
+                database.update_paid_amount(orden_id, int(confirmed_amount))
+            print(f"✅ Order {orden_id} marked as PAID (${confirmed_amount or '?'})")
             
             # Get metadata and service type
             metadata = order.get("metadata", {})
@@ -1897,6 +1906,9 @@ async def crear_orden_gcs(
             "files": [],
             "audio_url": audio_url,
             "service_type": "transcription",
+            "paid_amount": final_price,
+            "discount_code": discount_code or "",
+            "discount_percent": discount_percent,
             "metadata": {
                 "estimated_minutes": estimated_minutes
             } if estimated_minutes else {}
@@ -1930,6 +1942,10 @@ async def crear_orden_gcs(
         "columnas": columnas,
         "files": [],
         "audio_url": audio_url,
+        "service_type": "transcription",
+        "paid_amount": final_price,
+        "discount_code": discount_code or "",
+        "discount_percent": discount_percent,
         "metadata": {
             "estimated_minutes": estimated_minutes
         } if estimated_minutes else {}

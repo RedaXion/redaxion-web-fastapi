@@ -507,6 +507,24 @@ def update_order_status(orden_id: str, status: str):
     conn.close()
 
 
+def update_paid_amount(orden_id: str, amount: int):
+    """Updates the paid_amount of an order (call when payment is confirmed)."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if USE_POSTGRES:
+            c.execute('UPDATE orders SET paid_amount = %s WHERE id = %s', (amount, orden_id))
+        else:
+            c.execute('UPDATE orders SET paid_amount = ? WHERE id = ?', (amount, orden_id))
+        conn.commit()
+        print(f"💰 paid_amount actualizado: orden {orden_id[:8]}... → ${amount}")
+    except Exception as e:
+        print(f"⚠️ Error actualizando paid_amount: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+
 def mark_order_email_sent(orden_id: str):
     """Marks an order's email as sent."""
     conn = get_connection()
