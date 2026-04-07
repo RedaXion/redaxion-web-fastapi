@@ -2298,6 +2298,32 @@ async def admin_deactivate_code(request: Request, code: str):
     return {"success": True, "message": f"Código {code} desactivado"}
 
 
+@app.post("/api/admin/sync-flow")
+async def admin_sync_flow(request: Request):
+    """Admin endpoint to retrospectively sync payment amounts from Flow."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+        
+    try:
+        from services.flow_payment import obtener_estado_pago_por_comercio
+        all_orders = database.get_all_orders()
+        synced = 0
+        errors = 0
+        for order in all_orders:
+            if order.get("status") in ("paid", "completed", "processing"):
+                res = obtener_estado_pago_por_comercio(order["id"])
+                if "error" not in res and "amount" in res:
+                    database.update_paid_amount(order["id"], res["amount"])
+                    synced += 1
+                else:
+                    errors += 1
+                    print(f"Sync skip {order['id']}: {res.get('error')}")
+        return {"success": True, "synced": synced, "errors": errors}
+    except Exception as e:
+        print(f"Error sync: {e}")
+        return {"success": False, "error": str(e)}
+
+
 @app.post("/api/admin/activate-code/{code}")
 async def admin_activate_code(request: Request, code: str):
     """Activate a discount code."""

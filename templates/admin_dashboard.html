@@ -277,7 +277,13 @@
     <div class="container">
         <header>
             <h1>📊 Dashboard <span>Admin</span></h1>
-            <a href="/admin/logout" class="logout-btn">Cerrar Sesión</a>
+            <div style="display: flex; gap: 1rem;">
+                <button onclick="syncFlowAmounts()" id="sync-flow-btn" 
+                    style="padding: 0.5rem 1rem; background: rgba(28, 198, 194, 0.2); border: 1px solid var(--accent-cyan); border-radius: 8px; color: var(--accent-cyan); cursor: pointer; font-weight: 600;">
+                    🔄 Sincronizar Pagos
+                </button>
+                <a href="/admin/logout" class="logout-btn">Cerrar Sesión</a>
+            </div>
         </header>
 
         <!-- Main Stats -->
@@ -820,6 +826,30 @@
                 alert('Error de conexión');
             }
         }
+        
+        // Sync Flow Amounts
+        async function syncFlowAmounts() {
+            const btn = document.getElementById('sync-flow-btn');
+            btn.disabled = true;
+            btn.innerHTML = '🔄 Sincronizando...';
+            try {
+                const response = await fetch('/api/admin/sync-flow', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Sincronización completada. ${data.synced} órdenes actualizadas, ${data.errors} omitidas.`);
+                    location.reload();
+                } else {
+                    alert('Error en la sincronización: ' + data.error);
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Sincronizar Pagos';
+            }
+        }
 
         // Refresh stat cards from API without reloading the page
         async function refreshStats() {
@@ -871,5 +901,4 @@
         }
     </script>
 </body>
-
 </html>

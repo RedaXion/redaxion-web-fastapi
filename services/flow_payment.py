@@ -203,6 +203,53 @@ def obtener_estado_pago_manual(token: str) -> dict:
         print(f"❌ Excepción manual Flow: {e}")
         return {"error": str(e)}
 
+def obtener_estado_pago_por_comercio(commerce_id: str) -> dict:
+    """Gets order status directly using our order ID instead of Flow's token."""
+    import httpx
+    import hashlib
+    import hmac
+    
+    api_key = os.getenv("FLOW_API_KEY")
+    secret = os.getenv("FLOW_API_SECRET")
+    
+    if not api_key or not secret:
+        return {"error": "No Flow credentials"}
+        
+    use_sandbox = os.getenv("FLOW_SANDBOX", "true").lower() == "true"
+    base_url = "https://sandbox.flow.cl/api" if use_sandbox else "https://www.flow.cl/api"
+    
+    params = {
+        "apiKey": api_key,
+        "commerceId": commerce_id
+    }
+    
+    keys_sorted = sorted(params.keys())
+    to_sign = "".join([f"{k}{params[k]}" for k in keys_sorted])
+    
+    signature = hmac.new(
+        secret.encode('utf-8'),
+        to_sign.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    params["s"] = signature
+    
+    try:
+        url = f"{base_url}/payment/getStatusByCommerceId"
+        with httpx.Client() as client:
+            response = client.get(url, params=params)
+            
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 400:
+            # Payment might not exist in Flow
+            return {"error": "Not found in Flow", "status": 0}
+        else:
+            return {"error": f"Flow Error {response.status_code}: {response.text}"}
+            
+    except Exception as e:
+        return {"error": str(e)}
+
 
 # Payment status codes from Flow
 FLOW_STATUS = {
