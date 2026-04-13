@@ -17,11 +17,16 @@ HEADERS = {
 
 TRANSCRIBE_ENDPOINT = "https://api.assemblyai.com/v2/transcript"
 
-def enviar_a_transcripcion(audio_url):
+def enviar_a_transcripcion(audio_url, keyterms=None):
     payload = {
         "audio_url": audio_url,
         "language_code": "es"  # forzar español
     }
+    
+    # Soporte para la nueva funcionalidad 'keyterms_prompt' que reemplaza 'word_boost' en AssemblyAI
+    if keyterms:
+        payload["keyterms_prompt"] = keyterms
+        
     response = requests.post(TRANSCRIBE_ENDPOINT, headers=HEADERS, json=payload)
     response.raise_for_status()
     transcript_id = response.json()["id"]
@@ -46,7 +51,7 @@ def esperar_resultado_transcripcion(transcript_id, espera=10):
         print("⌛ Aún transcribiendo... esperando", espera, "segundos.")
         time.sleep(espera)
 
-def transcribir_audio(audio_url):
+def transcribir_audio(audio_url, keyterms=None):
     # Short-circuit if no key for dev/test
     if not ASSEMBLYAI_API_KEY:
         print("MOCK: Transcribing audio (No API Key)...")
@@ -58,7 +63,7 @@ def transcribir_audio(audio_url):
         return "Esta es una transcripción simulada. El sistema detectó que estamos en modo de pruebas local (mock://), por lo que se omite el procesamiento real de audio para ahorrar tiempo y evitar errores de descarga. Aquí iría el contenido real de tu grabación."
 
     try:
-        transcript_id = enviar_a_transcripcion(audio_url)
+        transcript_id = enviar_a_transcripcion(audio_url, keyterms=keyterms)
         texto = esperar_resultado_transcripcion(transcript_id)
         return texto
     except Exception as e:
@@ -82,10 +87,10 @@ El sistema continúa funcionando correctamente.
 # ============================================
 import asyncio
 
-async def transcribir_audio_async(audio_url: str) -> str:
+async def transcribir_audio_async(audio_url: str, keyterms: list = None) -> str:
     """
     Non-blocking version of transcribir_audio.
     Runs the blocking transcription in a thread pool so the event loop
     can continue responding to other requests (like polling).
     """
-    return await asyncio.to_thread(transcribir_audio, audio_url)
+    return await asyncio.to_thread(transcribir_audio, audio_url, keyterms)
