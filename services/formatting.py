@@ -342,9 +342,9 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             print(f"\n[{idx}/{len(visual_sections)}] Generando visual para: \"{section['title']}\"")
             
             # Prepare content for Napkin
-            # Use section title + first ~500 words of content for context
+            # Use section title + first ~200 words of content for context
             section_text = " ".join(section["content"])
-            max_context = 500
+            max_context = 200
             words = section_text.split()
             context = " ".join(words[:max_context])
             

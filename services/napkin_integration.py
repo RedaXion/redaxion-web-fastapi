@@ -12,12 +12,13 @@ load_dotenv()
 # Configuration
 NAPKIN_API_URL = "https://api.napkin.ai"
 
-# Fallback chain: Primary → Backup 1 → Backup 2
+# Fallback chain: Primary → Backup 1 → Backup 2 → Backup 3
 # Each entry: (account_name, api_key)
 NAPKIN_ACCOUNTS = [
     ("Principal",   os.getenv("NAPKIN_API_KEY")),
     ("RXRESPALDO",  os.getenv("NAPKIN_API_KEY_BACKUP1")),
     ("RX2RESPALDO", os.getenv("NAPKIN_API_KEY_BACKUP2")),
+    ("RX3RESPALDO", os.getenv("NAPKIN_API_KEY_BACKUP3")),
 ]
 
 # Rate limiting
@@ -219,7 +220,7 @@ def generate_napkin_visual(text: str, language: str = "es-ES") -> Optional[Bytes
     """
     Generate a visual from text using Napkin AI with automatic fallback.
 
-    Tries accounts in order: Principal → RXRESPALDO → RX2RESPALDO.
+    Tries accounts in order: Principal → RXRESPALDO → RX2RESPALDO → RX3RESPALDO.
     Switches to the next account automatically on 402 (credits exhausted).
 
     Returns:
@@ -231,10 +232,11 @@ def generate_napkin_visual(text: str, language: str = "es-ES") -> Optional[Bytes
         return None
 
     # Truncate if needed
-    max_length = 2000
+    max_length = 1500
     if len(text) > max_length:
         text = text[:max_length] + "..."
-        print(f"⚠️ Texto truncado a {max_length} caracteres")
+        print(f"⚠️ Texto truncado a {max_length} caracteres para ahorrar créditos")
+
 
     # Filter to only accounts that have a key configured
     active_accounts = [(name, key) for name, key in NAPKIN_ACCOUNTS if key]
