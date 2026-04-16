@@ -1040,7 +1040,7 @@ def calculate_estimated_costs(sales_summary: dict):
     Calculate estimated costs based on API usage.
     
     Costs:
-    - AssemblyAI: ~$0.00025/second of audio (~$0.015/minute)
+    - Deepgram: ~$0.00007/second of audio (~$0.004/minute)
     - OpenAI GPT-4: ~$0.03/1K input tokens, $0.06/1K output tokens
     - Average audio produces ~150 words/minute, ~200 tokens/minute
     - Each transcription has ~3 GPT passes
@@ -1063,8 +1063,8 @@ def calculate_estimated_costs(sales_summary: dict):
             meeting_count = count
     
     # Estimated costs per service
-    # Transcription: avg 30 min audio = $0.45 AssemblyAI + ~$2 GPT = ~$2.50
-    # Meeting: avg 45 min audio = $0.675 AssemblyAI + ~$3 GPT = ~$3.70
+    # Transcription: avg 30 min audio = $0.12 Deepgram + ~$2 GPT = ~$2.12
+    # Meeting: avg 45 min audio = $0.18 Deepgram + ~$3 GPT = ~$3.18
     # Exam: ~$0.50 GPT per exam (no audio)
     
     transcription_cost = transcription_count * 2.50

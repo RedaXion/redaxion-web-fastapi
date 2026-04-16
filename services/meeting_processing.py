@@ -101,7 +101,7 @@ def procesar_reunion(transcripcion: str, titulo_reunion: str = None,
     Process a meeting transcription and extract structured information.
     
     Args:
-        transcripcion: The raw transcription text from AssemblyAI
+        transcripcion: The raw transcription text from Deepgram
         titulo_reunion: Optional meeting title
         asistentes: Optional list of attendees (text)
         agenda: Optional meeting agenda (text)

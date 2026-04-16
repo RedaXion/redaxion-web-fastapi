@@ -944,7 +944,7 @@ async def procesar_y_enviar_reunion(orden_id: str, audio_url: str, titulo: str,
     database.update_order_status(orden_id, "processing")
     
     try:
-        # 1. Transcribe audio with AssemblyAI
+        # 1. Transcribe audio with Deepgram
         transcripcion = await transcribir_audio_async(audio_url)
         print(f"[{orden_id}] Transcripción completada")
         
