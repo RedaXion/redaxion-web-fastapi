@@ -155,8 +155,7 @@ RESTRICCIONES IMPORTANTES
 
 ❌ No usar líneas horizontales (---)
 ❌ No usar espacios excesivos entre preguntas
-❌ No usar notación LaTeX
-❌ Usar símbolos Unicode: ² ³ ₂ etc."""
+✅ Instrucción matemática mandatoria: Si requieres incluir ecuaciones clínicas o fórmulas (ej. clearance, Parkland), DEBES encapsular el código LaTeX dentro de la etiqueta `<formula>`. Ejemplo: `<formula> E = mc^2 </formula>`."""
 
 
 def get_exam_generation_prompt(tema: str, asignatura: str, nivel: str, 
@@ -243,7 +242,7 @@ d) [Opción]
 - Cada respuesta tiene formato: "N. **LETRA)** [justificación de 1 línea]"
 - La justificación debe explicar POR QUÉ es correcta (no "es C porque C es la respuesta")
 - TODAS las {preguntas_alternativa} respuestas deben aparecer, sin omisiones
-- NO usar LaTeX. Usar: × ÷ ± ≤ ≥ ≠ ² ³ ₂"""
+- Instrucción matemática mandatoria: Si requieres escribir fórmulas o ecuaciones complejas/medianas, DEBES encapsular su código LaTeX puro dentro de la etiqueta `<formula>`. Ejemplo: `<formula> x^2 + y^2 = r^2 </formula>`. No uses código inline básico."""
 
 
 def generar_prueba(tema: str, asignatura: str, nivel: str,

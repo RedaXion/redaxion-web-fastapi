@@ -238,6 +238,7 @@ def configurar_columnas(doc, tipo):
 
 
 from services.napkin_integration import generate_napkin_visual
+from services.kroki_integration import generate_kroki_visual, generate_math_visual
 from io import BytesIO
 import time
 
@@ -351,8 +352,11 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             # Combine title + context for better visual generation
             napkin_input = f"{section['title']}. {context}"
             
-            # Generate visual
+            # Generate visual - Napkin AI con fallback a Kroki
             img_stream = generate_napkin_visual(napkin_input, language="es")
+            if not img_stream:
+                print(f"🔄 Activando fallback a Kroki para \"{section['title']}\"")
+                img_stream = generate_kroki_visual(napkin_input, color_theme=color)
             
             if img_stream:
                 visuals_data[section["title"]] = img_stream
@@ -399,7 +403,9 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
                 doc.add_picture(img_stream, width=Inches(3.52) if columnas=="doble" else Inches(5.5))
                 last_p = doc.paragraphs[-1]
                 last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                last_p.paragraph_format.space_after = Pt(6)  # Minimal spacing after image
+                # Aesthetic Spacing
+                last_p.paragraph_format.space_before = Pt(14)
+                last_p.paragraph_format.space_after = Pt(18)
                 print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
                 
                 # Remove from dict so we don't insert again
@@ -438,7 +444,24 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             p.paragraph_format.space_after = Pt(4)  # Compact spacing
             p.paragraph_format.line_spacing = 1.1  # Reduced line spacing
-            agregar_texto_con_negrita(p, linea_normalizada)
+            
+            if "<formula>" in linea_normalizada.lower():
+                partes = re.split(r"(<formula>.*?</formula>)", linea_normalizada, flags=re.IGNORECASE)
+                for parte in partes:
+                    if parte.lower().startswith("<formula>") and parte.lower().endswith("</formula>"):
+                        eq = parte[9:-10].strip()
+                        img_stream = generate_math_visual(eq)
+                        if img_stream:
+                            run = p.add_run()
+                            run.add_picture(img_stream, width=Inches(3.0))
+                        else:
+                            agregar_texto_con_negrita(p, eq)
+                    else:
+                        if parte.strip():
+                            agregar_texto_con_negrita(p, parte)
+            else:
+                agregar_texto_con_negrita(p, linea_normalizada)
+                
             aplicar_estilo(p, "texto", color)
 
     doc.save(path_salida)

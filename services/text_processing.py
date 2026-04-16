@@ -23,7 +23,7 @@ Asegúrate de que todas las explicaciones, ejemplos, aclaraciones, datos técnic
 
 No introduzcas interpretaciones personales ni agregues información externa.
 
-Si aparecen fórmulas (matemáticas, físicas, químicas o biomédicas), escríbelas siempre en formato de texto editable y compatible con Word/Docs (MathType, Unicode para subíndices/superíndices). Nunca como imágenes.
+Instrucción matemática mandatoria: Si aparecen o deduces fórmulas y ecuaciones (matemáticas, físicas, químicas o biomédicas) de tamaño mediano o grande, DEBES OBLIGATORIAMENTE encapsularlas en formato LaTeX puro dentro de la etiqueta `<formula>`. Ejemplo: `<formula> E = mc^2 </formula>`. No uses código en línea regular para ecuaciones estructurales. Nunca devuelvas imágenes de markdown.
 
 OBJETIVO:
 La reescritura debe mantener la extensión y densidad de contenido del original, con redacción mejorada, sin recortes ni simplificaciones. Aunque un fragmento parezca redundante o largo, si contiene contenido valioso, debe conservarse.

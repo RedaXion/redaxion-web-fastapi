@@ -42,6 +42,8 @@ REQUISITOS:
 - Alta complejidad (dificultad 8–9 de 10)
 - En temas de medicina, usar formato tipo EUNACOM
 - El objetivo es evaluar comprensión profunda, discriminación conceptual, razonamiento y aplicación práctica
+- Instrucción matemática mandatoria: Si requieres escribir fórmulas o ecuaciones complejas/medianas, DEBES obligatoriamente encapsular su código LaTeX puro dentro de la etiqueta `<formula>`. Ejemplo: `<formula> x^2 + y^2 = r^2 </formula>`.
+- No uses código Markdown `$$` o en línea normal para fórmulas medianas/estructurales.
 
 FORMATO DE SALIDA OBLIGATORIO:
 
