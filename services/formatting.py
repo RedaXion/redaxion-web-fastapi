@@ -242,6 +242,59 @@ from services.kroki_integration import generate_kroki_visual, generate_math_visu
 from io import BytesIO
 import time
 
+def procesar_linea_con_formulas(doc, linea, color, espaciado_extra=False):
+    if "<formula>" not in linea.lower():
+        p = doc.add_paragraph()
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.space_after = Pt(10) if espaciado_extra else Pt(4)
+        p.paragraph_format.line_spacing = 1.1
+        agregar_texto_con_negrita(p, linea)
+        aplicar_estilo(p, "texto", color)
+        return
+
+    partes = re.split(r"(<formula>.*?</formula>)", linea, flags=re.IGNORECASE)
+    
+    current_p = None
+
+    def get_or_create_p():
+        nonlocal current_p
+        if current_p is None:
+            current_p = doc.add_paragraph()
+            current_p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            current_p.paragraph_format.space_after = Pt(10) if espaciado_extra else Pt(4)
+            current_p.paragraph_format.line_spacing = 1.1
+        return current_p
+
+    for parte in partes:
+        if parte.lower().startswith("<formula>") and parte.lower().endswith("</formula>"):
+            if current_p is not None:
+                aplicar_estilo(current_p, "texto", color)
+                current_p = None  # Reset for next text block
+            
+            eq = parte[9:-10].strip()
+            img_stream = generate_math_visual(eq)
+            
+            p_formula = doc.add_paragraph()
+            p_formula.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_formula.paragraph_format.space_before = Pt(14)
+            p_formula.paragraph_format.space_after = Pt(14)
+            
+            if img_stream:
+                run = p_formula.add_run()
+                run.add_picture(img_stream, width=Inches(3.0))
+            else:
+                agregar_texto_con_negrita(p_formula, eq)
+                aplicar_estilo(p_formula, "texto", color)
+            
+        else:
+            if parte.strip():
+                p = get_or_create_p()
+                agregar_texto_con_negrita(p, parte)
+
+    if current_p is not None:
+        aplicar_estilo(current_p, "texto", color)
+
+
 def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscuro", columnas="simple"):
     preparar_logo()
     doc = Document()
@@ -400,7 +453,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             
             try:
                 # 10% larger images for better visibility (3.2->3.52, 5.0->5.5)
-                doc.add_picture(img_stream, width=Inches(3.52) if columnas=="doble" else Inches(5.5))
+                # NOTA: Reducido otra vez a pedido del usuario (2.3 para doble, 3.8 para simple)
+                doc.add_picture(img_stream, width=Inches(2.3) if columnas=="doble" else Inches(3.8))
                 last_p = doc.paragraphs[-1]
                 last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 # Aesthetic Spacing
@@ -440,29 +494,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
                 configurar_columnas(doc, columnas)
                 titulo_agregado = True
         else:
-            p = doc.add_paragraph()
-            p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            p.paragraph_format.space_after = Pt(4)  # Compact spacing
-            p.paragraph_format.line_spacing = 1.1  # Reduced line spacing
-            
-            if "<formula>" in linea_normalizada.lower():
-                partes = re.split(r"(<formula>.*?</formula>)", linea_normalizada, flags=re.IGNORECASE)
-                for parte in partes:
-                    if parte.lower().startswith("<formula>") and parte.lower().endswith("</formula>"):
-                        eq = parte[9:-10].strip()
-                        img_stream = generate_math_visual(eq)
-                        if img_stream:
-                            run = p.add_run()
-                            run.add_picture(img_stream, width=Inches(3.0))
-                        else:
-                            agregar_texto_con_negrita(p, eq)
-                    else:
-                        if parte.strip():
-                            agregar_texto_con_negrita(p, parte)
-            else:
-                agregar_texto_con_negrita(p, linea_normalizada)
-                
-            aplicar_estilo(p, "texto", color)
+            procesar_linea_con_formulas(doc, linea_normalizada, color)
 
     doc.save(path_salida)
     return path_salida
@@ -556,10 +588,7 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
             if not linea:
                 continue
             # Se mantienen **...** para que agregar_texto_con_negrita aplique bold
-            para = doc.add_paragraph()
-            para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            agregar_texto_con_negrita(para, linea)
-            aplicar_estilo(para, "texto", color)
+            procesar_linea_con_formulas(doc, linea, color)
 
     doc.add_page_break()
 
@@ -577,10 +606,7 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
             if re.match(r"^\s*respuestas\s*[:：]?\s*$", linea, flags=re.IGNORECASE):
                 continue
             # ❌ Sin limpieza de **...**
-            para = doc.add_paragraph()
-            para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            agregar_texto_con_negrita(para, linea)
-            aplicar_estilo(para, "texto", color)
+            procesar_linea_con_formulas(doc, linea, color)
 
     doc.save(path_guardado)
     return path_guardado

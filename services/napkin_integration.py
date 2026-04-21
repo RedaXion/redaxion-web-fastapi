@@ -237,6 +237,8 @@ def generate_napkin_visual(text: str, language: str = "es-ES") -> Optional[Bytes
         text = text[:max_length] + "..."
         print(f"⚠️ Texto truncado a {max_length} caracteres para ahorrar créditos")
 
+    # Add custom constraints for Napkin AI constraints (vertical size & banned topics)
+    text += "\n\n(INSTRUCCIONES EXTRA PARA TI: El esquema generado NO DEBE ser muy extenso verticalmente, haz que ocupe máximo media página. Además, bajo NINGUNA CIRCUNSTANCIA uses templates, esquemas o ejemplos relacionados con Bitcoin o criptomonedas.)"
 
     # Filter to only accounts that have a key configured
     active_accounts = [(name, key) for name, key in NAPKIN_ACCOUNTS if key]
