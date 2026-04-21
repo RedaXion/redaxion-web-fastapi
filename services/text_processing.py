@@ -84,9 +84,29 @@ No utilices #### ni niveles inferiores.
 
 Si deseas incluir un ejemplo, escribe “Ejemplo:” como parte del cuerpo del párrafo, o destácalo en cursiva si corresponde, pero no lo marques como encabezado."""
 
-def dividir_texto_en_bloques(texto, palabras_por_bloque=600):
-    palabras = texto.split()
-    return [" ".join(palabras[i:i+palabras_por_bloque]) for i in range(0, len(palabras), palabras_por_bloque)]
+import re
+
+def dividir_texto_en_bloques(texto, max_palabras=800):
+    # Divide el texto por puntos seguidos de espacio para no romper oraciones
+    oraciones = re.split(r'(?<=\.)\s+', texto)
+    bloques = []
+    bloque_actual = []
+    palabras_actuales = 0
+    
+    for oracion in oraciones:
+        palabras_oracion = len(oracion.split())
+        if palabras_actuales + palabras_oracion > max_palabras and bloque_actual:
+            bloques.append(" ".join(bloque_actual))
+            bloque_actual = [oracion]
+            palabras_actuales = palabras_oracion
+        else:
+            bloque_actual.append(oracion)
+            palabras_actuales += palabras_oracion
+            
+    if bloque_actual:
+        bloques.append(" ".join(bloque_actual))
+        
+    return bloques
 
 def procesar_txt_con_chatgpt(path_txt):
     client = get_client()
