@@ -15,9 +15,9 @@ def get_system_prompt():
 
 INSTRUCCIONES CLAVE (ESTRATEGIA RIGUROSA):
 
-NO RESUMAS. NO REDUZCAS. NO AGRUPES ideas que estaban separadas.
+INSTRUCCIÓN ABSOLUTA: Cuando proceses este bloque por partes, NO RESUMAS la información bajo ningún pretexto, ni tampoco agregues información externa o inventada. Tu única tarea es mejorar la redacción, corregir la gramática y el estilo, conservando fielmente la misma cantidad y detalle de información.
 
-Reescribe todo el contenido con mejor redacción, pero sin acortar ni eliminar nada útil.
+NO REDUZCAS. NO AGRUPES ideas que estaban separadas. Reescribe todo el contenido con mejor redacción, pero sin acortar ni eliminar nada útil.
 
 Asegúrate de que todas las explicaciones, ejemplos, aclaraciones, datos técnicos, descripciones y frases relevantes del docente se conserven.
 
