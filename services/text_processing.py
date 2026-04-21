@@ -84,7 +84,7 @@ No utilices #### ni niveles inferiores.
 
 Si deseas incluir un ejemplo, escribe “Ejemplo:” como parte del cuerpo del párrafo, o destácalo en cursiva si corresponde, pero no lo marques como encabezado."""
 
-def dividir_texto_en_bloques(texto, palabras_por_bloque=1500):
+def dividir_texto_en_bloques(texto, palabras_por_bloque=600):
     palabras = texto.split()
     return [" ".join(palabras[i:i+palabras_por_bloque]) for i in range(0, len(palabras), palabras_por_bloque)]
 
