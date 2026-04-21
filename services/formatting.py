@@ -539,7 +539,8 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
     aplicar_estilo(titulo, "titulo", color)
     doc.add_paragraph("")
 
-    match = re.search(r"(respuesta 1:)", texto_preguntas_y_respuestas.lower())
+    # Mejorada la detección de la sección de solucionario generada por GPT
+    match = re.search(r"(##\s*solucionario|\*{0,2}solucionario\*{0,2}|\*{0,2}respuestas:?\*{0,2}|respuesta 1:)", texto_preguntas_y_respuestas.lower())
     if not match:
         preguntas = texto_preguntas_y_respuestas.strip()
         respuestas = ""
@@ -603,7 +604,11 @@ def guardar_quiz_como_docx(texto_preguntas_y_respuestas, path_guardado="/tmp/qui
 
         for linea in respuestas.strip().split("\n"):
             linea = linea.strip()
-            if re.match(r"^\s*respuestas\s*[:：]?\s*$", linea, flags=re.IGNORECASE):
+            if not linea:
+                continue
+            if re.match(r"^\s*(\#\#\s*solucionario|\*{0,2}respuestas\*{0,2})\s*[:：]?\s*$", linea, flags=re.IGNORECASE):
+                continue
+            if "importante: esta sección es obligatoria" in linea.lower():
                 continue
             # ❌ Sin limpieza de **...**
             procesar_linea_con_formulas(doc, linea, color)
