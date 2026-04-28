@@ -2298,6 +2298,37 @@ async def admin_deactivate_code(request: Request, code: str):
     return {"success": True, "message": f"Código {code} desactivado"}
 
 
+@app.get("/api/admin/flow-status/{orden_id}")
+async def admin_check_flow_status(request: Request, orden_id: str):
+    """Query Flow directly for the payment status of a specific order by commerce ID."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    try:
+        from services.flow_payment import obtener_estado_pago_por_comercio
+        flow_result = obtener_estado_pago_por_comercio(orden_id)
+
+        # Also get our local DB record for comparison
+        order = database.get_order(orden_id)
+
+        return {
+            "order_id": orden_id,
+            "db_status": order.get("status") if order else "not_found",
+            "db_paid_amount": order.get("paid_amount") if order else None,
+            "flow_raw": flow_result,
+            "flow_status_code": flow_result.get("status"),
+            "flow_status_str": {1: "pending", 2: "paid", 3: "rejected", 4: "cancelled"}.get(
+                flow_result.get("status"), "unknown"
+            ),
+            "flow_amount": flow_result.get("amount"),
+            "flow_subject": flow_result.get("subject"),
+            "flow_payer": flow_result.get("payer"),
+            "flow_payment_date": flow_result.get("paymentDate"),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.post("/api/admin/sync-flow")
 async def admin_sync_flow(request: Request):
     """Admin endpoint to retrospectively sync payment amounts from Flow."""
