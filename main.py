@@ -2329,6 +2329,54 @@ async def admin_check_flow_status(request: Request, orden_id: str):
         return {"success": False, "error": str(e)}
 
 
+@app.post("/api/admin/send-email")
+async def admin_send_email(
+    request: Request,
+    to_email: str = Form(...),
+    to_name: str = Form(...),
+    subject: str = Form(...),
+    html_body: str = Form(...),
+):
+    """Admin endpoint to send a custom HTML email to a customer via Resend."""
+    if not verify_admin_session(request):
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    import httpx
+
+    resend_key = os.getenv("RESEND_API_KEY")
+    sender_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+    admin_from = f"RedaXion <{sender_email}>"
+
+    if not resend_key:
+        raise HTTPException(status_code=500, detail="RESEND_API_KEY no configurada en el servidor")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": admin_from,
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html_body,
+                    "reply_to": "contacto@redaxion.cl",
+                },
+                timeout=15,
+            )
+
+        if resp.status_code in (200, 201):
+            return {"success": True, "message": f"Correo enviado a {to_email}", "resend_id": resp.json().get("id")}
+        else:
+            return {"success": False, "error": f"Resend error {resp.status_code}: {resp.text}"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.post("/api/admin/sync-flow")
 async def admin_sync_flow(request: Request):
     """Admin endpoint to retrospectively sync payment amounts from Flow."""
