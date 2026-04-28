@@ -2344,8 +2344,9 @@ async def admin_send_email(
     import httpx
 
     resend_key = os.getenv("RESEND_API_KEY")
-    sender_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-    admin_from = f"RedaXion <{sender_email}>"
+    sender_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev").strip()
+    # Avoid double-wrapping if RESEND_FROM_EMAIL already has "Name <email>" format
+    admin_from = sender_email if "<" in sender_email else f"RedaXion <{sender_email}>"
 
     if not resend_key:
         raise HTTPException(status_code=500, detail="RESEND_API_KEY no configurada en el servidor")
