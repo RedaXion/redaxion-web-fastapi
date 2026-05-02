@@ -15,7 +15,43 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+ASSEMBLYAI_API_KEY = os.environ.get("ASSEMBLYAI_API_KEY")
+
 TRANSCRIBE_ENDPOINT = "https://api.deepgram.com/v1/listen"
+
+def transcribir_audio_assembly_rest(audio_url: str) -> str:
+    if not ASSEMBLYAI_API_KEY:
+        print("⚠️ No hay ASSEMBLYAI_API_KEY. Fallback no disponible.")
+        return ""
+    
+    print(f"🔗 Enviando audio a AssemblyAI (Fallback API REST)...")
+    headers = {"authorization": ASSEMBLYAI_API_KEY, "content-type": "application/json"}
+    
+    # Iniciar transcripción
+    response = requests.post(
+        "https://api.assemblyai.com/v2/transcript",
+        json={"audio_url": audio_url, "language_code": "es"},
+        headers=headers,
+        timeout=30
+    )
+    response.raise_for_status()
+    transcript_id = response.json()["id"]
+    
+    # Polling
+    polling_endpoint = f"https://api.assemblyai.com/v2/transcript/{transcript_id}"
+    print("⏳ Esperando a que AssemblyAI complete la transcripción...")
+    while True:
+        poll_res = requests.get(polling_endpoint, headers=headers, timeout=30)
+        poll_res.raise_for_status()
+        poll_data = poll_res.json()
+        status = poll_data["status"]
+        if status == "completed":
+            print("✅ Transcripción AssemblyAI completada con éxito.")
+            return poll_data["text"]
+        elif status == "error":
+            print(f"❌ Error en AssemblyAI: {poll_data.get('error')}")
+            return ""
+        time.sleep(10)
 
 def transcribir_audio(audio_url, keyterms=None):
     # Short-circuit if no key for dev/test
@@ -53,6 +89,18 @@ def transcribir_audio(audio_url, keyterms=None):
             
             if not transcript:
                 raise ValueError("Respuesta vacía o formato desconocido desde Deepgram")
+            
+            # Anti-truncation protection (Deepgram sometimes cuts off huge files silently)
+            word_count = len(transcript.split())
+            if word_count < 1000:
+                print(f"⚠️ ¡ALERTA! Deepgram devolvió sólo {word_count} palabras. Posible truncamiento silencioso.")
+                print("🔄 Activando fallback automático a AssemblyAI para asegurar el texto completo...")
+                assembly_text = transcribir_audio_assembly_rest(audio_url)
+                if assembly_text and len(assembly_text.split()) > word_count:
+                    print("✅ Fallback a AssemblyAI exitoso. Reemplazando texto truncado.")
+                    return assembly_text
+                else:
+                    print("⚠️ Fallback no disponible o retornó menos texto. Manteniendo resultado original.")
             
             print("✅ Transcripción Deepgram completada con éxito.")
             return transcript

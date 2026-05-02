@@ -12,8 +12,9 @@ from docx.enum.table import WD_ALIGN_VERTICAL
 # Visual generation configuration for Napkin AI
 # Base: 1 visual per ~500 words (~4-5 visuals per average document)
 # Extra: +1 visual if document exceeds 12 pages (~3600 words)
-WORDS_PER_VISUAL = 500
-EXTRA_VISUAL_PAGE_THRESHOLD = 12  # pages
+WORDS_PER_VISUAL = 450
+EXTRA_VISUAL_PAGE_THRESHOLD = 8  # pages
+MAX_BASE_VISUALS = 8
 
 # Helper para logo
 def preparar_logo():
@@ -342,14 +343,15 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
     
     for idx, linea in enumerate(texto_lineas):
         linea_stripped = linea.strip()
-        if linea_stripped.startswith("## ") or linea_stripped.startswith("# "):
+        # Detect headers (##, #, or ### for more visuals)
+        if linea_stripped.startswith("## ") or linea_stripped.startswith("# ") or linea_stripped.startswith("### "):
             # Save previous section
             if current_section["content"]:
                 current_section["words"] = sum(len(l.split()) for l in current_section["content"])
                 sections.append(current_section)
             
             # Start new section
-            title = linea_stripped.replace("## ", "").replace("# ", "").strip()
+            title = linea_stripped.replace("### ", "").replace("## ", "").replace("# ", "").strip()
             current_section = {"title": title, "start_line": idx, "content": [], "words": 0}
         else:
             current_section["content"].append(linea_stripped)
@@ -360,7 +362,7 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
         sections.append(current_section)
     
     # Calculate number of visuals
-    base_visuals = min(5, max(1, total_words // WORDS_PER_VISUAL))  # 1 per 500 words, min 1, max 5
+    base_visuals = min(MAX_BASE_VISUALS, max(1, total_words // WORDS_PER_VISUAL))  # max 8
     estimated_pages = total_words // 300  # Rough estimate: ~300 words per page
     extra_visual = 1 if estimated_pages > EXTRA_VISUAL_PAGE_THRESHOLD else 0
     num_visuals = base_visuals + extra_visual
@@ -441,36 +443,16 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
 
         linea_normalizada = linea.lstrip()
         
-        # Track current section
-        if linea_normalizada.startswith("## ") or linea_normalizada.startswith("# "):
-            current_section_title = linea_normalizada.replace("## ", "").replace("# ", "").strip()
-        
-        # Check if we should insert a visual BEFORE this section's content
-        if current_section_title in visuals_data and linea_normalizada.startswith("### "):
-            # Insert visual after first subsection of a major section
-            # This gives good placement without interrupting the main title
-            img_stream = visuals_data[current_section_title]
-            
-            try:
-                # 10% larger images for better visibility (3.2->3.52, 5.0->5.5)
-                # NOTA: Reducido otra vez a pedido del usuario (2.3 para doble, 3.8 para simple)
-                doc.add_picture(img_stream, width=Inches(2.3) if columnas=="doble" else Inches(3.8))
-                last_p = doc.paragraphs[-1]
-                last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                # Aesthetic Spacing
-                last_p.paragraph_format.space_before = Pt(14)
-                last_p.paragraph_format.space_after = Pt(18)
-                print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
-                
-                # Remove from dict so we don't insert again
-                del visuals_data[current_section_title]
-            except Exception as e:
-                print(f"❌ Error insertando visual para \"{current_section_title}\": {e}")
-
         # 🔁 Tolerancia: tratar #### como ### para subtítulos mal formateados
         if linea_normalizada.startswith("#### "):
             linea_normalizada = linea_normalizada.replace("#### ", "### ")
-
+            
+        # Track current section for visual placement
+        if linea_normalizada.startswith("## ") or linea_normalizada.startswith("# ") or linea_normalizada.startswith("### "):
+            current_section_title = linea_normalizada.replace("### ", "").replace("## ", "").replace("# ", "").strip()
+        else:
+            current_section_title = ""
+            
         if linea_normalizada.startswith("### "):
             texto_subtitulo = linea_normalizada.replace("### ", "")
             p = doc.add_paragraph()
@@ -480,6 +462,21 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             run.font.bold = True
             _set_run_calibri(run)
             aplicar_estilo(p, "subtitulo", color)
+            
+            # --- INSERT VISUAL HERE ---
+            if current_section_title in visuals_data:
+                img_stream = visuals_data[current_section_title]
+                try:
+                    # Ancho reducido para evitar desbordes visuales
+                    doc.add_picture(img_stream, width=Inches(1.8) if columnas=="doble" else Inches(3.2))
+                    last_p = doc.paragraphs[-1]
+                    last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    last_p.paragraph_format.space_before = Pt(14)
+                    last_p.paragraph_format.space_after = Pt(18)
+                    print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
+                    del visuals_data[current_section_title]
+                except Exception as e:
+                    print(f"❌ Error insertando visual para \"{current_section_title}\": {e}")
 
         elif linea_normalizada.startswith("## ") or linea_normalizada.startswith("# "):
             texto_titulo = linea_normalizada.replace("## ", "").replace("# ", "")
@@ -493,6 +490,21 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             if columnas == "doble" and not titulo_agregado:
                 configurar_columnas(doc, columnas)
                 titulo_agregado = True
+                
+            # --- INSERT VISUAL HERE ---
+            if current_section_title in visuals_data:
+                img_stream = visuals_data[current_section_title]
+                try:
+                    # Ancho reducido para evitar desbordes visuales
+                    doc.add_picture(img_stream, width=Inches(1.8) if columnas=="doble" else Inches(3.2))
+                    last_p = doc.paragraphs[-1]
+                    last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    last_p.paragraph_format.space_before = Pt(14)
+                    last_p.paragraph_format.space_after = Pt(18)
+                    print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
+                    del visuals_data[current_section_title]
+                except Exception as e:
+                    print(f"❌ Error insertando visual para \"{current_section_title}\": {e}")
         else:
             procesar_linea_con_formulas(doc, linea_normalizada, color)
 
@@ -829,6 +841,13 @@ def convert_to_pdf(path_docx, color="azul elegante"):
     """
     output_dir = os.path.dirname(path_docx)
     path_pdf = path_docx.replace(".docx", ".pdf")
+
+    # Asegurar que no hay un PDF viejo interfiriendo
+    if os.path.exists(path_pdf):
+        try:
+            os.remove(path_pdf)
+        except Exception:
+            pass
 
     # Intentar LibreOffice
     try:

@@ -29,7 +29,8 @@ LO QUE SÍ DEBES HACER:
 - En cada párrafo, resaltar en **negritas** los términos técnicos, conceptos clave o afirmaciones centrales.
 - En listas, poner en **negritas** el nombre de la categoría antes de los dos puntos.
 - Detectar fórmulas o ecuaciones y encapsularlas en `<formula>código LaTeX</formula>`.
-- Usar ## para secciones principales y ### para subsecciones.
+- Usar ## para el título principal del documento. Este título debe ser **amigable, empático y muy atractivo**.
+- Usar ### para los subtítulos de las secciones.
 
 LO QUE ESTÁ PROHIBIDO:
 - Resumir o comprimir ideas.
