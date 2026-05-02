@@ -13,23 +13,30 @@ def subir_archivo_a_drive(file_path: str, filename: str, orden_id: str):
     print(f"MOCK: Uploading {filename} to Goole Drive for Order {orden_id}...")
     # TODO: Implement real GDrive logic using google-api-python-client
 
-def enviar_correo_con_adjuntos(destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str]):
+def enviar_correo_con_adjuntos(destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str], bcc: List[str] = None):
     """
     Sends email with attachments.
     Tries Resend API first (works on Railway), then SMTP as fallback.
+    
+    Args:
+        destinatario: Main recipient email address.
+        asunto: Email subject.
+        cuerpo: Email body (plain text).
+        lista_archivos: List of file paths to attach.
+        bcc: Optional list of BCC email addresses (hidden from main recipient).
     """
     # Try Resend API first (recommended for Railway)
     resend_api_key = os.environ.get("RESEND_API_KEY")
     if resend_api_key:
         try:
-            return _enviar_con_resend(resend_api_key, destinatario, asunto, cuerpo, lista_archivos)
+            return _enviar_con_resend(resend_api_key, destinatario, asunto, cuerpo, lista_archivos, bcc=bcc)
         except Exception as e:
             print(f"⚠️ Resend failed: {e}. Trying SMTP...")
     
     # Fallback to SMTP
-    return _enviar_con_smtp(destinatario, asunto, cuerpo, lista_archivos)
+    return _enviar_con_smtp(destinatario, asunto, cuerpo, lista_archivos, bcc=bcc)
 
-def _enviar_con_resend(api_key: str, destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str]):
+def _enviar_con_resend(api_key: str, destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str], bcc: List[str] = None):
     """Send email using Resend API (works on Railway)."""
     from_email = os.environ.get("RESEND_FROM_EMAIL", "RedaXion <noreply@redaxiontcp.com>")
     
@@ -54,6 +61,9 @@ def _enviar_con_resend(api_key: str, destinatario: str, asunto: str, cuerpo: str
         "attachments": attachments
     }
     
+    if bcc:
+        payload["bcc"] = bcc
+    
     response = requests.post(
         "https://api.resend.com/emails",
         headers={"Authorization": f"Bearer {api_key}"},
@@ -61,12 +71,12 @@ def _enviar_con_resend(api_key: str, destinatario: str, asunto: str, cuerpo: str
     )
     
     if response.status_code == 200:
-        print(f"✅ Email enviado via Resend a {destinatario}")
+        print(f"✅ Email enviado via Resend a {destinatario}" + (f" (BCC: {bcc})" if bcc else ""))
     else:
         print(f"❌ Resend error: {response.status_code} - {response.text}")
         raise Exception(f"Resend failed: {response.text}")
 
-def _enviar_con_smtp(destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str]):
+def _enviar_con_smtp(destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str], bcc: List[str] = None):
     """Send email using SMTP (may not work on Railway)."""
     remitente = os.environ.get("REDA_CORREO_REMITENTE")
     clave_app = os.environ.get("REDA_CLAVE_APP_GMAIL")
@@ -80,6 +90,8 @@ def _enviar_con_smtp(destinatario: str, asunto: str, cuerpo: str, lista_archivos
     msg["From"] = remitente
     msg["To"] = destinatario
     msg["Subject"] = asunto
+    if bcc:
+        msg["Bcc"] = ", ".join(bcc)
     msg.set_content(cuerpo)
 
     for archivo_path in lista_archivos:
@@ -92,11 +104,12 @@ def _enviar_con_smtp(destinatario: str, asunto: str, cuerpo: str, lista_archivos
             contenido = f.read()
         msg.add_attachment(contenido, maintype="application", subtype="octet-stream", filename=nombre)
 
+    all_recipients = [destinatario] + (bcc or [])
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(remitente, clave_app)
-            smtp.send_message(msg)
-        print(f"✅ Email enviado via SMTP a {destinatario}")
+            smtp.send_message(msg, to_addrs=all_recipients)
+        print(f"✅ Email enviado via SMTP a {destinatario}" + (f" (BCC: {bcc})" if bcc else ""))
     except Exception as e:
         print(f"Error sending email via SMTP: {e}")
 

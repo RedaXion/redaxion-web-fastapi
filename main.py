@@ -317,14 +317,18 @@ Puedes ver el estado y descargar tus archivos también en tu dashboard:
 Gracias por confiar en nosotros.
 Equipo RedaXion.
 """
+             # Support optional BCC from metadata (used by admin reprocess endpoint)
+             bcc = user_metadata.get("bcc") or None
+
              enviar_correo_con_adjuntos(
                  destinatario=correo_cliente,
                  asunto=f"¡Tu RedaXion está lista! - Orden #{orden_id}",
                  cuerpo=cuerpo_correo,
-                 lista_archivos=archivos_adjuntos
+                 lista_archivos=archivos_adjuntos,
+                 bcc=bcc
              )
              database.mark_order_email_sent(orden_id)
-             print(f"[{orden_id}] Correo enviado.")
+             print(f"[{orden_id}] Correo enviado." + (f" BCC: {bcc}" if bcc else ""))
         elif email_sent:
              print(f"[{orden_id}] Correo ya enviado anteriormente. Omitiendo.")
 
@@ -614,6 +618,84 @@ async def reprocess_order_endpoint(
     print(f"🔧 [ADMIN] Reprocesando orden {orden_id} para {email}")
     return {"success": True, "message": f"Orden {orden_id} en reprocesamiento"}
 
+
+@app.post("/api/admin/reprocess-from-gcs")
+async def reprocess_from_gcs(
+    background_tasks: BackgroundTasks,
+    admin_key: str = Form(...),
+    orden_id: str = Form(...),
+    gcs_blob_name: str = Form(...),       # nombre del blob en el bucket, ej: "33a039ec_...m4a"
+    email_to: str = Form(...),             # destinatario principal
+    email_bcc: str = Form(""),             # BCC separados por coma
+    nombre: str = Form("Cliente"),
+    color: str = Form("azul elegante"),
+    columnas: str = Form("una")
+):
+    """
+    Admin endpoint: Regenera URL firmada desde GCS (48h) y reprocesa la orden.
+    Útil cuando la URL firmada original ya venció.
+    Soporta BCC en el correo de entrega.
+    """
+    if admin_key != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+    # 1. Regenerar URL firmada fresca desde GCS
+    try:
+        from datetime import timedelta
+        sc = get_storage_client()
+        if not sc:
+            raise Exception("GCS client no disponible")
+        bkt = sc.bucket(GCS_BUCKET_NAME)
+        blob = bkt.blob(gcs_blob_name)
+        if not blob.exists():
+            raise Exception(f"Blob no encontrado en GCS: {gcs_blob_name}")
+        fresh_url = blob.generate_signed_url(
+            expiration=timedelta(hours=48),
+            method="GET",
+            version="v4"
+        )
+        print(f"🔗 [ADMIN] URL fresca generada para {gcs_blob_name[:60]}...")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando URL GCS: {e}")
+
+    # 2. Actualizar la orden en DB con la nueva URL y estado
+    try:
+        database.create_order({
+            "id": orden_id,
+            "status": "processing",
+            "client": nombre,
+            "email": email_to,
+            "color": color,
+            "columnas": columnas,
+            "files": [],
+            "audio_url": fresh_url,
+            "service_type": "transcription"
+        })
+    except Exception:
+        database.update_order_status(orden_id, "processing")
+
+    # 3. Parsear BCC
+    bcc_list = [e.strip() for e in email_bcc.split(",") if e.strip()] if email_bcc else []
+
+    # 4. Tarea background con BCC
+    async def _reprocess_with_bcc():
+        user_metadata = {
+            "email": email_to,
+            "client": nombre,
+            "color": color,
+            "columnas": columnas,
+            "bcc": bcc_list
+        }
+        await procesar_audio_y_documentos(orden_id, fresh_url, user_metadata)
+
+    background_tasks.add_task(_reprocess_with_bcc)
+
+    print(f"🔧 [ADMIN] Reprocesamiento desde GCS iniciado: {orden_id} → {email_to} BCC={bcc_list}")
+    return {
+        "success": True,
+        "message": f"Orden {orden_id} en reprocesamiento. URL regenerada OK.",
+        "fresh_url_preview": fresh_url[:80] + "..."
+    }
 
 async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, nivel: str,
                                     preguntas_alternativa: int, preguntas_desarrollo: int,
