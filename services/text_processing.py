@@ -47,8 +47,46 @@ Este fragmento forma parte de un documento mayor. No incluyas introducciones ni 
 
 
 def dividir_texto_en_bloques(texto, max_palabras=800):
-    # Divide el texto por puntos seguidos de espacio para no romper oraciones
-    oraciones = re.split(r'(?<=\.)\s+', texto)
+    """
+    Divide el texto en bloques de ≤max_palabras para enviar a GPT.
+
+    Estrategia en cascada:
+    1. Divide por punto (.) seguido de espacio — respeta oraciones.
+    2. Si algún fragmento resultante supera max_palabras (p. ej. Deepgram
+       devolvió texto casi sin puntuación), lo re-divide por otros
+       delimitadores: ';', ',', salto de línea.
+    3. Si aún así el fragmento es demasiado largo, lo corta por palabras
+       de forma forzada como último recurso.
+
+    Esto garantiza que NUNCA se envíe un bloque gigante a GPT, lo cual
+    causaría timeout o respuesta truncada (el error de "1 sola página").
+    """
+    total_palabras = len(texto.split())
+    print(f"📐 [chunking] Texto total: {total_palabras} palabras")
+
+    # --- Paso 1: División por punto ---
+    fragmentos_crudos = re.split(r'(?<=\.)\s+', texto)
+
+    # --- Paso 2 y 3: Sub-dividir fragmentos que sigan siendo muy grandes ---
+    oraciones = []
+    for frag in fragmentos_crudos:
+        if len(frag.split()) <= max_palabras:
+            oraciones.append(frag)
+        else:
+            # Intentar con ';' y ','
+            sub_frags = re.split(r'(?<=[;,])\s+', frag)
+            for sf in sub_frags:
+                if len(sf.split()) <= max_palabras:
+                    oraciones.append(sf)
+                else:
+                    # Corte forzado por palabras (último recurso)
+                    palabras = sf.split()
+                    for i in range(0, len(palabras), max_palabras):
+                        oraciones.append(" ".join(palabras[i:i + max_palabras]))
+
+    print(f"📐 [chunking] Fragmentos base: {len(oraciones)}")
+
+    # --- Agregar fragmentos en bloques de ≤max_palabras ---
     bloques = []
     bloque_actual = []
     palabras_actuales = 0
@@ -66,6 +104,7 @@ def dividir_texto_en_bloques(texto, max_palabras=800):
     if bloque_actual:
         bloques.append(" ".join(bloque_actual))
 
+    print(f"📐 [chunking] Bloques finales: {len(bloques)} (máx. {max_palabras} palabras c/u)")
     return bloques
 
 
@@ -85,7 +124,8 @@ def procesar_txt_con_chatgpt(path_txt):
     texto_procesado = ""
 
     for i, bloque in enumerate(bloques):
-        print(f"🧠 Procesando bloque {i+1}/{len(bloques)} ({len(bloque.split())} palabras)...")
+        palabras_bloque = len(bloque.split())
+        print(f"🧠 Procesando bloque {i+1}/{len(bloques)} ({palabras_bloque} palabras)...")
 
         intentos = 0
         exito = False
@@ -97,17 +137,23 @@ def procesar_txt_con_chatgpt(path_txt):
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": bloque}
                     ],
-                    temperature=0.3
+                    temperature=0.3,
+                    timeout=120  # Timeout explícito: 2 min por bloque
                 )
-                texto_procesado += response.choices[0].message.content.strip() + "\n\n"
+                contenido = response.choices[0].message.content.strip()
+                if not contenido:
+                    raise ValueError("GPT devolvió respuesta vacía")
+                texto_procesado += contenido + "\n\n"
                 exito = True
+                print(f"   ✅ Bloque {i+1} procesado: {len(contenido.split())} palabras salida")
             except Exception as e:
                 intentos += 1
-                print(f"⚠️ Error en bloque {i+1}, intento {intentos}: {e}")
+                print(f"   ⚠️ Error en bloque {i+1}, intento {intentos}: {e}")
                 time.sleep(5)
 
         if not exito:
-            print(f"❌ Fallo definitivo en bloque {i+1}")
-            texto_procesado += f"[ERROR: Fallo permanente en el bloque {i+1}]\n\n"
+            print(f"   ❌ Fallo definitivo en bloque {i+1} — se incluye texto original como fallback")
+            # Incluir el texto original en lugar de un mensaje de error vacío
+            texto_procesado += bloque + "\n\n"
 
     return texto_procesado.strip()
