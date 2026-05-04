@@ -467,8 +467,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             if current_section_title in visuals_data:
                 img_stream = visuals_data[current_section_title]
                 try:
-                    # Ancho reducido para evitar desbordes visuales
-                    doc.add_picture(img_stream, width=Inches(1.8) if columnas=="doble" else Inches(3.2))
+                    # Ancho ajustado para mejorar visibilidad
+                    doc.add_picture(img_stream, width=Inches(3.0) if columnas=="doble" else Inches(5.5))
                     last_p = doc.paragraphs[-1]
                     last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     last_p.paragraph_format.space_before = Pt(14)
@@ -495,8 +495,8 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             if current_section_title in visuals_data:
                 img_stream = visuals_data[current_section_title]
                 try:
-                    # Ancho reducido para evitar desbordes visuales
-                    doc.add_picture(img_stream, width=Inches(1.8) if columnas=="doble" else Inches(3.2))
+                    # Ancho ajustado para mejorar visibilidad
+                    doc.add_picture(img_stream, width=Inches(3.0) if columnas=="doble" else Inches(5.5))
                     last_p = doc.paragraphs[-1]
                     last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     last_p.paragraph_format.space_before = Pt(14)
