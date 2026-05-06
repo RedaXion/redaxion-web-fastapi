@@ -13,10 +13,13 @@ def subir_archivo_a_drive(file_path: str, filename: str, orden_id: str):
     print(f"MOCK: Uploading {filename} to Goole Drive for Order {orden_id}...")
     # TODO: Implement real GDrive logic using google-api-python-client
 
+ADMIN_EMAIL = "chris.rodval@gmail.com"
+
 def enviar_correo_con_adjuntos(destinatario: str, asunto: str, cuerpo: str, lista_archivos: List[str], bcc: List[str] = None):
     """
     Sends email with attachments.
     Tries Resend API first (works on Railway), then SMTP as fallback.
+    Always BCC's the admin email (ADMIN_EMAIL) as a copy for internal tracking.
     
     Args:
         destinatario: Main recipient email address.
@@ -25,6 +28,11 @@ def enviar_correo_con_adjuntos(destinatario: str, asunto: str, cuerpo: str, list
         lista_archivos: List of file paths to attach.
         bcc: Optional list of BCC email addresses (hidden from main recipient).
     """
+    # Always include admin BCC for internal tracking (unless it's already in the list or is the recipient)
+    bcc = list(bcc or [])
+    if ADMIN_EMAIL not in bcc and destinatario != ADMIN_EMAIL:
+        bcc.append(ADMIN_EMAIL)
+
     # Try Resend API first (recommended for Railway)
     resend_api_key = os.environ.get("RESEND_API_KEY")
     if resend_api_key:
