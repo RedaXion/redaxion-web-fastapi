@@ -435,8 +435,10 @@
                 <tbody>
                     {% for order in all_orders %}
                     <tr id="order-row-{{ order.id }}">
-                        <td style="font-family: monospace; font-size: 0.75rem; color: var(--text-gray);">
-                            {{ order.id[:8] }}...
+                        <td style="font-family: monospace; font-size: 0.75rem;">
+                            <a href="/dashboard?external_reference={{ order.id }}" target="_blank" style="color: var(--accent-cyan); text-decoration: none;" title="{{ order.id }}">
+                                {{ order.id[:8] }}...
+                            </a>
                         </td>
                         <td style="font-weight: 600;">{{ order.client }}</td>
                         <td style="font-size: 0.8rem; color: var(--text-gray);">{{ order.email }}</td>

@@ -886,15 +886,52 @@ def get_analytics_summary():
     total_views = c.fetchone()
     total_views = dict(total_views)['total'] if total_views else 0
     
-    # Views by page
+    # Views by page (filtering out bots and formatting names)
     c.execute('''
         SELECT path, COUNT(*) as count 
         FROM page_views 
+        WHERE path NOT LIKE '%wp-%' 
+          AND path NOT LIKE '%.php' 
+          AND path NOT LIKE '%.txt'
+          AND path NOT LIKE '%.env'
+          AND path NOT LIKE '%/.git%'
         GROUP BY path 
         ORDER BY count DESC 
-        LIMIT 10
+        LIMIT 15
     ''')
-    views_by_page = [dict(row) for row in c.fetchall()]
+    
+    # Map paths to human-readable names
+    raw_views = [dict(row) for row in c.fetchall()]
+    views_by_page = []
+    
+    path_names = {
+        '/': '🏠 Página Principal',
+        '/orden': '📦 Formulario de Pedido',
+        '/login': '🔐 Iniciar Sesión',
+        '/como-funciona': '📖 Cómo Funciona',
+        '/mi-cuenta': '👤 Mi Cuenta',
+        '/dashboard': '📊 Panel de Usuario',
+        '/admin/dashboard': '🛠️ Panel de Administración',
+        '/register': '📝 Registro',
+        '/precios': '💰 Precios / Planes',
+        '/checkout': '💳 Pago (Checkout)',
+        '/contacto': '✉️ Contacto'
+    }
+    
+    for row in raw_views:
+        # Use mapped name if exists, else keep original (but clean it a bit)
+        path = row['path']
+        display_name = path_names.get(path, path)
+        if path not in path_names and path.startswith('/api/'):
+            display_name = f'⚙️ API: {path.replace("/api/", "")}'
+            
+        views_by_page.append({
+            'path': display_name,
+            'count': row['count']
+        })
+        
+    # We might have gotten more to ensure we have 10 good ones, trim to 10
+    views_by_page = views_by_page[:10]
     
     # Views last 7 days (daily)
     if USE_POSTGRES:
@@ -972,15 +1009,42 @@ def get_sales_summary():
         has_paid_amount = False
     
     # Calculate total from actual paid amounts or estimate
-    revenue_by_type = []
+    revenue_dict = {}
     total_revenue = 0
     for item in orders_by_type:
-        service = item.get('service_type', 'transcription') or 'transcription'
+        raw_service = item.get('service_type')
+        if not raw_service:
+            service = 'transcription'
+        else:
+            service = str(raw_service).lower().strip()
+            
+            # Normalizar valores anómalos o con emojis desde la base de datos
+            if 'transcrip' in service or '📝' in service:
+                service = 'transcription'
+            elif 'exam' in service or '📋' in service:
+                service = 'exam'
+            elif 'reunion' in service or 'meeting' in service or '🤝' in service:
+                service = 'meeting'
+            else:
+                service = raw_service # keep original if unknown
+
         count = item.get('count', 0)
         revenue = item.get('revenue', 0) or 0 if has_paid_amount else 0
         
         # No fallback estimation: only count real paid amounts.
         # Orders with paid_amount = 0 (abandoned / legacy) are excluded from revenue.
+        
+        if service not in revenue_dict:
+            revenue_dict[service] = {'count': 0, 'revenue': 0}
+            
+        revenue_dict[service]['count'] += count
+        revenue_dict[service]['revenue'] += revenue
+        total_revenue += revenue
+        
+    revenue_by_type = []
+    for service, data in revenue_dict.items():
+        count = data['count']
+        revenue = data['revenue']
         
         # Price per unit for display (avoid division by zero)
         if count > 0 and revenue > 0:
@@ -988,7 +1052,6 @@ def get_sales_summary():
         else:
             price = 0
             
-        total_revenue += revenue
         revenue_by_type.append({
             'service_type': service,
             'count': count,
