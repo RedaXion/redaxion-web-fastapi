@@ -59,7 +59,7 @@ TEXTO A DIAGRAMAR:
             mermaid_code = mermaid_code.split("```")[1].split("```")[0].strip()
             
         print(f"🎨 [Kroki Fallback] Renderizando imagen para el documento...")
-        r = requests.post("https://kroki.io/mermaid/png", data=mermaid_code.encode('utf-8'), timeout=15)
+        r = requests.post("https://kroki.io/mermaid/png", data=mermaid_code.encode('utf-8'), timeout=30)
         
         if r.status_code == 200:
             print("✅ [Kroki Fallback] Gráfico generado con éxito.")
