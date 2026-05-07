@@ -113,20 +113,22 @@ def transcribir_audio(audio_url, keyterms=None):
             if attempt < max_retries:
                 print("🔄 Reintentando en 5 segundos...")
                 time.sleep(5)
-            else:
-                print("⚠️ Retornando texto de contingencia tras agotar reintentos.")
-                return """
-[TRANSCRIPCIÓN SIMULADA]
-Este es un texto generado automáticamente porque el servicio de transcripción falló persistentemente o no pudo acceder al archivo de audio (probablemente porque estamos en un entorno local sin almacenamiento en la nube real).
 
-En un entorno de producción, aquí aparecería el contenido completo de tu grabación.
-Por ahora, utilizaremos este texto base para demostrar la capacidad de RedaXion de:
-1. Analizar el contenido.
-2. Mejorar la redacción.
-3. Generar quizzes de repaso.
+    # --- Deepgram agotó todos los reintentos ---
+    # Fix #2: Intentar AssemblyAI como último recurso antes de abortar
+    print("⚠️ Deepgram agotó todos los reintentos. Intentando AssemblyAI como fallback final...")
+    assembly_text = transcribir_audio_assembly_rest(audio_url)
+    if assembly_text:
+        print("✅ Fallback final a AssemblyAI exitoso.")
+        return assembly_text
 
-El sistema continúa funcionando correctamente.
-"""
+    # Fix #1: Lanzar excepción real en lugar de retornar texto de demo
+    # Esto marca la orden como 'error' y notifica al admin correctamente.
+    print("❌ Todas las opciones de transcripción fallaron. Abortando orden.")
+    raise RuntimeError(
+        "Transcripción fallida: Deepgram (3 intentos) y AssemblyAI también fallaron. "
+        "La orden no puede procesarse sin audio real."
+    )
 
 # ============================================
 # ASYNC VERSION - Non-blocking transcription

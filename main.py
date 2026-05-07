@@ -258,12 +258,14 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
         # Generate descriptive document name from content
         nombre_descriptivo = generar_nombre_documento(texto_procesado, orden_id)
         
-        # Update DB with files
-        # Upload to GCS if configured - using descriptive names
-        url_pdf_remote = upload_file_to_gcs(path_pdf, f"{nombre_descriptivo}.pdf")
-        url_doc_remote = upload_file_to_gcs(path_docx, f"{nombre_descriptivo}.docx")
-        url_quiz_pdf_remote = upload_file_to_gcs(path_quiz_pdf, f"Quiz-{nombre_descriptivo}.pdf")
-        url_quiz_doc_remote = upload_file_to_gcs(path_quiz, f"Quiz-{nombre_descriptivo}.docx")
+        # Fix #3: usar subcarpeta única por orden en GCS para evitar colisiones.
+        # El nombre del archivo que ve el cliente queda limpio (ej: "Fisiopatologia_Cardiaca.pdf").
+        # La ruta en GCS será: {orden_id[:8]}/{nombre_descriptivo}.pdf (transparente para el cliente).
+        gcs_folder = orden_id[:8]
+        url_pdf_remote = upload_file_to_gcs(path_pdf, f"{gcs_folder}/{nombre_descriptivo}.pdf")
+        url_doc_remote = upload_file_to_gcs(path_docx, f"{gcs_folder}/{nombre_descriptivo}.docx")
+        url_quiz_pdf_remote = upload_file_to_gcs(path_quiz_pdf, f"{gcs_folder}/Quiz-{nombre_descriptivo}.pdf")
+        url_quiz_doc_remote = upload_file_to_gcs(path_quiz, f"{gcs_folder}/Quiz-{nombre_descriptivo}.docx")
 
         # Use remote URLs if upload succeeded, else local
         base_url_path = "/static/generated"
