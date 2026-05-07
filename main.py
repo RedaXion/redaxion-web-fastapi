@@ -52,6 +52,79 @@ def startup_event():
     database.deactivate_discount_code("DESCUENTO80")
     print("✅ Base de datos, analytics y comentarios inicializados")
 
+# --- Maintenance Mode Middleware ---
+@app.middleware("http")
+async def maintenance_mode_middleware(request: Request, call_next):
+    # Set to True to enable maintenance mode today
+    MAINTENANCE_MODE = True
+    
+    # Paths that are allowed during maintenance
+    allowed_paths = ["/admin", "/api/admin", "/static", "/docs", "/openapi.json"]
+    
+    if MAINTENANCE_MODE and not any(request.url.path.startswith(p) for p in allowed_paths):
+        content = """
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>RedaXion - En Mantención</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&display=swap');
+                body { 
+                    font-family: 'Outfit', sans-serif; 
+                    background: radial-gradient(circle at center, #1a2a4a 0%, #0d1526 100%); 
+                    color: white; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    height: 100vh; 
+                    margin: 0; 
+                    overflow: hidden;
+                }
+                .container { 
+                    max-width: 500px; 
+                    padding: 50px; 
+                    background: rgba(255, 255, 255, 0.05); 
+                    backdrop-filter: blur(15px); 
+                    border-radius: 30px; 
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    text-align: center;
+                    animation: fadeIn 1s ease-out;
+                }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                h1 { font-size: 2.5rem; margin-bottom: 20px; font-weight: 600; letter-spacing: -1px; }
+                p { font-size: 1.1rem; line-height: 1.6; color: #a0aec0; margin-bottom: 30px; }
+                .insta-btn { 
+                    display: inline-block;
+                    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); 
+                    color: white; 
+                    text-decoration: none; 
+                    padding: 12px 30px; 
+                    border-radius: 50px; 
+                    font-weight: 600;
+                    transition: transform 0.3s ease;
+                }
+                .insta-btn:hover { transform: scale(1.05); }
+                .logo { font-size: 1.5rem; font-weight: bold; color: #4F81BD; margin-bottom: 20px; display: block; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <span class="logo">RedaXion</span>
+                <h1>Página en Mantención</h1>
+                <p>Estamos realizando mejoras críticas en nuestro motor de visualización para brindarte una experiencia impecable.</p>
+                <p>Informaremos sobre nuestra reapertura hoy mismo por Instagram.</p>
+                <a href="https://www.instagram.com/redaxion.ai" target="_blank" class="insta-btn">Seguir en Instagram</a>
+            </div>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=content, status_code=503)
+        
+    return await call_next(request)
+
 # Security headers middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
