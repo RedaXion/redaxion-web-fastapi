@@ -35,8 +35,9 @@ def generate_kroki_visual(text: str, color_theme: str = "azul elegante") -> Opti
 REGLAS ESTRICTAS:
 1. SOLO devuelve el código Mermaid puro, SIN bloques delimitadores de markdown (```).
 2. Si el contenido describe un proceso lineal de más de 4 pasos, usa 'flowchart LR' (horizontal). Si es jerárquico o corto, usa 'flowchart TD' (vertical).
-3. No uses comillas, paréntesis u otros caracteres especiales en los IDs de los nodos.
-4. Aplica el siguiente estilo de colores a TODOS los nodos usando classDef:
+3. No uses comillas, paréntesis u otros caracteres especiales en los IDs de los nodos (usa IDs simples como A, B, C, etc.).
+4. Si el texto del nodo (etiqueta) contiene caracteres especiales como acentos, comas o paréntesis, debes encerrarlo en comillas dobles obligatoriamente. Ejemplo: `A["Texto con (paréntesis)"]`.
+5. Aplica el siguiente estilo de colores a TODOS los nodos usando classDef:
    classDef default fill:{secondary_bg},stroke:{primary_bg},stroke-width:2px,color:#000000;
 
 TEXTO A DIAGRAMAR:
