@@ -1,0 +1,213 @@
+RedaXion – Tecnología que transforma tu estudio
+Transcripción
+Entendiendo la Tolerancia Inmunitaria y sus Implicaciones
+La Tolerancia Inmunitaria
+Tolerancia inmunitaria es un concepto fundamental en inmunología. Se refiere a la capacidad del sistema inmunitario 
+para distinguir entre lo propio y lo no propio, tolerando las células y tejidos del propio cuerpo mientras ataca a los 
+invasores externos. La función de las células inmunitarias es destruir, pero deben ser tolerantes a los antígenos propios 
+para evitar atacar el propio cuerpo.
+- Propio vs. No Propio: Si una bacteria entra en el cuerpo, es reconocida como no propia y es atacada. Sin embargo, si se 
+recibe sangre compatible, el cuerpo la tolera.
+- Trasplantes: En el caso de un trasplante, si el cuerpo no reconoce el tejido como propio, lo destruye.
+Patologías Relacionadas con la Tolerancia
+El equilibrio entre lo que el sistema inmunitario tolera y no tolera puede llevar a diversas patologías. Existen tres 
+principales categorías de inmunopatologías:
+1.  Autoinmunidad: Ocurre cuando el cuerpo no tolera sus propios tejidos, atacándolos como si fueran extraños. 
+Ejemplos incluyen el lupus y la diabetes mellitus tipo 1.
+2.  Inmunodeficiencia: Se presenta cuando el sistema inmunitario es incapaz de responder adecuadamente a las 
+amenazas externas. Por ejemplo, los pacientes en quimioterapia pueden desarrollar inmunodeficiencia debido a la 
+destrucción de células que replican rápidamente, como los leucocitos.
+3. Hipersensibilidad: Se refiere a una respuesta exagerada del sistema inmunitario ante antígenos exógenos, como el 
+chocolate, el polvo o el pasto. Esta respuesta exacerbada puede dañar los tejidos del cuerpo.
+Diferencias entre Autoinmunidad e Hipersensibilidad
+- Autoinmunidad: Destruye los tejidos debido a un fallo en reconocer los antígenos propios.
+- Hipersensibilidad: Responde de manera exagerada a antígenos exógenos, causando daño a los tejidos.
+Mecanismos de la Tolerancia
+La  tolerancia se establece en los linfocitos T, que son activados por células presentadoras de antígenos, como las 
+dendríticas. Si un linfocito T no reacciona con los antígenos del cuerpo, se integra al sistema circulatorio. Sin embargo, si 
+comienza a destruir células presentadoras, entra en apoptosis para evitar el daño autoinmune.
+Este equilibrio entre tolerancia y respuesta inmunitaria es crucial para la salud, y su desregulación puede llevar a 
+enfermedades graves.
+La Importancia de la Tolerancia Inmunológica y la Respuesta Alérgica
+RedaXion – Tecnología que transforma tu estudio
+Tolerancia Central y Periférica
+Cuando un  linfocito T que no tolera a una célula presentadora sana entra en circulación, puede ser peligroso. Esto 
+ocurre porque el linfocito T, al no reconocer la célula como propia, puede atacarla. La tolerancia inmunológica es crucial 
+para evitar este tipo de reacciones autoinmunes.
+La tolerancia central es gobernada por un gen llamado AIRE (Regulador Autoinmune). Si este gen se daña, perturba o 
+muta, la tolerancia se desregula, permitiendo que linfocitos T autorreactivos destruyan células propias, lo que puede 
+llevar a enfermedades autoinmunes.
+Además de la tolerancia central, existe la tolerancia periférica. Si un linfocito T no tolerante escapa de la tolerancia 
+central, los linfocitos T reguladores (Treg) actúan para detenerlo. Estos linfocitos Treg son esenciales para mantener la 
+tolerancia periférica, inmovilizando y neutralizando a los linfocitos T autorreactivos.
+Envejecimiento y Tolerancia Inmunológica
+Con el envejecimiento, la inmunidad del paciente disminuye. Esto afecta la eficacia de los linfocitos Treg, lo que puede 
+alterar la tolerancia y aumentar la posibilidad de desarrollar problemas autoinmunes. Además, el envejecimiento inhibe 
+la expansión clonal, un proceso donde los linfocitos B proliferan en respuesta a un antígeno. En un paciente normal, la 
+expansión clonal es necesaria para activar una respuesta inflamatoria adecuada.
+Respuesta Alérgica y Genes Atópicos
+En el caso de las alergias, algunas personas tienen  genes atópicos que predisponen a generar reacciones alérgicas. 
+Cuando una persona con estos genes se expone por primera vez a un alérgeno exógeno, como el polen de un plátano  
+oriental, no reacciona inmediatamente. Sin embargo, este alérgeno induce la liberación de inmunoglobulina E (IgE), que 
+se une a los mastocitos y basófilos, quedando latente en el tejido.
+Cuando la persona se expone nuevamente al mismo alérgeno, ahora sí reacciona, ya que la inmunidad está activada. 
+Este proceso explica por qué algunas personas desarrollan alergias a ciertos alimentos o sustancias, mientras que otras 
+no. La sobreexpresión de linfocitos B en personas con genes atópicos es la causa de esta predisposición a las alergias.
+La Complejidad de las Reacciones Alérgicas y la Hipersensibilidad Tipo 1
+Algunas personas presentan una mayor expresión de  inmunocomplejos, los cuales, tras desencadenar una reacción 
+inmunitaria, permanecen en las zonas de deposición de manera permanente. Por ejemplo, una persona alérgica al 
+huevo probablemente mantendrá esta alergia de por vida debido a la permanencia de estos inmunocomplejos.
+Genética y Reacciones Alérgicas
+Las personas con genes atópicos tienden a sobreexpresar la reacción de los linfocitos Th, que liberan inmunocomplejos. 
+En este contexto, los inmunocomplejos involucrados son principalmente de  inmunoglobulina E (IgE). Cuando una 
+persona se expone a un alérgeno, como el polen, genera una respuesta inmune que, aunque inicialmente se resuelve, 
+deja la IgE depositada en los mastocitos y basófilos. Esto permite que, ante una nueva exposición, se instale una 
+respuesta clínica inmediata.
+Predisposición Genética
+RedaXion – Tecnología que transforma tu estudio
+La  predisposición  genética  juega  un  papel  crucial  en  las  reacciones  alérgicas.  Aunque  una  persona  pueda  no 
+experimentar  síntomas  en  el  primer  contacto  con  un  alérgeno,  las  inmunoglobulinas sensibilizan  los  tejidos, 
+especialmente los mastocitos y basófilos, preparando el terreno para una respuesta de hipersensibilidad tipo 1.
+Hipersensibilidad Tipo 1: Respuesta Rápida y Tardía
+La hipersensibilidad tipo 1 se caracteriza por dos tipos de respuestas:
+1.  Respuesta rápida: Se produce la liberación de  histamina, que provoca vasodilatación, congestión nasal y otros 
+síntomas alérgicos inmediatos. La  histamina también  activa la  vía  de la  lipoxigenasa, generando leucotrienos e 
+interleucina  4,  que  actúan  como  quimiotácticos  para  atraer  células  inflamatorias  como  neutrófilos,  linfocitos  y 
+eosinófilos.
+2. Respuesta tardía: Los mediadores liberados en la respuesta rápida inducen la migración de células inflamatorias al 
+tejido afectado. El eosinófilo es particularmente importante, ya que, al no reconocer el antígeno como un parásito, 
+libera proteasas que dañan el tejido, provocando su remodelación.
+Remodelación del Tejido
+La liberación de proteasas por los eosinófilos lleva a la destrucción del tejido, que posteriormente se repara mediante la 
+formación de nuevo tejido. Este proceso puede resultar en la remodelación de la vía aérea, un fenómeno común en las  
+alergias clásicas.
+Conclusión
+La alergia clásica, caracterizada por la hipersensibilidad tipo 1, es un proceso complejo que involucra la interacción de 
+factores genéticos y ambientales. Las personas con genes atópicos tienden a sobreexpresar linfocitos Th, generando 
+inmunocomplejos que se depositan en los tejidos, perpetuando la respuesta alérgica.
+Explorando las Diferentes Clases de Hipersensibilidad
+Mecanismos de Hipersensibilidad
+En  el  estudio  de  la  hipersensibilidad,  es  crucial  entender  los  mecanismos  que  se  activan  en  cada  tipo.  En  la 
+hipersensibilidad tipo 1, se observa una respuesta inmediata que involucra la  vasodilatación y el reclutamiento de 
+células inflamatorias, como los eosinófilos, que son responsables de destruir el tejido. Esta respuesta es rápida y se 
+clasifica como una reacción alérgica.
+Hipersensibilidad Tipo 2
+La hipersensibilidad tipo 2 se activa cuando una infección o un fármaco modifica la estructura molecular de algunas 
+células del cuerpo. Este cambio hace que el antígeno no sea reconocido como propio, activando el sistema de 
+complemento. Este sistema forma el complejo de ataque a la membrana, que destruye la célula afectada mediante lisis. 
+Un ejemplo clásico es la anemia hemolítica inducida por penicilina, donde el fármaco altera la conformación molecular 
+de la membrana celular, activando el sistema de complemento y causando la destrucción de eritrocitos.
+Hipersensibilidad Tipo 3
+RedaXion – Tecnología que transforma tu estudio
+En la  hipersensibilidad tipo 3, se produce una saturación de inmunocomplejos que se depositan en áreas de poco 
+tránsito vascular, como los capilares y el riñón. Esto ocurre debido a una inmunodeficiencia que impide la eliminación 
+adecuada de estos complejos, generando una sobreproducción que se acumula en zonas estrechas. Esta acumulación 
+puede llevar a condiciones como la vasculitis autoinmune y la glomerulonefritis autoinmune.
+Hipersensibilidad Tipo 4
+La hipersensibilidad tipo 4 se caracteriza por la sobreactivación de los linfocitos T, que responden de manera exagerada 
+ante antígenos. Esta respuesta es más tardía y no involucra anticuerpos, sino una activación celular directa.
+Resumen de las Clases de Hipersensibilidad
+- Tipo 1: Reacción alérgica inmediata, mediada por eosinófilos.
+- Tipo 2: Destrucción celular por modificación molecular inducida por fármacos o infecciones.
+- Tipo 3: Acumulación de inmunocomplejos en áreas de poco tránsito vascular.
+- Tipo 4: Sobreactivación de linfocitos T ante antígenos.
+Cada tipo de hipersensibilidad tiene un mecanismo específico que explica su manifestación clínica y sus consecuencias 
+en el organismo. Es fundamental entender estos procesos para abordar adecuadamente las condiciones asociadas a 
+cada tipo.
+Explorando la Inmunología: Inmunoglobulinas, Tolerancia y Enfermedades Autoinmunes
+Inmunoglobulinas y su Función
+Inmunoglobulina E (IgE): La prueba de la inmunoglobulina E está relacionada con la sensibilidad alérgica.
+Inmunoglobulinas G y M (IgG e IgM): Estas están asociadas con la  respuesta inmune adaptativa y se utilizan para 
+evaluar la respuesta del cuerpo a infecciones.
+Tolerancia Inmunológica
+Entrenamiento de Linfocitos T: Los linfocitos T se entrenan en el timo. Solo aquellos que son tolerantes, es decir, que 
+reconocen lo propio y no atacan al cuerpo, son liberados al sistema.
+Gen AIRE: Este gen es crucial para la tolerancia central. Si se daña, la tolerancia central se ve afectada, pero la tolerancia 
+periférica puede compensar regulando los linfocitos T intolerantes mediante:
+- Anergia: Inmovilización de los linfocitos.
+- Apoptosis: Inducción de la muerte celular programada.
+La pérdida de tolerancia, ya sea central o periférica, conduce a la autoinmunidad.
+Factores Genéticos y Epigenéticos
+Predisposición  Genética: Anteriormente  se  pensaba  que  solo  la  predisposición  genética  causaba  enfermedades 
+autoinmunes. Ahora se sabe que es un proceso multifactorial, donde varios genes pueden desregular la tolerancia.
+RedaXion – Tecnología que transforma tu estudio
+Epigenética: Los genes pueden estar "dormidos" y activarse ante ciertos estímulos ambientales, lo que influye en la 
+expresión genética y contribuye a la autoinmunidad.
+Hormonas: Un entorno hormonal con altos niveles de estrógenos puede exacerbar la intolerancia.
+Enfermedades Autoinmunes
+Lupus Eritematoso Sistémico (LES): Es una enfermedad autoinmune sistémica que afecta múltiples tejidos, pero no el 
+cerebro ni los ojos, que están protegidos de la reacción autoinmune.
+Diferencias entre LES y Diabetes Tipo 1: El LES afecta múltiples órganos, mientras que la diabetes tipo 1 es órgano-
+específica.
+Antígenos y Autoinmunidad: Las enfermedades sistémicas generan autoinmunidad contra antígenos nucleares y DNA 
+propios, presentes en todas las células.
+Cáncer y Mortalidad
+Cáncer en Hombres: Los hombres tienen mayor riesgo de morir por cáncer de estómago, pulmón y próstata. Por ello, los 
+tamizajes prostáticos son esenciales, especialmente si hay sintomatología.
+Resumen de Conceptos Clave
+- Inmunoglobulina E: Sensibilidad alérgica.
+- Tolerancia Central y Periférica: Regulación de linfocitos T.
+- AIRE: Gen regulador de la inmunidad.
+- Autoinmunidad: Resultado de la pérdida de tolerancia.
+- Epigenética y Hormonas: Factores que influyen en la expresión genética y la autoinmunidad.
+- Cáncer en Hombres: Importancia de los tamizajes para prevenir mortalidad.
+Este análisis proporciona una visión detallada de cómo las inmunoglobulinas, la tolerancia inmunológica y los factores 
+genéticos y ambientales interactúan en el desarrollo de enfermedades autoinmunes y su relación con el cáncer.
+La Complejidad del Cáncer: Factores de Mortalidad y Tratamientos
+Mortalidad en Mujeres: Cáncer Vesicular y Mamario
+En las mujeres, los tipos de cáncer que generan mayor mortalidad son el cáncer vesicular y el cáncer mamario. La alta 
+incidencia de cáncer vesicular en Chile y en poblaciones con ascendencia similar puede estar relacionada con factores 
+demográficos y ambientales, no solo individuales. Esto sugiere que la exposición a ciertos factores ambientales y 
+demográficos influye en la prevalencia de estos tipos de cáncer.
+Evolución de la Quimioterapia
+El estudio del cáncer ha sido un campo de investigación durante mucho tiempo. Entre las décadas de 1960 y 1970, se 
+desarrolló la primera quimioterapia. Este tratamiento fue inicialmente aplicado de manera uniforme a diferentes tipos 
+de cáncer, como leucemia y linfoma. En algunos casos, como en leucemias y linfomas, la respuesta fue positiva, con un 
+40-60% de éxito. Sin embargo, en tumores sólidos, la respuesta fue significativamente menor, solo del 2.6%. Esto 
+RedaXion – Tecnología que transforma tu estudio
+evidenció que los tratamientos deben ser específicos para cada tipo de cáncer, ya que los tumores sólidos y los cánceres 
+plasmáticos responden de manera diferente a los tratamientos.
+Agentes Etiológicos y Proceso Oncológico
+Se han identificado varios agentes etiológicos que desencadenan el cáncer, entre ellos:
+- Radiación
+- Agentes químicos, como el cigarrillo
+- Agentes biológicos, incluyendo virus oncogénicos
+Cuando una célula se enfrenta a estos agentes, un "guardián" del ADN evalúa si el daño puede ser reparado. Si no es 
+posible la reparación, se induce la apoptosis. Sin embargo, si este proceso falla, puede iniciarse la tumorogénesis, donde 
+una célula mutada comienza a proliferar descontroladamente.
+Diferenciación entre Tumores Malignos y Benignos
+La distinción entre tumores malignos y benignos no se basa en su tamaño, sino en su arquitectura histológica. Un tumor 
+benigno mantiene una estructura ordenada, mientras que un tumor maligno presenta una estructura desordenada. 
+Además, un tumor encapsulado tiende a ser benigno, mientras que uno infiltrado en el tejido conjuntivo es maligno. La 
+presencia de metástasis es un claro indicador de malignidad.
+Tratamiento de Tumores Benignos y Malignos
+-  Tumores benignos: Pueden ser curados mediante la extirpación del tejido afectado. Si el tumor ejerce presión o 
+presenta neoplasia, se recomienda cortar un poco más allá del tejido afectado para evitar complicaciones futuras. 
+Algunos tumores benignos, como el papiloma invertido, pueden volverse malignos si no se tratan a tiempo.
+-  Tumores malignos: También se tratan mediante extirpación. Si el tumor está cerca de estructuras críticas, como 
+nervios o vasos sanguíneos, se debe proceder con cuidado para evitar daños adicionales.
+La comprensión de estos aspectos es crucial para el diagnóstico y tratamiento efectivo del cáncer, adaptando las 
+estrategias terapéuticas a las características específicas de cada tipo de tumor.
+La Radio y su Impacto en el Tratamiento del Cáncer
+La Función de la Radioterapia
+Radioterapia: La radioterapia utiliza radiaciones ionizantes para destruir el ADN de las células tumorales. Al destruir el 
+ADN, las células cancerígenas encuentran dificultades para realizar la  apoptosis, lo que lleva a su destrucción. Sin 
+embargo, este tratamiento también afecta a las células sanas adyacentes. La diferencia clave entre un tumor maligno y 
+una célula sana es que las células sanas tienen una mayor capacidad de regeneración. A pesar de que la radioterapia 
+afecta a ambas, las células sanas pueden recuperarse mejor.
+Quimioterapia y su Mecanismo de Acción
+Quimioterapia: Este tratamiento se enfoca en inestabilizar los microtúbulos necesarios para la mitosis. Al impedir la 
+mitosis, se evita la replicación celular. Sin mitosis, la célula no puede reproducirse, lo que lleva a su eventual 
+RedaXion – Tecnología que transforma tu estudio
+destrucción. Un efecto adverso común de la quimioterapia es la parestesia, una sensación de hormigueo debido a la 
+alteración en la liberación de neurotransmisores.
+Cirugía Paliativa
+Cirugía paliativa: Este tipo de cirugía se realiza para mejorar la calidad de vida del paciente cuando un tumor está 
+comprimiendo órganos vitales, como los pulmones. Aunque no elimina el cáncer por completo, alivia los síntomas y 
+mejora la funcionalidad del órgano afectado. Un ejemplo es el caso de un tumor en el esófago, donde se puede realizar 
+una estirpación y colocar una malla para aliviar la obstrucción, aunque no siempre garantiza una recuperación completa.
+Reflexiones Finales
+El tratamiento del cáncer es complejo y requiere un enfoque multidisciplinario. La radioterapia, la quimioterapia y la 
+cirugía paliativa son herramientas esenciales en el manejo de la enfermedad, cada una con sus beneficios y limitaciones. 
+La elección del tratamiento depende de múltiples factores, incluyendo el tipo de cáncer, su localización y el estado 
+general del paciente.
