@@ -298,7 +298,13 @@ async def procesar_audio_y_documentos(orden_id: str, audio_public_url: str = Non
                  audio_public_url = order.get("audio_url")
 
         # Use async transcription - runs in thread pool so server stays responsive
-        transcription_text = await transcribir_audio_async(audio_public_url)
+        # Passing client info so that, if transcription fails, notifications are sent automatically
+        transcription_text = await transcribir_audio_async(
+            audio_public_url,
+            cliente_email=correo_cliente,
+            cliente_nombre=user_metadata.get("client"),
+            orden_id=orden_id
+        )
         print(f"[{orden_id}] Transcripción completada.")
         
         # Save raw text
@@ -1101,8 +1107,13 @@ async def procesar_y_enviar_reunion(orden_id: str, audio_url: str, titulo: str,
     database.update_order_status(orden_id, "processing")
     
     try:
-        # 1. Transcribe audio with Deepgram
-        transcripcion = await transcribir_audio_async(audio_url)
+        # 1. Transcribe audio — passing client info for failure notifications
+        transcripcion = await transcribir_audio_async(
+            audio_url,
+            cliente_email=correo,
+            cliente_nombre=nombre,
+            orden_id=orden_id
+        )
         print(f"[{orden_id}] Transcripción completada")
         
         # 2. Process with ChatGPT meeting prompt
