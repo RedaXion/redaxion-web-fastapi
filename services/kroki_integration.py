@@ -5,6 +5,9 @@ from typing import Optional
 from openai import OpenAI
 import re
 from urllib.parse import quote
+import zlib
+import base64
+import string
 
 # We map typical color strings to their primary Hex background to theme the Mermaid graph.
 # If a color is not found, we default to the blue variant.
@@ -70,6 +73,74 @@ TEXTO A DIAGRAMAR:
             return None
     except Exception as e:
         print(f"❌ [Kroki Fallback] Excepción durante la generación: {e}")
+        return None
+
+
+def plantuml_encode(plantuml_text: str) -> str:
+    """Compresses and encodes PlantUML text for use in a server URL."""
+    utf8_text = plantuml_text.encode('utf-8')
+    zlibbed_str = zlib.compress(utf8_text)[2:-4]
+    plantuml_alphabet = string.digits + string.ascii_uppercase + string.ascii_lowercase + '-_'
+    base64_alphabet = string.ascii_uppercase + string.ascii_lowercase + string.digits + '+/'
+    translator = bytes.maketrans(base64_alphabet.encode('utf-8'), plantuml_alphabet.encode('utf-8'))
+    encoded = base64.b64encode(zlibbed_str).translate(translator)
+    return encoded.decode('utf-8')
+
+
+def generate_plantuml_official_visual(text: str) -> Optional[BytesIO]:
+    """Generates a PlantUML diagram using the official server as a fallback."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("⚠️ OPENAI_API_KEY no configurada. Saltando PlantUML.")
+        return None
+        
+    client = OpenAI(api_key=api_key)
+    
+    prompt = f"""Convierte el siguiente texto en un Diagrama de Actividades de PlantUML.
+REGLAS ESTRICTAS:
+1. SOLO devuelve el código PlantUML puro, SIN bloques delimitadores de markdown (```).
+2. Empieza con @startuml y termina con @enduml.
+3. Usa `skinparam shadowing false` y `skinparam dpi 300` justo después de @startuml.
+4. Para dar color a CADA actividad, usa la sintaxis `:Texto de la actividad; <<#HexCode>>` (el color en doble ángulo al final de la línea, después del punto y coma).
+5. Usa una variedad de colores pastel (Verde: #DAEFD3, Rosado: #F9D4E8, Morado: #E8D4F9, Azul: #DCE5F0, Turquesa: #D4F9F5, Crema: #FDEBD0).
+6. Usa `stop` para finalizar el diagrama, NO uses `end`.
+
+TEXTO A DIAGRAMAR:
+{text}
+"""
+    print(f"🧠 [PlantUML Fallback] Solicitando código PlantUML a GPT-4o...")
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=600
+        )
+        
+        plantuml_code = response.choices[0].message.content.strip()
+        # Extract from @start to @end
+        match = re.search(r'(@start\w+.*?@end\w+)', plantuml_code, re.DOTALL)
+        if match:
+            plantuml_code = match.group(1).strip()
+            
+        # Fix common GPT mistakes
+        if plantuml_code.endswith("end"):
+            plantuml_code = plantuml_code[:-3] + "stop"
+            
+        encoded = plantuml_encode(plantuml_code)
+        url = f"http://www.plantuml.com/plantuml/png/{encoded}"
+        
+        print(f"🎨 [PlantUML Fallback] Descargando imagen desde el servidor oficial...")
+        r = requests.get(url, timeout=30)
+        
+        if r.status_code == 200:
+            print("✅ [PlantUML Fallback] Gráfico generado con éxito.")
+            return BytesIO(r.content)
+        else:
+            print(f"❌ [PlantUML Fallback] Error del servidor PlantUML: {r.status_code}")
+            return None
+    except Exception as e:
+        print(f"❌ [PlantUML Fallback] Excepción durante la generación: {e}")
         return None
 
 

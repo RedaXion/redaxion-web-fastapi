@@ -239,7 +239,7 @@ def configurar_columnas(doc, tipo):
 
 
 from services.napkin_integration import generate_napkin_visual
-from services.kroki_integration import generate_kroki_visual, generate_math_visual
+from services.kroki_integration import generate_kroki_visual, generate_math_visual, generate_plantuml_official_visual
 from io import BytesIO
 import time
 
@@ -407,8 +407,11 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             # Combine title + context for better visual generation
             napkin_input = f"{section['title']}. {context}"
             
-            # Generate visual - Kroki con fallback a Napkin AI
+            # Generate visual - Kroki -> PlantUML Oficial -> Napkin AI
             img_stream = generate_kroki_visual(napkin_input, color_theme=color)
+            if not img_stream:
+                print(f"🔄 Activando fallback a PlantUML Oficial (Skinparam) para \"{section['title']}\"")
+                img_stream = generate_plantuml_official_visual(napkin_input)
             if not img_stream:
                 print(f"🔄 Activando fallback a Napkin AI para \"{section['title']}\"")
                 img_stream = generate_napkin_visual(napkin_input, language="es")
