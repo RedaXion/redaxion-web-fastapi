@@ -30,7 +30,8 @@ LO QUE SÍ DEBES HACER:
 - En listas, poner en **negritas** el nombre de la categoría antes de los dos puntos.
 - Detectar fórmulas o ecuaciones y encapsularlas en `<formula>código LaTeX</formula>`.
 - Usar ## para el título principal del documento. Este título debe ser **amigable, empático y muy atractivo**.
-- Usar ### para los subtítulos de las secciones.
+- Usar ### para los subtítulos de las secciones, pero **NO abuses de ellos**. Usa subtítulos solo cuando haya un cambio de tema MUY evidente y significativo. Si el expositor sigue hablando del mismo tema general, mantén el texto en párrafos continuos sin insertar subtítulos artificiales.
+- Sé fiel al flujo del discurso del exponente. Si el exponente no estructura su charla de forma rígida, no fuerces una estructura de libro de texto con demasiados encabezados.
 
 LO QUE ESTÁ PROHIBIDO:
 - Resumir o comprimir ideas.

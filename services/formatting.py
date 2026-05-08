@@ -407,11 +407,11 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             # Combine title + context for better visual generation
             napkin_input = f"{section['title']}. {context}"
             
-            # Generate visual - Napkin AI con fallback a Kroki
-            img_stream = generate_napkin_visual(napkin_input, language="es")
+            # Generate visual - Kroki con fallback a Napkin AI
+            img_stream = generate_kroki_visual(napkin_input, color_theme=color)
             if not img_stream:
-                print(f"🔄 Activando fallback a Kroki para \"{section['title']}\"")
-                img_stream = generate_kroki_visual(napkin_input, color_theme=color)
+                print(f"🔄 Activando fallback a Napkin AI para \"{section['title']}\"")
+                img_stream = generate_napkin_visual(napkin_input, language="es")
             
             if img_stream:
                 visuals_data[section["title"]] = img_stream
