@@ -30,18 +30,16 @@ def generate_kroki_visual(text: str, color_theme: str = "azul elegante") -> Opti
         
     client = OpenAI(api_key=api_key)
     
-    # Try to map color
-    theme_key = color_theme.strip().lower()
-    primary_bg, secondary_bg = COLOR_MAP.get(theme_key, ("#4A66AC", "#D8DFEF"))
-    
     prompt = f"""Convierte el siguiente texto explicativo en un diagrama de flujo en sintaxis Mermaid.js (flowchart).
 REGLAS ESTRICTAS:
 1. SOLO devuelve el código Mermaid puro, SIN bloques delimitadores de markdown (```).
-2. Si el contenido describe un proceso lineal de más de 4 pasos, usa 'flowchart LR' (horizontal). Si es jerárquico o corto, usa 'flowchart TD' (vertical).
-3. No uses comillas, paréntesis u otros caracteres especiales en los IDs de los nodos (usa IDs simples como A, B, C, etc.).
-4. Si el texto del nodo (etiqueta) contiene caracteres especiales como acentos, comas o paréntesis, debes encerrarlo en comillas dobles obligatoriamente. Ejemplo: `A["Texto con (paréntesis)"]`.
-5. Aplica el siguiente estilo de colores a TODOS los nodos usando classDef:
-   classDef default fill:{secondary_bg},stroke:{primary_bg},stroke-width:2px,color:#000000;
+2. Usa 'flowchart LR' (dirección horizontal de izquierda a derecha) OBLIGATORIAMENTE.
+3. SE MINIMALISTA PERO COMPLETO: Extrae los 5 o 6 conceptos más importantes. Usa textos concisos (máximo 5 palabras por nodo) e incluye relaciones clave.
+4. No uses comillas, paréntesis u otros caracteres especiales en los IDs de los nodos (usa IDs simples como A, B, C, etc.).
+5. Si el texto del nodo (etiqueta) contiene caracteres especiales como acentos, comas o paréntesis, debes encerrarlo en comillas dobles obligatoriamente. Ejemplo: `A["Texto corto"]`.
+6. El cliente ha solicitado que el diagrama use el color/tema: "{color_theme}". Genera un color hexadecimal primario (para los bordes) y un color secundario pastel (para el fondo) que representen este color.
+7. Aplica el estilo de color generado a TODOS los nodos usando classDef. 
+   Ejemplo: classDef default fill:#F9D4E8,stroke:#E32E91,stroke-width:2px,color:#000000;
 
 TEXTO A DIAGRAMAR:
 {text}
@@ -62,14 +60,26 @@ TEXTO A DIAGRAMAR:
         elif mermaid_code.startswith("```"):
             mermaid_code = mermaid_code.split("```")[1].split("```")[0].strip()
             
-        print(f"🎨 [Kroki Fallback] Renderizando imagen para el documento...")
-        r = requests.post("https://kroki.io/mermaid/png", data=mermaid_code.encode('utf-8'), timeout=50)
+        print(f"🎨 [Kroki Fallback] Renderizando imagen para el documento (usando mermaid.ink)...")
+        
+        import json
+        state = {
+            "code": mermaid_code,
+            "mermaid": {"theme": "default"}
+        }
+        state_json = json.dumps(state)
+        # mermaid.ink requiere base64 url-safe
+        encoded_mermaid = base64.urlsafe_b64encode(state_json.encode('utf-8')).decode('utf-8')
+        
+        # Parámetros para mejor calidad y tamaño en el PDF
+        url = f"https://mermaid.ink/img/{encoded_mermaid}?type=png&width=1200&scale=3"
+        r = requests.get(url, timeout=50)
         
         if r.status_code == 200:
-            print("✅ [Kroki Fallback] Gráfico generado con éxito.")
+            print("✅ [Kroki Fallback] Gráfico generado con éxito en mermaid.ink.")
             return BytesIO(r.content)
         else:
-            print(f"❌ [Kroki Fallback] Error de Kroki: {r.status_code}")
+            print(f"❌ [Kroki Fallback] Error de mermaid.ink: {r.status_code}")
             return None
     except Exception as e:
         print(f"❌ [Kroki Fallback] Excepción durante la generación: {e}")
@@ -100,10 +110,11 @@ def generate_plantuml_official_visual(text: str) -> Optional[BytesIO]:
 REGLAS ESTRICTAS:
 1. SOLO devuelve el código PlantUML puro, SIN bloques delimitadores de markdown (```).
 2. Empieza con @startuml y termina con @enduml.
-3. Usa `skinparam shadowing false` y `skinparam dpi 300` justo después de @startuml.
-4. Para dar color a CADA actividad, usa la sintaxis `:Texto de la actividad; <<#HexCode>>` (el color en doble ángulo al final de la línea, después del punto y coma).
+3. Usa `skinparam shadowing false`, `skinparam dpi 300` y `left to right direction` justo después de @startuml.
+4. Para dar color a CADA actividad, USA EXACTAMENTE ESTA SINTAXIS (el color va al final fuera de la actividad): `:Texto corto; <<#HexCode>>`
 5. Usa una variedad de colores pastel (Verde: #DAEFD3, Rosado: #F9D4E8, Morado: #E8D4F9, Azul: #DCE5F0, Turquesa: #D4F9F5, Crema: #FDEBD0).
-6. Usa `stop` para finalizar el diagrama, NO uses `end`.
+6. SE EXTREMADAMENTE MINIMALISTA: Extrae solo los 4 o 5 conceptos más importantes. Usa textos súper cortos (máximo 4 palabras por nodo).
+7. Usa `stop` para finalizar el diagrama, NO uses `end`.
 
 TEXTO A DIAGRAMAR:
 {text}
