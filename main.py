@@ -814,26 +814,46 @@ async def procesar_y_enviar_prueba(orden_id: str, tema: str, asignatura: str, ni
         guardar_examen_como_docx(contenido_examen, path_docx_examen, color=color)
         guardar_examen_como_pdf(contenido_examen, path_pdf_examen, color=color)
         
+        url_pdf_examen_remote = upload_file_to_gcs(path_pdf_examen, f"{orden_id}_{nombre_archivo}.pdf", "application/pdf")
+        url_docx_examen_remote = upload_file_to_gcs(path_docx_examen, f"{orden_id}_{nombre_archivo}.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        
         print(f"[{orden_id}] Prueba '{nombre_prueba}' generada: {path_pdf_examen}")
         
         # Generate Solucionario DOCX and PDF (separate file)
         path_docx_solucionario = f"static/generated/Solucionario-{nombre_archivo}-{orden_id}.docx"
         path_pdf_solucionario = f"static/generated/Solucionario-{nombre_archivo}-{orden_id}.pdf"
         
+        url_pdf_sol_remote = None
+        url_docx_sol_remote = None
+        
         if contenido_solucionario:
             guardar_examen_como_docx(contenido_solucionario, path_docx_solucionario, color=color)
             guardar_examen_como_pdf(contenido_solucionario, path_pdf_solucionario, color=color)
+            
+            url_pdf_sol_remote = upload_file_to_gcs(path_pdf_solucionario, f"{orden_id}_Solucionario_{nombre_archivo}.pdf", "application/pdf")
+            url_docx_sol_remote = upload_file_to_gcs(path_docx_solucionario, f"{orden_id}_Solucionario_{nombre_archivo}.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            
             print(f"[{orden_id}] Solucionario generado: {path_pdf_solucionario}")
         
         # Update DB with files
         import os
         base_url_path = "/static/generated"
+        
+        final_url_pdf_examen = url_pdf_examen_remote or f"{base_url_path}/{nombre_archivo}-{orden_id}.pdf"
+        final_url_docx_examen = url_docx_examen_remote or f"{base_url_path}/{nombre_archivo}-{orden_id}.docx"
+        final_url_pdf_sol = url_pdf_sol_remote or f"{base_url_path}/Solucionario-{nombre_archivo}-{orden_id}.pdf"
+        final_url_docx_sol = url_docx_sol_remote or f"{base_url_path}/Solucionario-{nombre_archivo}-{orden_id}.docx"
+        
         files_list = [
-            {"name": f"{nombre_prueba} - PDF", "url": f"{base_url_path}/{nombre_archivo}-{orden_id}.pdf", "type": "pdf"},
-            {"name": f"{nombre_prueba} - Editable", "url": f"{base_url_path}/{nombre_archivo}-{orden_id}.docx", "type": "docx"},
-            {"name": "Solucionario - PDF", "url": f"{base_url_path}/Solucionario-{nombre_archivo}-{orden_id}.pdf", "type": "pdf"},
-            {"name": "Solucionario - Editable", "url": f"{base_url_path}/Solucionario-{nombre_archivo}-{orden_id}.docx", "type": "docx"}
+            {"name": f"{nombre_prueba} - PDF", "url": final_url_pdf_examen, "type": "pdf"},
+            {"name": f"{nombre_prueba} - Editable", "url": final_url_docx_examen, "type": "docx"}
         ]
+        
+        if contenido_solucionario:
+            files_list.extend([
+                {"name": "Solucionario - PDF", "url": final_url_pdf_sol, "type": "pdf"},
+                {"name": "Solucionario - Editable", "url": final_url_docx_sol, "type": "docx"}
+            ])
         database.update_order_files(orden_id, files_list)
         database.update_order_status(orden_id, "completed")
         
