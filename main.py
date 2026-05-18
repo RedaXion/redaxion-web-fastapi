@@ -420,6 +420,13 @@ Equipo RedaXion.
 
     except Exception as e:
         print(f"[{orden_id}] Error en el procesamiento: {e}")
+        import traceback
+        try:
+            with open("static/last_error.txt", "w") as f_err:
+                f_err.write(traceback.format_exc())
+        except Exception as write_err:
+            print(f"Failed to write error to file: {write_err}")
+            
         database.update_order_status(orden_id, "error")
         # Notificar al administrador del error
         enviar_notificacion_error(
