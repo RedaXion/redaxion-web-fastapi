@@ -107,11 +107,18 @@ def plantuml_encode(plantuml_text: str) -> str:
 # Mermaid Renderers (misma sintaxis, distintos servidores)
 # ---------------------------------------------------------------------------
 
+# Dimensiones máximas de salida para evitar diagramas imposibles de leer.
+# El ancho base de renderizado de mermaid.ink se controla desde la URL.
+# 800px de base con scale=2 → 1600px real, que luego python-docx escala al ancho del doc.
+_MERMAID_INK_WIDTH = 800   # px base (no escalar a más — diagramas se vuelven ilegibles)
+_MERMAID_INK_SCALE = 2     # escala de resolución (calidad)
+
+
 def _render_mermaid_ink(mermaid_code: str) -> Optional[BytesIO]:
     """Renderiza Mermaid via mermaid.ink (primario)."""
     try:
         encoded = _mermaid_to_base64(mermaid_code)
-        url = f"https://mermaid.ink/img/{encoded}?type=png&width=1200&scale=2"
+        url = f"https://mermaid.ink/img/{encoded}?type=png&width={_MERMAID_INK_WIDTH}&scale={_MERMAID_INK_SCALE}"
         r = requests.get(url, timeout=30)
         if r.status_code == 200 and _is_valid_png(r.content):
             print("   ✅ mermaid.ink: OK")
@@ -161,13 +168,18 @@ def _try_render_mermaid(mermaid_code: str) -> Optional[BytesIO]:
 def _build_mermaid_prompt(text: str, color_theme: str, simplified: bool = False) -> str:
     primary, secondary = COLOR_MAP.get(color_theme.strip().lower(), ("#4A66AC", "#D8DFEF"))
 
-    complexity = (
-        "Extrae SOLO los 3 o 4 conceptos ABSOLUTAMENTE esenciales. "
-        "Texto de nodos: máximo 3 palabras simples, sin caracteres especiales."
-    ) if simplified else (
-        "Extrae los 5 o 6 conceptos más importantes. "
-        "Textos concisos, máximo 5 palabras por nodo."
-    )
+    # Simplified = 3 nodos máx; normal = 4 nodos máx.
+    # Menos nodos → diagramas más compactos y legibles en el PDF.
+    if simplified:
+        complexity = (
+            "Extrae SOLO los 3 conceptos ABSOLUTAMENTE esenciales. "
+            "Texto de nodos: máximo 2-3 palabras simples, sin caracteres especiales."
+        )
+    else:
+        complexity = (
+            "Extrae exactamente 4 conceptos clave. No más de 4 nodos en total. "
+            "Textos concisos: máximo 4 palabras por nodo."
+        )
 
     return f"""Genera un diagrama de flujo en Mermaid.js para el texto académico dado.
 
@@ -180,11 +192,11 @@ REGLAS CRÍTICAS (si las incumples el renderizado falla):
    Reemplaza: ( ) {{ }} [ ] por nada o por coma. Acentos sí están permitidos dentro de comillas.
 6. Relaciones: solo usa --> o -- texto --> entre IDs simples.
 7. {complexity}
-8. Estilo de color para todos los nodos:
+8. Aplica estilo de color con classDef en la ÚLTIMA línea:
    classDef default fill:{secondary},stroke:{primary},stroke-width:2px,color:#000000;
 
 TEXTO A DIAGRAMAR:
-{text[:600]}
+{text[:500]}
 """
 
 

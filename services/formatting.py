@@ -467,18 +467,19 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
             
             # --- INSERT VISUAL HERE ---
             if current_section_title in visuals_data:
-                img_stream = visuals_data[current_section_title]
+                img_stream = visuals_data.pop(current_section_title)  # remover siempre, éxito o fallo
                 try:
-                    # Ancho ajustado para mejorar visibilidad
-                    doc.add_picture(img_stream, width=Inches(3.0) if columnas=="doble" else Inches(5.5))
+                    # Ancho máximo: 4.5" (una columna) ó 2.8" (doble columna).
+                    # python-docx mantiene aspecto — la altura se ajusta automáticamente.
+                    max_w = Inches(2.8) if columnas == "doble" else Inches(4.5)
+                    doc.add_picture(img_stream, width=max_w)
                     last_p = doc.paragraphs[-1]
                     last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    last_p.paragraph_format.space_before = Pt(14)
-                    last_p.paragraph_format.space_after = Pt(18)
+                    last_p.paragraph_format.space_before = Pt(10)
+                    last_p.paragraph_format.space_after  = Pt(14)
                     print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
-                    del visuals_data[current_section_title]
                 except Exception as e:
-                    print(f"❌ Error insertando visual para \"{current_section_title}\": {e}")
+                    print(f"⚠️ Visual descartado para \"{current_section_title}\" ({type(e).__name__}: {e})")
 
         elif linea_normalizada.startswith("## ") or linea_normalizada.startswith("# "):
             texto_titulo = linea_normalizada.replace("## ", "").replace("# ", "")
@@ -495,18 +496,19 @@ def guardar_como_docx(texto, path_salida="/tmp/procesado.docx", color="azul oscu
                 
             # --- INSERT VISUAL HERE ---
             if current_section_title in visuals_data:
-                img_stream = visuals_data[current_section_title]
+                img_stream = visuals_data.pop(current_section_title)  # remover siempre, éxito o fallo
                 try:
-                    # Ancho ajustado para mejorar visibilidad
-                    doc.add_picture(img_stream, width=Inches(3.0) if columnas=="doble" else Inches(5.5))
+                    # Ancho máximo: 4.5" (una columna) ó 2.8" (doble columna).
+                    # python-docx mantiene aspecto — la altura se ajusta automáticamente.
+                    max_w = Inches(2.8) if columnas == "doble" else Inches(4.5)
+                    doc.add_picture(img_stream, width=max_w)
                     last_p = doc.paragraphs[-1]
                     last_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    last_p.paragraph_format.space_before = Pt(14)
-                    last_p.paragraph_format.space_after = Pt(18)
+                    last_p.paragraph_format.space_before = Pt(10)
+                    last_p.paragraph_format.space_after  = Pt(14)
                     print(f"🖼️ Visual insertado para sección: \"{current_section_title}\"")
-                    del visuals_data[current_section_title]
                 except Exception as e:
-                    print(f"❌ Error insertando visual para \"{current_section_title}\": {e}")
+                    print(f"⚠️ Visual descartado para \"{current_section_title}\" ({type(e).__name__}: {e})")
         else:
             procesar_linea_con_formulas(doc, linea_normalizada, color)
 
