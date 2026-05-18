@@ -44,19 +44,8 @@ DEEPGRAM_STATUS_ENDPOINT  = "https://api.deepgram.com/v1/requests/{request_id}"
 
 def _deepgram_batch_poll(audio_url: str, keyterms: list = None, poll_interval: int = 8, max_wait: int = 900) -> str:
     """
-    Envía el audio a Deepgram en modo BATCH con polling.
-
-    Parámetros
-    ----------
-    audio_url    : URL pública/firmada del archivo de audio.
-    keyterms     : Términos clave para mejorar el reconocimiento.
-    poll_interval: Segundos entre cada consulta de estado (default 8s).
-    max_wait     : Máximo de segundos a esperar (default 15 min = 900s).
-                   Si Deepgram no termina en ese tiempo, es un fallo.
-
-    Retorna
-    -------
-    Texto transcrito completo, o lanza RuntimeError si falla.
+    Realiza la transcripción síncrona en Deepgram con soporte para timeout largo.
+    Se mantiene el nombre de la función y firma para compatibilidad con el resto del flujo.
     """
     payload = {"url": audio_url}
 
@@ -65,31 +54,24 @@ def _deepgram_batch_poll(audio_url: str, keyterms: list = None, poll_interval: i
         "language":      "es",
         "smart_format":  "true",
         "punctuate":     "true",
-        "diarize":       "false",   # desactivar si no se necesita — reduce tiempo
-        # callback_method=polling le dice a Deepgram que procese de forma
-        # asíncrona y que devuelva un request_id para consultar el estado.
-        "callback_method": "polling",
+        "diarize":       "false",
     }
 
     if keyterms:
         params["keywords"] = keyterms
 
-    print(f"🚀 [Deepgram Batch] Enviando trabajo... URL: {audio_url[:60]}...")
+    print(f"🚀 [Deepgram] Iniciando transcripción síncrona... URL: {audio_url[:60]}...")
 
-    # 1. Enviar el trabajo — Deepgram responde inmediatamente con request_id
     r = requests.post(
         DEEPGRAM_BATCH_ENDPOINT,
         headers=DEEPGRAM_HEADERS,
         json=payload,
         params=params,
-        timeout=60   # Solo para el POST inicial, no para procesar el audio
+        timeout=300   # 5 minutos para permitir la transcripción de archivos grandes
     )
     r.raise_for_status()
     response_data = r.json()
 
-    # En modo batch/polling la respuesta inicial puede traer el resultado
-    # directamente (si el archivo es pequeño) O un request_id.
-    # Intentamos extraer el transcript directo primero.
     transcript = (
         response_data
         .get("results", {})
@@ -98,67 +80,13 @@ def _deepgram_batch_poll(audio_url: str, keyterms: list = None, poll_interval: i
         .get("transcript", "")
     )
 
-    if transcript:
-        # El archivo era pequeño y Deepgram respondió al instante
-        words = len(transcript.split())
-        print(f"✅ [Deepgram Batch] Respuesta inmediata: {words} palabras.")
-        return transcript
+    if not transcript:
+        print(f"⚠️ [Deepgram] Respuesta inesperada o vacía: {response_data}")
+        raise RuntimeError("Deepgram no retornó texto en la respuesta.")
 
-    # Si no vino transcript, buscamos el request_id para hacer polling
-    request_id = response_data.get("request_id") or response_data.get("metadata", {}).get("request_id")
-
-    if not request_id:
-        # Dump de la respuesta para diagnóstico
-        print(f"⚠️ [Deepgram Batch] Respuesta inesperada: {response_data}")
-        raise RuntimeError("Deepgram no retornó transcript ni request_id.")
-
-    print(f"⏳ [Deepgram Batch] Job aceptado (request_id={request_id}). Iniciando polling...")
-
-    # 2. Polling hasta que el trabajo termine
-    elapsed   = 0
-    poll_url  = DEEPGRAM_STATUS_ENDPOINT.format(request_id=request_id)
-    poll_headers = {
-        "Authorization": f"Token {DEEPGRAM_API_KEY}",
-    }
-
-    while elapsed < max_wait:
-        time.sleep(poll_interval)
-        elapsed += poll_interval
-
-        try:
-            status_r = requests.get(poll_url, headers=poll_headers, timeout=30)
-            status_r.raise_for_status()
-            status_data = status_r.json()
-        except Exception as poll_err:
-            print(f"⚠️ [Deepgram Poll] Error consultando estado ({elapsed}s): {poll_err}")
-            continue
-
-        # Deepgram usa el campo "status" en su endpoint de requests
-        job_status = status_data.get("status", "")
-
-        if job_status in ("succeeded", "completed"):
-            transcript = (
-                status_data
-                .get("results", {})
-                .get("channels", [{}])[0]
-                .get("alternatives", [{}])[0]
-                .get("transcript", "")
-            )
-            words = len(transcript.split())
-            print(f"✅ [Deepgram Batch] Completado en {elapsed}s — {words} palabras.")
-            return transcript
-
-        elif job_status in ("failed", "error"):
-            detail = status_data.get("error") or status_data.get("metadata", {})
-            raise RuntimeError(f"Deepgram reportó error en el job: {detail}")
-
-        else:
-            print(f"   ⏳ Estado: '{job_status}' — esperando... ({elapsed}s transcurridos)")
-
-    raise RuntimeError(
-        f"Deepgram Batch no completó la transcripción en {max_wait}s. "
-        "Activando fallback a AssemblyAI."
-    )
+    words = len(transcript.split())
+    print(f"✅ [Deepgram] Transcripción completada exitosamente: {words} palabras.")
+    return transcript
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -393,7 +321,7 @@ def transcribir_audio(audio_url: str, keyterms: list = None,
                 deepgram_error_msg = f"Texto insuficiente en intento {attempt} ({len(deepgram_transcript.split())} palabras)."
                 print(f"⚠️ [Deepgram] {deepgram_error_msg}")
 
-        except RuntimeError as e:
+        except Exception as e:
             deepgram_error_msg = str(e)
             print(f"⚠️ [Deepgram] Intento {attempt}/{max_dg_retries} fallido: {e}")
             if attempt < max_dg_retries:
