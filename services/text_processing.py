@@ -3,6 +3,7 @@ import re
 import time
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessage
+import anthropic
 
 # Client initialization moved to function to ensure env vars are loaded
 def get_client():
@@ -133,18 +134,37 @@ def procesar_txt_con_chatgpt(path_txt):
         exito = False
         while intentos < 3 and not exito:
             try:
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": bloque}
-                    ],
-                    temperature=0.3,
-                    timeout=120  # Timeout explícito: 2 min por bloque
-                )
-                contenido = response.choices[0].message.content.strip()
+                if intentos < 2:
+                    response = client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": bloque}
+                        ],
+                        temperature=0.3,
+                        timeout=120  # Timeout explícito: 2 min por bloque
+                    )
+                    contenido = response.choices[0].message.content.strip()
+                else:
+                    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+                    if not anthropic_key:
+                        raise ValueError("No hay ANTHROPIC_API_KEY para fallback")
+                    print(f"   🔄 Usando Anthropic Claude (fallback) para bloque {i+1}...")
+                    anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
+                    response = anthropic_client.messages.create(
+                        model="claude-sonnet-4-6",
+                        max_tokens=2048,
+                        temperature=0.3,
+                        system=system_prompt,
+                        messages=[
+                            {"role": "user", "content": bloque}
+                        ],
+                        timeout=120
+                    )
+                    contenido = response.content[0].text.strip()
+
                 if not contenido:
-                    raise ValueError("GPT devolvió respuesta vacía")
+                    raise ValueError("API devolvió respuesta vacía")
                 texto_procesado += contenido + "\n\n"
                 exito = True
                 print(f"   ✅ Bloque {i+1} procesado: {len(contenido.split())} palabras salida")

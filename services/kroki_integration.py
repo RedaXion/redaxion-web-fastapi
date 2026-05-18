@@ -202,23 +202,45 @@ TEXTO A DIAGRAMAR:
 
 def _generate_mermaid_with_gpt(text: str, color_theme: str, simplified: bool = False) -> Optional[str]:
     """Pide a GPT-4o-mini que genere código Mermaid. Retorna el código limpio o None."""
+    prompt = _build_mermaid_prompt(text, color_theme, simplified)
+    
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    try:
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",   # más rápido y barato que gpt-4o para esta tarea
-            messages=[{"role": "user", "content": _build_mermaid_prompt(text, color_theme, simplified)}],
-            temperature=0.1,
-            max_tokens=400,
-            timeout=20,
-        )
-        raw = response.choices[0].message.content.strip()
-        return _clean_mermaid_code(raw)
-    except Exception as e:
-        print(f"   ⚠️ GPT Mermaid: excepción — {e}")
-        return None
+    if api_key:
+        try:
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",   # más rápido y barato que gpt-4o para esta tarea
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=400,
+                timeout=20,
+            )
+            raw = response.choices[0].message.content.strip()
+            return _clean_mermaid_code(raw)
+        except Exception as e:
+            print(f"   ⚠️ GPT Mermaid: excepción — {e}")
+            pass
+
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        print("   🔄 Intentando con Claude para Mermaid...")
+        try:
+            import anthropic
+            anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
+            response = anthropic_client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=400,
+                temperature=0.1,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=20
+            )
+            raw = response.content[0].text.strip()
+            return _clean_mermaid_code(raw)
+        except Exception as e:
+            print(f"   ⚠️ Claude Mermaid: excepción — {e}")
+            pass
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -250,25 +272,48 @@ TEXTO A DIAGRAMAR:
 
 
 def _generate_plantuml_with_gpt(text: str, color_theme: str) -> Optional[str]:
+    prompt = _build_plantuml_prompt(text, color_theme)
+    
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    try:
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": _build_plantuml_prompt(text, color_theme)}],
-            temperature=0.1,
-            max_tokens=400,
-            timeout=20,
-        )
-        raw = response.choices[0].message.content.strip()
-        # Extraer bloque @startuml…@enduml
-        match = re.search(r"(@startuml[\s\S]*?@enduml)", raw)
-        return match.group(1).strip() if match else raw.strip()
-    except Exception as e:
-        print(f"   ⚠️ GPT PlantUML: excepción — {e}")
-        return None
+    if api_key:
+        try:
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=400,
+                timeout=20,
+            )
+            raw = response.choices[0].message.content.strip()
+            # Extraer bloque @startuml…@enduml
+            match = re.search(r"(@startuml[\s\S]*?@enduml)", raw)
+            return match.group(1).strip() if match else raw.strip()
+        except Exception as e:
+            print(f"   ⚠️ GPT PlantUML: excepción — {e}")
+            pass
+
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        print("   🔄 Intentando con Claude para PlantUML...")
+        try:
+            import anthropic
+            anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
+            response = anthropic_client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=400,
+                temperature=0.1,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=20
+            )
+            raw = response.content[0].text.strip()
+            match = re.search(r"(@startuml[\s\S]*?@enduml)", raw)
+            return match.group(1).strip() if match else raw.strip()
+        except Exception as e:
+            print(f"   ⚠️ Claude PlantUML: excepción — {e}")
+            pass
+
+    return None
 
 
 def _render_plantuml(plantuml_code: str) -> Optional[BytesIO]:
