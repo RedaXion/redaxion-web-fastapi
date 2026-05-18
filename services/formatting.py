@@ -855,10 +855,12 @@ def convert_to_pdf(path_docx, color="azul elegante"):
 
     # Intentar LibreOffice
     try:
-        # Check if libreoffice is installed (simplified check by running)
+        # Provide /tmp as HOME for LibreOffice because Railway restricts root HOME writing
+        env = os.environ.copy()
+        env["HOME"] = "/tmp"
         subprocess.run([
             "libreoffice", "--headless", "--convert-to", "pdf", path_docx, "--outdir", output_dir
-        ], check=True, capture_output=True)
+        ], check=True, capture_output=True, env=env)
         
         if os.path.exists(path_pdf):
             print(f"✅ PDF generado correctamente con LibreOffice: {path_pdf}")

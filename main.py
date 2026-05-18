@@ -228,15 +228,16 @@ def generar_nombre_documento(texto: str, orden_id: str) -> str:
         )
         
         nombre_raw = response.choices[0].message.content.strip()
-        # Sanitize: remove special chars, limit length
-        nombre_limpio = re.sub(r'[^\w\s-]', '', nombre_raw).strip().replace(' ', '_')
+        # Sanitize: remove special chars, use spaces for friendly reading
+        nombre_limpio = re.sub(r'[^\w\s-]', '', nombre_raw).strip()
+        nombre_amigable = " ".join(word.capitalize() for word in nombre_limpio.split())
         
         # Validate result
-        if len(nombre_limpio) < 3 or len(nombre_limpio) > 50:
+        if len(nombre_amigable) < 3 or len(nombre_amigable) > 60:
             return fallback_name
             
-        print(f"📝 Nombre de documento generado: {nombre_limpio}")
-        return nombre_limpio
+        print(f"📝 Nombre de documento generado: {nombre_amigable}")
+        return nombre_amigable
         
     except Exception as e:
         print(f"⚠️ Error generando nombre de documento: {e}")
