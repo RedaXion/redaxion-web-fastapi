@@ -742,19 +742,23 @@ async def reprocess_from_gcs(
 
     # 2. Actualizar la orden en DB con la nueva URL y estado
     try:
-        database.create_order({
-            "id": orden_id,
-            "status": "processing",
-            "client": nombre,
-            "email": email_to,
-            "color": color,
-            "columnas": columnas,
-            "files": [],
-            "audio_url": fresh_url,
-            "service_type": "transcription"
-        })
-    except Exception:
-        database.update_order_status(orden_id, "processing")
+        existing = database.get_order(orden_id)
+        if existing:
+            database.update_order_status(orden_id, "processing")
+        else:
+            database.create_order({
+                "id": orden_id,
+                "status": "processing",
+                "client": nombre,
+                "email": email_to,
+                "color": color,
+                "columnas": columnas,
+                "files": [],
+                "audio_url": fresh_url,
+                "service_type": "transcription"
+            })
+    except Exception as e:
+        print(f"⚠️ Error actualizando estado de orden: {e}")
 
     # 3. Parsear BCC
     bcc_list = [e.strip() for e in email_bcc.split(",") if e.strip()] if email_bcc else []
