@@ -168,17 +168,17 @@ def _try_render_mermaid(mermaid_code: str) -> Optional[BytesIO]:
 def _build_mermaid_prompt(text: str, color_theme: str, simplified: bool = False) -> str:
     primary, secondary = COLOR_MAP.get(color_theme.strip().lower(), ("#4A66AC", "#D8DFEF"))
 
-    # Simplified = 3 nodos máx; normal = 4 nodos máx.
+    # Simplified = 4 nodos máx; normal = 5 nodos máx (aumento de complejidad del 5-10%)
     # Menos nodos → diagramas más compactos y legibles en el PDF.
     if simplified:
         complexity = (
-            "Extrae SOLO los 3 conceptos ABSOLUTAMENTE esenciales. "
-            "Texto de nodos: máximo 2-3 palabras simples, sin caracteres especiales."
+            "Extrae SOLO los 4 conceptos esenciales. "
+            "Texto de nodos: máximo 3 palabras simples, sin caracteres especiales."
         )
     else:
         complexity = (
-            "Extrae exactamente 4 conceptos clave. No más de 4 nodos en total. "
-            "Textos concisos: máximo 4 palabras por nodo."
+            "Extrae exactamente 5 conceptos clave. No más de 5 nodos en total. "
+            "Textos concisos: máximo 5 palabras por nodo."
         )
 
     return f"""Genera un diagrama de flujo en Mermaid.js para el texto académico dado.
