@@ -32,7 +32,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],  # Configurar en Railway
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
@@ -1838,7 +1838,8 @@ async def get_upload_url(filename: str = Form(...)):
             version="v4",
             expiration=timedelta(minutes=60),
             method="PUT",
-            content_type="application/octet-stream",
+            # No fijamos content_type en la firma para que cualquier browser
+            # pueda subir sin importar cómo envíe el Content-Type header
         )
         
         # Also generate the public URL for later use

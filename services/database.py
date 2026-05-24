@@ -723,7 +723,11 @@ def increment_code_usage(code: str):
     """Increment the usage count for a discount code.
     Auto-deactivates the code if max_uses is reached."""
     conn = get_connection()
-    c = conn.cursor()
+    if USE_POSTGRES:
+        from psycopg2.extras import RealDictCursor
+        c = conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        c = conn.cursor()
     try:
         if USE_POSTGRES:
             c.execute('UPDATE discount_codes SET uses_count = uses_count + 1 WHERE code = %s', (code.upper(),))
