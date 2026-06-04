@@ -56,7 +56,7 @@ def startup_event():
 @app.middleware("http")
 async def maintenance_mode_middleware(request: Request, call_next):
     # Set to True to enable maintenance mode today
-    MAINTENANCE_MODE = False
+    MAINTENANCE_MODE = True
     
     # Paths that are allowed during maintenance
     allowed_paths = ["/admin", "/api/admin", "/static", "/docs", "/openapi.json"]
